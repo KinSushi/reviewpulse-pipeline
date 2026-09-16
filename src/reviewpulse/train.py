@@ -297,7 +297,7 @@ def train_and_log(
 
         model_info = mlflow.sklearn.log_model(
             sk_model=pipeline,
-            artifact_path="model",
+            name="model",
             signature=signature,
             registered_model_name=config.MODEL_NAME if register else None,
         )

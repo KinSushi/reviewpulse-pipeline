@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark
 
 help:
 	@echo "Cibles du Makefile :"
@@ -11,9 +11,10 @@ help:
 	@echo "  transform - Transforme les données brutes en données propres"
 	@echo "  quality   - Effectue les contrôles de qualité des données"
 	@echo "  gx        - Exécute la suite Great Expectations sur la zone propre et génère le rapport HTML sous data/quality_reports/gx"
+	@echo "  spark     - Construit la zone silver avec PySpark et l'écrit en table Iceberg"
 	@echo "  train     - Entraîne le modèle et l'enregistre dans MLflow"
 	@echo "  score     - Calcule les scores avec le modèle champion"
-	@echo "  pipeline  - Exécute ingest → transform → gx → train → score"
+	@echo "  pipeline  - Exécute ingest → spark → gx → train → score"
 	@echo "  api       - Démarre le serveur FastAPI en mode reload"
 	@echo "  dashboard - Lance le tableau de bord Streamlit"
 	@echo "  up        - Construit et démarre les services Docker (mlflow, api, dashboard)"
@@ -52,6 +53,10 @@ quality:
 gx:
 	python -m reviewpulse.expectations
 
+## Construction de la zone silver avec PySpark et écriture en table Iceberg
+spark:
+	python -m reviewpulse.spark_silver
+
 ## Entraînement du modèle et enregistrement dans MLflow
 train:
 	python -m reviewpulse.train
@@ -60,10 +65,10 @@ train:
 score:
 	python -m reviewpulse.score
 
-## Exécution complète du pipeline : ingest → transform → gx → train → score
+## Exécution complète du pipeline : ingest → spark → gx → train → score
 pipeline:
 	$(MAKE) ingest
-	$(MAKE) transform
+	$(MAKE) spark
 	$(MAKE) gx
 	$(MAKE) train
 	$(MAKE) score

@@ -50,6 +50,20 @@ ARTIFACT_DIR = DATA_DIR / "mlartifacts"
 # Répertoire des rapports Great Expectations (voir expectations.py)
 GX_DIR = DATA_DIR / "quality_reports" / "gx"
 
+# --- Lakehouse — constantes spécifiques au stockage Iceberg et Spark ---
+# Répertoire racine du lakehouse (Iceberg) ; créé à la volée par get_catalog()
+LAKEHOUSE_DIR = DATA_DIR / "lakehouse"
+# Namespace Iceberg dédié aux tables « silver » (données nettoyées et prédictions)
+SILVER_NAMESPACE = "silver"
+# Identifiant complet de la table Iceberg contenant les avis nettoyés
+SILVER_REVIEWS_TABLE = "silver.reviews"
+# Identifiant complet de la table Iceberg contenant les prédictions de sentiment
+SILVER_PREDICTIONS_TABLE = "silver.predictions"
+# Adresse du master Spark, configurable via l’environnement
+SPARK_MASTER = os.getenv("REVIEWPULSE_SPARK_MASTER", "local[2]")
+# Mémoire allouée au driver Spark, configurable via l’environnement
+SPARK_DRIVER_MEMORY = os.getenv("REVIEWPULSE_SPARK_DRIVER_MEMORY", "2g")
+
 # Fichiers dérivés
 CLEAN_FILE = CLEAN_DIR / "reviews.parquet"
 SCORED_FILE = SCORED_DIR / "reviews_scored.parquet"

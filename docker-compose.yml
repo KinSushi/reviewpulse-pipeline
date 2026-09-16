@@ -12,12 +12,15 @@ x-envfile: &envfile
 
 services:
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.17.2
+    image: ghcr.io/mlflow/mlflow:v3.16.0
     command: >
       mlflow server --host 0.0.0.0 --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
       --artifacts-destination /mlflow/artifacts
       --serve-artifacts
+      --allowed-hosts mlflow,mlflow:5000,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000,host.docker.internal,host.docker.internal:5000
+    # --allowed-hosts : MLflow 3 rejette tout en-tête Host non listé (protection contre le DNS rebinding).
+    # Sans le nom de service « mlflow », les autres conteneurs recevaient une erreur 403 (constaté le 16/09/2026).
     ports:
       - "5000:5000"
     volumes:

@@ -147,6 +147,32 @@ res = vd.run(batch_parameters={"dataframe": df})   # res.success ; res.results[i
 - **Tests** (`tests/test_expectations.py`) : `labelled_frame` passe ; un doublon de `review_id`, un pseudonyme de 10 caractères, une colonne retirée et un `weighted_vote_score` de 2 font chacun échouer la suite, l'expectation fautive étant nommée dans `failed` ; `build_data_docs` crée un `index.html`.
 - `labelled_frame` doit avoir `weighted_vote_score` entre 0 et 1, `votes_up` et `playtime_at_review_min` ≥ 0 (à vérifier, corriger la fixture si besoin).
 
+## Lakehouse — `lakehouse.py` et `spark_silver.py` (sprint 1)
+
+*Décision du 16/09/2026 (ADR 0013, 0014). API PyIceberg 0.12.0 mesurée : `SqlCatalog(name, uri="sqlite:///…/catalog.db", warehouse="file:///…")`, `create_namespace_if_not_exists`, `table_exists`, `create_table(identifier, schema=<pyarrow.Schema>)`, `load_table`, `table.overwrite(arrow_table)`, `table.append(arrow_table)`, `table.scan().to_arrow()`, `table.history()`, `table.metadata_location`, `drop_table`. DuckDB 1.5.5 lit une table par `iceberg_scan('<metadata_location>')` après `INSTALL iceberg; LOAD iceberg;`.*
+
+- **config** : `LAKEHOUSE_DIR = DATA_DIR / "lakehouse"`, `SILVER_NAMESPACE = "silver"`, `SILVER_REVIEWS_TABLE = "silver.reviews"`, `SILVER_PREDICTIONS_TABLE = "silver.predictions"`, `SPARK_MASTER` (env `REVIEWPULSE_SPARK_MASTER`, défaut `"local[2]"`), `SPARK_DRIVER_MEMORY` (env `REVIEWPULSE_SPARK_DRIVER_MEMORY`, défaut `"2g"`).
+- **`lakehouse.py`** (pas de Spark ici) :
+  - `get_catalog()` : crée `LAKEHOUSE_DIR` si besoin ; `SqlCatalog("reviewpulse", uri=f"sqlite:///{(LAKEHOUSE_DIR / 'catalog.db').resolve().as_posix()}", warehouse=LAKEHOUSE_DIR.resolve().as_uri())` ; crée le namespace `SILVER_NAMESPACE` s'il n'existe pas.
+  - `write_table(identifier, arrow_table) -> dict` : si la table n'existe pas, la crée avec `arrow_table.schema` ; sinon, si le schéma diffère, lève `ValueError` explicite (pas d'évolution silencieuse) ; puis `overwrite(arrow_table)` ; renvoie `{"table": identifier, "rows": n, "snapshots": len(history), "metadata_location": ...}`.
+  - `read_table(identifier) -> pyarrow.Table`.
+  - `table_history(identifier) -> list[dict]` : `snapshot_id` et `timestamp_ms` de chaque entrée de `history()`.
+  - **Les colonnes horodatées** sont écrites en `timestamp[us, tz=UTC]` (Iceberg ne stocke pas la nanoseconde avant la v3) : convertir avec `pyarrow.compute.cast` avant écriture.
+- **`spark_silver.py`** :
+  - `build_spark(app_name="reviewpulse-silver")` : `SparkSession.builder.master(config.SPARK_MASTER).config("spark.driver.memory", config.SPARK_DRIVER_MEMORY).config("spark.ui.enabled", "false").config("spark.sql.session.timeZone", "UTC")`.
+  - `build_silver(spark, raw_dir=None, salt=None) -> pandas.DataFrame` qui produit **exactement** le même résultat que `transform.clean(transform.load_raw(raw_dir), salt)` (mêmes lignes, mêmes colonnes `CLEAN_COLUMNS`, mêmes types pandas, trié par `review_id`) :
+    - lecture : `spark.read.option("recursiveFileLookup", "true").option("pathGlobFilter", "*.jsonl").json(str(raw_dir))` avec `F.input_file_name()` ; `app_id` extrait du chemin par `regexp_extract(path, "app_id=(\\d+)", 1)` ; `language` par `language=([^/]+)` ; `sample_source` = `negative_boost` si le chemin contient `sample=negative_boost`, sinon `natural` ;
+    - aucune ligne → DataFrame vide aux colonnes `CLEAN_COLUMNS` ;
+    - nettoyage BBCode : `regexp_replace(review, "\\[/?[a-zA-Z*]+(=[^\\]]*)?\\]", "")`, puis espaces multiples réduits (`\\s+` → espace), `trim` ; lignes au texte vide supprimées ;
+    - dédoublonnage : `row_number()` sur une fenêtre par `recommendationid`, ordonnée par priorité (natural = 0, negative_boost = 1) puis `timestamp_updated` décroissant ; garder le rang 1 ;
+    - `label` = 1 si `voted_up` sinon 0 ; dates UTC depuis les epochs ; `weighted_vote_score` en double ; `votes_up` en entier ; `playtime_at_review_min` = `author.playtime_at_review` ou 0 ; `text_len` = longueur du texte nettoyé ;
+    - `author_pseudo` : **Spark n'a pas de HMAC natif** → `pandas_udf` (type `string`) qui applique `hmac.new(salt, steamid.encode(), hashlib.sha256).hexdigest()` ; le sel est lu par `config.salt()` si `salt` vaut `None` ;
+    - conversion finale en pandas puis `astype` conforme à `CLEAN_COLUMNS` (les dates en `datetime64[ns, UTC]`).
+  - `main() -> int` : `logging.basicConfig` ; construit la session ; `build_silver` ; `quality.assert_quality` (bloquant) ; `transform.write_clean` (compatibilité avec `train` et `score`) ; `lakehouse.write_table(SILVER_REVIEWS_TABLE, …)` ; `transform.purge_raw()` ; journalise les lignes et le nombre d'instantanés ; arrête la session dans un `finally` ; 0 ou 1 (`DataQualityError`, sel absent ou exception → 1).
+- **`score.py`** : après l'écriture de `SCORED_FILE`, écrit aussi la table `SILVER_PREDICTIONS_TABLE` (colonnes `review_id`, `app_id`, `language`, `sample_source`, `created_at`, `label`, `proba_negative`, `pred_label`, `decision_threshold`, `model_version`, `scored_at`).
+- **DAG quotidien** : `ingest >> spark_silver >> gx_validate >> score` (`transform.py` reste disponible en ligne de commande comme moteur de référence).
+- **Tests** (`tests/test_spark_silver.py`, marqueur `spark`) : équivalence stricte Spark / pandas sur des données brutes des deux flux (doublons, BBCode, texte vide) ; écriture Iceberg puis relecture identique ; deux écritures → au moins deux instantanés et la dernière version seule lisible ; schéma différent → `ValueError`.
+
 ## Modèle — `train.py`
 
 - `build_pipeline() -> sklearn.pipeline.Pipeline` : `TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True, lowercase=True)` puis `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000, random_state=RANDOM_STATE)`. *Choix mesuré le 16/09 sur données réelles, voir la charte.*

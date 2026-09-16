@@ -8,15 +8,21 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "pandas==2.2.3",
-    "pyarrow==17.0.0",
+    "pyarrow==24.0.0",
     "scikit-learn==1.5.2",
-    "mlflow==2.17.2",
-    "fastapi==0.115.5",
+    "mlflow==3.16.0",
+    "fastapi==0.141.1",
     "uvicorn==0.32.1",
     "pydantic==2.9.2",
-    "streamlit==1.40.2",
+    "streamlit==1.60.0",
     "requests==2.32.3",
     "great_expectations==1.23.0",
+    "pyspark==4.2.0",
+    "pyiceberg[sql-sqlite,pyarrow]==0.12.0",
+    "duckdb==1.5.5",
+    "dbt-core==1.12.5",
+    "dbt-duckdb==1.11.0",
+    "confluent-kafka[avro,schemaregistry]==2.15.1",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +38,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = ["spark: tests qui démarrent une session PySpark (Java requis)"]
 
 [tool.ruff]
 line-length = 110

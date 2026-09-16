@@ -16,3 +16,5 @@ Chaque décision structurante du projet est écrite ici, **avec la mesure ou le 
 | [0010](0010-artefacts-et-ecritures.md) | Emplacement des artefacts et des écritures | Acceptée |
 | [0011](0011-orchestration.md) | Airflow et GitHub Actions | Acceptée |
 | [0012](0012-deploiement-conteneurs.md) | Déploiement Docker Compose | Acceptée |
+| [0013](0013-pile-du-programme-et-environnements.md) | Pile du programme Lead, MLflow 3, environnements séparés dans Airflow | Acceptée |
+| [0014](0014-spark-iceberg-silver.md) | Zone silver en PySpark et Iceberg, pandas comme référence | Acceptée |

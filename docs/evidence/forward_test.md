@@ -1,6 +1,6 @@
 # Rapport de tests forward
-*Date UTC* : 2026-09-16T21:06:49Z
-*Commit* : 0ace6a4+travail-en-cours
+*Date UTC* : 2026-09-16T22:57:20Z
+*Commit* : a274445+mlflow3
 
 ## URLs testées
 - **API** : `http://host.docker.internal:8000`
@@ -17,11 +17,11 @@
 | A4 | PASS | 14 éléments |
 | D1 | PASS | OK |
 | M1 | PASS | champion=2 servi=2 |
-| F1 | PASS | natural: 6005 lignes / 6005 ids ; negative_boost: 2797 lignes / 2797 ids |
+| F1 | PASS | natural: 6023 lignes / 6023 ids ; negative_boost: 2798 lignes / 2798 ids |
 | F2 | PASS | aucune erreur |
 | F3 | PASS | aucune colonne interdite détectée |
-| F4 | PASS | 1086940/english=1.209, 1086940/french=0.975, 1903340/english=0.986, 1903340/french=0.838, 2622380/english=0.797, 2622380/french=0.837 |
-| F5 | PASS | n_reviews=5959 |
+| F4 | PASS | 1086940/english=1.205, 1086940/french=0.975, 1903340/english=0.986, 1903340/french=0.838, 2622380/english=0.797, 2622380/french=0.837 |
+| F5 | PASS | n_reviews=5977 |
 | F6 | PASS | toutes version=2 |
 
 **Total PASS** : 12
