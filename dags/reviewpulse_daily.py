@@ -1,13 +1,13 @@
 """Rôle
-    Automatiser la chaîne de traitement ReviewPulse : quotidien : ingest → transform_and_check → score ; hebdomadaire : train → score.
+    Automatiser la chaîne de traitement ReviewPulse : quotidien : ingest → transform_and_check → gx_validate → score ; hebdomadaire : train → score.
 
 Place dans la chaîne
-    Le DAG quotidien orchestre les trois premières étapes de la chaîne ; le DAG hebdomadaire orchestre l’entraînement puis le scoring, qui alimentent le tableau de bord et l’API.
+    Le DAG quotidien orchestre les quatre premières étapes de la chaîne ; le DAG hebdomadaire orchestre l’entraînement puis le scoring, qui alimentent le tableau de bord et l’API.
 
 Fonctionnement
     - Deux DAGs sont définis : ``reviewpulse_daily`` (planifié ``0 6 * * *``) et ``reviewpulse_weekly_train`` (planifié ``0 7 * * 1``).
-    - Chaque tâche est un ``PythonOperator`` qui exécute la fonction interne ``_run_main`` avec le module métier correspondant (``ingest``, ``transform``, ``score`` ou ``train``).
-    - Les dépendances sont linéaires : ``ingest`` → ``transform_and_check`` → ``score`` pour le quotidien, et ``train`` → ``score`` pour le hebdomadaire.
+    - Chaque tâche est un ``PythonOperator`` qui exécute la fonction interne ``_run_main`` avec le module métier correspondant (``ingest``, ``transform``, ``expectations`` ou ``score`` pour le quotidien, ``train`` puis ``score`` pour le hebdomadaire).
+    - Les dépendances sont linéaires : ``ingest`` → ``transform_and_check`` → ``gx_validate`` → ``score`` pour le quotidien, et ``train`` → ``score`` pour le hebdomadaire.
     - Les DAGs sont créés avec ``catchup=False`` et les mêmes ``default_args`` (retries = 2, retry_delay = 5 min, tags = ["reviewpulse"]).
 
 Choix de conception
@@ -30,7 +30,7 @@ from airflow.operators.python import PythonOperator
 from airflow.exceptions import AirflowException
 
 # Import des modules métier
-from reviewpulse import ingest, transform, score, train
+from reviewpulse import ingest, transform, score, train, expectations
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _run_main(module):
     return result
 
 # ---------------------------------------------------------------------------
-# DAG quotidien : ingestion → transformation & contrôle → scoring
+# DAG quotidien : ingestion → transformation & contrôle → validation GX → scoring
 # ---------------------------------------------------------------------------
 
 # Paramètres communs au DAG quotidien (date de départ, politique de retry, tags)
@@ -92,6 +92,12 @@ with DAG(
         op_args=[transform],
     )
 
+    gx_validate_task = PythonOperator(
+        task_id="gx_validate",
+        python_callable=_run_main,
+        op_args=[expectations],
+    )
+
     score_task = PythonOperator(
         task_id="score",
         python_callable=_run_main,
@@ -99,7 +105,7 @@ with DAG(
     )
 
     # Chaînage séquentiel des tâches
-    ingest_task >> transform_task >> score_task
+    ingest_task >> transform_task >> gx_validate_task >> score_task
 
 # ---------------------------------------------------------------------------
 # DAG hebdomadaire : entraînement → scoring

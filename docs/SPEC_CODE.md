@@ -109,6 +109,44 @@ Un objet `review` contient notamment : `recommendationid` (str), `author` (objet
 - `assert_quality(df) -> None` : lève `DataQualityError` avec tous les échecs.
 - `main()` : lit `CLEAN_FILE`, contrôle, code 0 ou 1.
 
+## Great Expectations — `expectations.py`
+
+*Ajout du 16/09/2026. Version figée : `great_expectations==1.23.0` (installée et vérifiée le 16/09 : `pip check` sans conflit, pandas 2.2.3 et mlflow 2.17.2 inchangés ; API confirmée sur la zone propre réelle).* Complète `quality.py` sans le remplacer : `quality` reste le contrôle bloquant intégré à `transform` ; Great Expectations ajoute une **suite déclarative** et un **rapport HTML** (Data Docs) lisible par un non-développeur.
+
+API confirmée pour cette version (à utiliser telle quelle) :
+
+```python
+import great_expectations as gx
+ctx = gx.get_context(mode="ephemeral")            # ou mode="file", project_root_dir=...
+ds = ctx.data_sources.add_pandas("reviewpulse")
+asset = ds.add_dataframe_asset("clean_reviews")
+bd = asset.add_batch_definition_whole_dataframe("tout")
+suite = ctx.suites.add(gx.ExpectationSuite(name="zone_propre"))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column="review_id"))
+vd = ctx.validation_definitions.add(gx.ValidationDefinition(name="zone_propre", data=bd, suite=suite))
+res = vd.run(batch_parameters={"dataframe": df})   # res.success ; res.results[i].expectation_config.type, .success, .result
+```
+
+- **config** : `GX_DIR = DATA_DIR / "quality_reports" / "gx"`.
+- `SUITE_NAME = "zone_propre"`.
+- `build_expectations() -> list` : liste d'objets `gx.expectations.*`, dans cet ordre :
+  1. `ExpectTableColumnsToMatchOrderedList(column_list=list(config.CLEAN_COLUMNS))` ;
+  2. `ExpectTableRowCountToBeBetween(min_value=1)` ;
+  3. `ExpectColumnValuesToNotBeNull` sur `review_id`, `review_text`, `created_at`, `author_pseudo` (une expectation par colonne) ;
+  4. `ExpectColumnValuesToBeUnique(column="review_id")` ;
+  5. `ExpectColumnValuesToBeInSet` : `label` ∈ [0, 1], `language` ∈ `config.LANGUAGES`, `sample_source` ∈ `config.SAMPLE_SOURCES` ;
+  6. `ExpectColumnValuesToBeBetween(column="text_len", min_value=1)` ;
+  7. `ExpectColumnValuesToBeBetween(column="weighted_vote_score", min_value=0, max_value=1)` ;
+  8. `ExpectColumnValuesToBeBetween` sur `votes_up` et `playtime_at_review_min`, `min_value=0` ;
+  9. `ExpectColumnValuesToMatchRegex(column="author_pseudo", regex=r"^[0-9a-f]{64}$")`.
+- `validate(df, context=None) -> dict` : construit (ou reçoit) un contexte, exécute la suite, renvoie `{"success": bool, "evaluated": int, "failed": [{"expectation": type, "column": colonne ou None, "unexpected_count": int ou None}]}`. Contexte éphémère par défaut.
+- `build_data_docs(df, project_dir=None) -> Path` : contexte **fichier** sous `project_dir or config.GX_DIR` (dossier créé), même suite, exécution, `ctx.build_data_docs()`, renvoie le chemin de `index.html` du site local (chercher `index.html` sous `project_dir`). Si un contexte existe déjà dans ce dossier, les objets déjà enregistrés (source, suite, validation) sont réutilisés ou remplacés sans erreur.
+- `main() -> int` : `logging.basicConfig` ; lit `config.CLEAN_FILE` ; `build_data_docs` ; journalise le chemin du rapport et le nombre d'échecs ; renvoie 0 si succès, 1 sinon (fichier absent → 1 avec message).
+- **DAG quotidien** : `ingest → transform_and_check → gx_validate → score`, la tâche `gx_validate` appelant `expectations.main`.
+- **Makefile** : cible `gx`.
+- **Tests** (`tests/test_expectations.py`) : `labelled_frame` passe ; un doublon de `review_id`, un pseudonyme de 10 caractères, une colonne retirée et un `weighted_vote_score` de 2 font chacun échouer la suite, l'expectation fautive étant nommée dans `failed` ; `build_data_docs` crée un `index.html`.
+- `labelled_frame` doit avoir `weighted_vote_score` entre 0 et 1, `votes_up` et `playtime_at_review_min` ≥ 0 (à vérifier, corriger la fixture si besoin).
+
 ## Modèle — `train.py`
 
 - `build_pipeline() -> sklearn.pipeline.Pipeline` : `TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True, lowercase=True)` puis `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000, random_state=RANDOM_STATE)`. *Choix mesuré le 16/09 sur données réelles, voir la charte.*

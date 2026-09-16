@@ -7,4 +7,5 @@ uvicorn==0.32.1
 pydantic==2.9.2
 streamlit==1.40.2
 requests==2.32.3
+great_expectations==1.23.0
 -e .

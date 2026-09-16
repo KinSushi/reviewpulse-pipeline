@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx
 
 help:
 	@echo "Cibles du Makefile :"
@@ -10,9 +10,10 @@ help:
 	@echo "  ingest    - Lance l'ingestion des données brutes"
 	@echo "  transform - Transforme les données brutes en données propres"
 	@echo "  quality   - Effectue les contrôles de qualité des données"
+	@echo "  gx        - Exécute la suite Great Expectations sur la zone propre et génère le rapport HTML sous data/quality_reports/gx"
 	@echo "  train     - Entraîne le modèle et l'enregistre dans MLflow"
 	@echo "  score     - Calcule les scores avec le modèle champion"
-	@echo "  pipeline  - Exécute ingest → transform → train → score"
+	@echo "  pipeline  - Exécute ingest → transform → gx → train → score"
 	@echo "  api       - Démarre le serveur FastAPI en mode reload"
 	@echo "  dashboard - Lance le tableau de bord Streamlit"
 	@echo "  up        - Construit et démarre les services Docker (mlflow, api, dashboard)"
@@ -47,6 +48,10 @@ transform:
 quality:
 	python -m reviewpulse.quality
 
+## Exécution de la suite Great Expectations
+gx:
+	python -m reviewpulse.expectations
+
 ## Entraînement du modèle et enregistrement dans MLflow
 train:
 	python -m reviewpulse.train
@@ -55,10 +60,11 @@ train:
 score:
 	python -m reviewpulse.score
 
-## Exécution complète du pipeline : ingest → transform → train → score
+## Exécution complète du pipeline : ingest → transform → gx → train → score
 pipeline:
 	$(MAKE) ingest
 	$(MAKE) transform
+	$(MAKE) gx
 	$(MAKE) train
 	$(MAKE) score
 

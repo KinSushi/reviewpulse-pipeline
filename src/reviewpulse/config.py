@@ -47,6 +47,8 @@ STATE_DIR = DATA_DIR / "state"
 
 # Répertoire des artefacts MLflow
 ARTIFACT_DIR = DATA_DIR / "mlartifacts"
+# Répertoire des rapports Great Expectations (voir expectations.py)
+GX_DIR = DATA_DIR / "quality_reports" / "gx"
 
 # Fichiers dérivés
 CLEAN_FILE = CLEAN_DIR / "reviews.parquet"
