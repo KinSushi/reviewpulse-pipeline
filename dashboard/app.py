@@ -1,13 +1,28 @@
-"""Tableau de bord Streamlit ReviewPulse.
+"""dashboard/app.py
+Rôle
+----
+Restitution pour la ou le community manager.
 
-Ce module charge les fichiers générés par le pipeline :
+Place dans la chaîne
+--------------------
+Exécuté après le module `score` (et en même temps que `api`). Ne produit pas de sortie persistante.
 
-- ``config.SCORED_FILE`` : avis annotés et scorés.
-- ``config.SUMMARY_FILE`` : agrégats quotidiens des parts négatives prédites et réelles.
+Choix de conception
+-------------------
+* Avis naturels seulement.  
+* Aucune information d'auteur affichée.  
+* Texte tronqué à 200 caractères.  
+* Parts négatives calculées sur les étiquettes (pas sur les probabilités).  
+* URL de l'API lue dans la variable d’environnement `REVIEWPULSE_API_URL` (dans Docker, `localhost` désigne le conteneur du tableau de bord).  
+* Appel direct à `main()` ; un `SystemExit` bloquerait le moteur de test Streamlit.
 
-Il ne conserve que les avis dont ``sample_source == config.SAMPLE_NATURAL`` (convention du projet) et n’affiche aucune information d’auteur, conformément aux exigences de confidentialité.
+Preuves
+-------
+Défauts observés dans le navigateur le 16/09/2026 et corrigés : affichage erroné de la part réelle (affichée comme part positive) et plantage lié aux dates du résumé.
 
-Le tableau de bord propose des filtres jeu / langue, des indicateurs clés, une courbe d’évolution et un test d’appel à l’API ``/predict``.
+Tests associés
+--------------
+`test_dashboard.py` : exécution réelle du script avec `AppTest`.
 """
 
 import os
@@ -19,8 +34,17 @@ from reviewpulse import config, decision
 def _load_scored() -> pd.DataFrame | None:
     """Charge le fichier de scores produit par le module `score.py`.
 
-    Retourne ``None`` si le fichier n'existe pas encore, ce qui permet
-    d'afficher un message d'attente dans l'interface.
+    Retourne
+    -------
+    pd.DataFrame | None
+        DataFrame contenant les avis annotés et scorés, ou ``None`` si le
+        fichier n’est pas encore présent.
+
+    Pourquoi
+    -------
+    Le tableau de bord doit pouvoir démarrer même si le pipeline n’a pas encore
+    produit le parquet ; renvoyer ``None`` permet d’afficher un message d’attente
+    sans interrompre l’exécution.
     """
     try:
         return pd.read_parquet(config.SCORED_FILE)
@@ -30,8 +54,16 @@ def _load_scored() -> pd.DataFrame | None:
 def _load_summary() -> pd.DataFrame | None:
     """Charge le résumé quotidien produit par le module `score.py`.
 
-    Le résumé contient les parts négatives prédites et réelles agrégées
-    par jour, jeu et langue.
+    Retourne
+    -------
+    pd.DataFrame | None
+        DataFrame agrégé par jour, jeu et langue, ou ``None`` si le fichier
+        n’est pas encore présent.
+
+    Pourquoi
+    -------
+    Le même raisonnement que pour ``_load_scored`` : le tableau de bord doit
+    rester fonctionnel pendant la génération des artefacts.
     """
     try:
         return pd.read_parquet(config.SUMMARY_FILE)
@@ -39,29 +71,70 @@ def _load_summary() -> pd.DataFrame | None:
         return None
 
 def _format_date(dt: pd.Timestamp) -> str:
-    """Convertit un timestamp en date ISO (UTC)."""
+    """Convertit un timestamp en date ISO (UTC).
+
+    Parameters
+    ----------
+    dt : pd.Timestamp
+        Timestamp issu de la colonne ``created_at`` du DataFrame.
+
+    Returns
+    -------
+    str
+        Date au format ``YYYY‑MM‑DD`` en UTC.
+
+    Pourquoi
+    -------
+    Le tableau de bord affiche uniquement la date, pas l’heure, afin de
+    simplifier la lecture et d’uniformiser le format avec le résumé quotidien.
+    """
     return dt.tz_convert("UTC").date().isoformat()
 
 def _truncate(text: str, length: int = 200) -> str:
-    """Tronque le texte à *length* caractères en ajoutant une ellipse si besoin."""
+    """Tronque le texte à *length* caractères en ajoutant une ellipse si besoin.
+
+    Parameters
+    ----------
+    text : str
+        Texte complet de l’avis.
+    length : int, optional
+        Longueur maximale souhaitée (défaut : 200).
+
+    Returns
+    -------
+    str
+        Texte tronqué ou identique si sa longueur est inférieure à *length*.
+
+    Pourquoi
+    -------
+    Limite l’exposition de données personnelles tout en conservant une
+    indication du contenu de l’avis.
+    """
     return (text[:length] + "…") if len(text) > length else text
 
 def main() -> int:
-    """Point d'entrée du tableau de bord Streamlit.
+    """Point d’entrée du tableau de bord Streamlit.
 
-    - Charge les données scorées et le résumé quotidien.
-    - Applique les filtres jeu / langue.
-    - Calcule les indicateurs en respectant la convention de décision
-      (part négative = proportion d'étiquettes ``LABEL_NEGATIVE``).
-    - Trace la courbe quotidienne des parts négatives prédites et réelles.
-    - Affiche le top 20 des avis les plus négatifs et un test d'API.
+    Retourne
+    -------
+    int
+        Code de sortie : toujours ``0`` (compatible avec la convention
+        ``if __name__ == "__main__": raise SystemExit(main())``).
+
+    Pourquoi
+    -------
+    Centralise toutes les étapes d’affichage afin de respecter le contrat
+    d’un module exécutable exposant ``main() -> int``.
     """
+    # Configuration de la page Streamlit
     st.set_page_config(page_title="ReviewPulse")
     st.title("Tableau de bord ReviewPulse")
 
+    # Chargement paresseux des artefacts
     scored_df = _load_scored()
     summary_df = _load_summary()
 
+    # Si l’un des fichiers n’est pas encore disponible, on informe l’utilisateur
     if scored_df is None or summary_df is None:
         st.warning(
             "Les fichiers de données ne sont pas encore disponibles. "
@@ -75,8 +148,10 @@ def main() -> int:
     # Interface de sélection des filtres
     with st.sidebar:
         st.header("Filtres")
+        # Liste des jeux disponibles dans le sous‑ensemble naturel
         app_ids = sorted(scored_df.loc[natural_mask, "app_id"].unique())
         selected_app = st.selectbox("Jeu (app_id)", app_ids, index=0)
+        # Liste des langues disponibles dans le sous‑ensemble naturel
         languages = sorted(scored_df.loc[natural_mask, "language"].unique())
         selected_lang = st.selectbox("Langue", languages, index=0)
 
@@ -107,8 +182,10 @@ def main() -> int:
         else 0.0
     )
 
+    # Version du modèle (exemple : « v1.2.3 » ou « N/A » si aucun avis)
     model_version = str(df_view["model_version"].iloc[0]) if not df_view.empty else "N/A"
 
+    # Seuil de décision utilisé pour la prédiction
     decision_threshold = (
         float(df_view["decision_threshold"].iloc[0])
         if not df_view.empty and "decision_threshold" in df_view.columns
@@ -135,11 +212,7 @@ def main() -> int:
         daily_summary = summary_df.loc[summary_mask].copy()
 
         if not daily_summary.empty:
-            # On s’assure que la colonne date est bien de type datetime.
-            # La colonne provient du résumé quotidien et contient des dates
-            # sans fuseau horaire (objets datetime.date). On la convertit en
-            # datetime puis on extrait la partie date sans tenter de
-            # convertir un fuseau, évitant ainsi l’erreur TypeError.
+            # S’assure que la colonne date est bien de type datetime.date.
             if not pd.api.types.is_datetime64_any_dtype(daily_summary["date"]):
                 daily_summary["date"] = pd.to_datetime(daily_summary["date"]).dt.date
             else:

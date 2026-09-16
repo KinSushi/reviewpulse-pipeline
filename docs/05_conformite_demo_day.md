@@ -13,8 +13,8 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 | 2b | Dépôt **idempotent** (exigence J1) | Manifeste des identifiants, écriture atomique | Second passage réel : **0 nouvel avis**, 6 000 identifiants uniques pour 6 000 lignes ; tests `test_fresh_dirs` | ✅ |
 | 3 | Transformation en jeu propre avec dbt, PySpark **ou pandas** | pandas : dédoublonnage, BBCode, types, pseudonymisation | Exécution réelle : 5 974 lignes propres ; types contrôlés | ✅ |
 | 3b | **Au moins un test de qualité** | 9 contrôles **bloquants** avant écriture de la zone propre | `quality.py`, tests dédiés | ✅ |
-| 4 | Étape d'IA qui consomme la sortie, **ML suivi avec MLflow** | Régression logistique sur n-grammes de caractères, registre MLflow, alias `champion` / `challenger`, barrière de promotion | Run réel : F1 macro **0,753 à 0,759**, AUC **0,897 à 0,923** selon l'échantillon ; promotion automatique vérifiée | ✅ |
-| 5 | Une partie de la chaîne **s'exécute seule** | DAG Airflow quotidien + workflow GitHub Actions planifié | `dags/reviewpulse_daily.py` (syntaxe vérifiée) ; `.github/workflows/pipeline.yml` | 🟡 à exécuter dans Airflow (cours du 17-18/09) et sur GitHub (22/09) |
+| 4 | Étape d'IA qui consomme la sortie, **ML suivi avec MLflow** | Régression logistique sur n-grammes de caractères, serveur MLflow, alias `champion` / `challenger`, barrière de promotion | Stack déployée : F1 macro **0,807** sur test naturel, AUC 0,948 ; promotion et non-promotion vérifiées (versions 1 à 5) | ✅ |
+| 5 | Une partie de la chaîne **s'exécute seule** | DAG Airflow quotidien et hebdomadaire + workflow GitHub Actions planifié | Airflow réel : 3 exécutions quotidiennes et 1 hebdomadaire réussies ; `pipeline.yml` écrit | ✅ Airflow · 🟡 GitHub Actions (dépôt à publier) |
 
 ## Les livrables par jour
 
@@ -25,8 +25,8 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 | J1 | Diagramme d'architecture v1 | ✅ `diagrams/png/01_architecture_globale.png` + 9 autres |
 | J1 | Ingestion qui remplit la zone brute depuis la source vivante | ✅ |
 | J2 | Une exécution de bout en bout, source → sortie IA | ✅ ingestion → propre → modèle → score → API, dans deux conteneurs distincts |
-| J2 | **Un chiffre de qualité défendable** | ✅ F1 macro sur test tenu à l'écart + validation croisée 5 plis (0,750 ± 0,018) ; comparaison de 4 variantes |
-| J2 (facultatif) | FastAPI ou Streamlit, Docker | 🟡 API vérifiée en conteneur (`/health`, `/predict`, `/insights`, 422, 503) ; tableau de bord et `docker compose` complet **pas encore lancés** |
+| J2 | **Un chiffre de qualité défendable** | ✅ F1 macro 0,807 sur test 100 % naturel tenu à l'écart, 0,802 en validation croisée, variantes comparées (ADR 0006 et 0007) |
+| J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ `docker compose` complet (MLflow, API, tableau de bord, Airflow), services sains ; tableau de bord piloté dans un navigateur ; test automatisé de la stack : 12 / 12 |
 | J3 | Démo en direct 10 min + 5 min de questions, dépôt, diagramme, présentation | ⬜ slides sur le gabarit Jedha, répétition, vidéo de secours |
 
 ## Les attendus implicites, relevés dans l'énoncé
@@ -41,16 +41,18 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 
 ## Les écarts connus, à assumer devant le jury
 
-1. **Précision des avis négatifs : 0,50.** Un avis signalé sur deux est en réalité positif. Pour un outil de *priorisation de lecture*, c'est acceptable (le coût d'une lecture inutile est faible) ; le rappel (0,62–0,64) est la métrique qui compte.
-2. **F1 proche de la barrière (0,75).** Un jour défavorable, la nouvelle version n'est pas promue et l'ancienne reste en service : c'est le garde-fou voulu.
-3. **Seuil de promotion revu de 0,80 à 0,75** après mesure. La décision et ses chiffres sont tracés dans la charte.
-4. **Great Expectations** n'est pas encore utilisé (contrôles maison) : prévu après le cours du 21/09.
-5. **Le pipeline tourne en local ou sur GitHub**, pas dans un cloud public : la fiche AIA l'admet (« dans le cloud ou on-premise »).
+1. **Précision des avis négatifs : 0,657.** Environ un avis signalé sur trois est en réalité positif (contre un sur deux avant l'ADR 0007). Pour un outil de *priorisation de lecture*, une lecture inutile coûte peu ; le rappel (0,639) compte davantage.
+2. **Seuil de promotion revu de 0,80 à 0,75** après mesure ; l'objectif de 0,80 est atteint depuis (0,807). Histoire complète : ADR 0008.
+3. **Great Expectations** n'est pas encore utilisé (contrôles maison bloquants, eux-mêmes couverts par les tests inverses) : prévu après le cours du 21/09.
+4. **Le pipeline tourne en conteneurs locaux ou sur GitHub**, pas dans un cloud public : la fiche AIA l'admet (« dans le cloud ou on-premise ») ; la cible cloud est décrite (schéma 06).
+5. **Airflow en mode `standalone`** (base SQLite, une tâche à la fois) : adapté à la démo, pas à la production (ADR 0011).
 
 ## Ce qui reste avant le 25/09
 
-- [ ] Lancer `docker compose` complet (MLflow serveur, API, tableau de bord) et l'Airflow du profil `airflow`.
+- [x] Lancer `docker compose` complet et Airflow ; tester en conditions réelles (16/09).
+- [x] Tests inverses et test automatisé de la stack déployée (16/09).
 - [ ] Publier le dépôt sur GitHub (KinSushi), secret `REVIEWPULSE_SALT`, premier run planifié vert.
+- [ ] Vidéo de la démo en production (livrable AIA 4).
 - [ ] Ajouter la suite Great Expectations.
 - [ ] Slides sur le gabarit Jedha (ou `Template DemoDay Slides - projet Telco.pptx` déjà sur le disque), script de 10 min, vidéo de secours.
 - [ ] Faire confirmer par Jedha : passage seul ou en équipe, heure, réemploi pour l'AIA 4.

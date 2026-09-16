@@ -1,3 +1,36 @@
+"""reviewpulse.transform
+=======================
+
+**Rôle**
+    Produire la zone propre, pseudonymisée et typée, uniquement si les contrôles qualité passent.
+
+**Place dans la chaîne**
+    Après ``reviewpulse.ingest`` et avant ``reviewpulse.train`` et ``reviewpulse.score``.
+
+**Fonctionnement**
+    1. Lecture récursive de tous les fichiers ``*.jsonl`` dans ``config.RAW_DIR`` ; le flux est déduit de la partition ``sample=`` du chemin, la valeur par défaut étant ``config.SAMPLE_NATURAL``.
+    2. Dédoublonnage avec priorité au flux naturel puis, à égalité, à la mise à jour la plus récente.
+    3. Suppression des balises BBCode et des lignes dont le texte devient vide.
+    4. Conversion des champs aux types déclarés dans ``config.CLEAN_COLUMNS`` ; calcul des colonnes dérivées (hash, durée de jeu, longueur du texte, etc.).
+    5. Pseudonymisation du ``steamid`` via HMAC‑SHA256 avec le sel fourni par ``config.salt()`` ; suppression des colonnes interdites listées dans ``config.FORBIDDEN_CLEAN_COLUMNS``.
+    6. Contrôle qualité bloquant via ``reviewpulse.quality.assert_quality``.
+    7. Écriture atomique du DataFrame propre au format Parquet.
+    8. Purge des partitions brutes plus anciennes que ``config.RAW_RETENTION_DAYS`` (30 jours).
+
+**Choix de conception**
+    - Utilisation de pandas (ADR 0003).
+    - Pseudonymisation HMAC salée, sel obligatoire (ADR 0004).
+    - Contrôles qualité exécutés avant l’écriture (ADR 0005).
+
+**Preuves**
+    - 16/09/2026 : exécution sans sel entraîne l’arrêt du pipeline et aucune modification de la zone propre.
+
+**Tests associés**
+    - ``test_transform_quality.py``
+    - ``test_fresh_dirs.py``
+    - ``test_boost.py``
+"""
+
 import os
 import json
 import re
@@ -20,7 +53,20 @@ _RE_SAMPLE = re.compile(r"sample=([^/]+)")
 
 
 def _extract_partition_info(file_path: Path) -> tuple[int, str, str]:
-    """Extrait app_id, language et source d'échantillonnage depuis le chemin du fichier."""
+    """Extrait les informations de partition depuis le chemin du fichier.
+
+    Args:
+        file_path: Chemin complet du fichier *.jsonl*.
+
+    Returns:
+        Tuple contenant ``app_id`` (int), ``language`` (str) et ``sample_source`` (str).
+
+    Raises:
+        RuntimeError: Si ``app_id`` ou ``language`` ne peuvent être extraits.
+
+    Pourquoi :
+        Centralise la logique d’extraction pour garantir la même interprétation dans :func:`load_raw` et faciliter les tests.
+    """
     app_match = re.search(r"app_id=(\d+)", str(file_path))
     lang_match = re.search(r"language=([a-zA-Z]+)", str(file_path))
     sample_match = _RE_SAMPLE.search(str(file_path))
@@ -41,7 +87,17 @@ def _extract_partition_info(file_path: Path) -> tuple[int, str, str]:
 
 
 def load_raw(raw_dir: Optional[Path] = None) -> pd.DataFrame:
-    """Lit tous les *.jsonl du répertoire brut et ajoute les colonnes de partition."""
+    """Lit les fichiers *.jsonl* bruts et ajoute les colonnes de partition.
+
+    Args:
+        raw_dir: Répertoire contenant les fichiers bruts. Si ``None``,
+            utilise ``config.RAW_DIR``.
+
+    Returns:
+        DataFrame contenant toutes les lignes valides avec les colonnes
+        ``app_id``, ``language_partition`` et ``sample_source`` ajoutées.
+        Retourne un DataFrame vide si aucun enregistrement n’est trouvé.
+    """
     raw_dir = raw_dir or config.RAW_DIR
     raw_dir = Path(raw_dir)
     records = []
@@ -74,14 +130,35 @@ def load_raw(raw_dir: Optional[Path] = None) -> pd.DataFrame:
 
 
 def _clean_text(text: str) -> str:
-    """Supprime les balises BBCode, réduit les espaces et strip."""
+    """Supprime les balises BBCode, réduit les espaces multiples et strip.
+
+    Args:
+        text: Chaîne brute contenant éventuellement du BBCode.
+
+    Returns:
+        Texte nettoyé.
+    """
     text = _RE_BBCODE.sub("", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
 def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
-    """Transforme le DataFrame brut en DataFrame propre conforme à CLEAN_COLUMNS."""
+    """Transforme le DataFrame brut en DataFrame propre conforme à ``CLEAN_COLUMNS``.
+
+    Args:
+        raw: DataFrame issu de :func:`load_raw`.
+        salt: Sel utilisé pour le hachage HMAC du ``steamid``.
+
+    Returns:
+        DataFrame propre, typé et ordonné selon ``config.CLEAN_COLUMNS``.
+
+    Raises:
+        RuntimeError: Si une colonne interdite apparaît après le nettoyage.
+
+    Pourquoi :
+        Centralise toutes les étapes de normalisation, dédoublonnage et dérivation de nouvelles colonnes afin de garantir la conformité aux exigences de qualité.
+    """
     if raw.empty:
         empty_df = pd.DataFrame(columns=config.CLEAN_COLUMNS.keys())
         for col, typ in config.CLEAN_COLUMNS.items():
@@ -179,7 +256,15 @@ def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
 
 
 def write_clean(df: pd.DataFrame, path: Optional[Path] = None) -> Path:
-    """Écriture atomique du DataFrame propre au format Parquet."""
+    """Écriture atomique du DataFrame propre au format Parquet.
+
+    Args:
+        df: DataFrame conforme à ``CLEAN_COLUMNS``.
+        path: Chemin de destination. Si ``None``, utilise ``config.CLEAN_FILE``.
+
+    Returns:
+        Chemin final du fichier écrit.
+    """
     path = path or config.CLEAN_FILE
     path = Path(path)
 
@@ -196,7 +281,19 @@ def purge_raw(
     retention_days: Optional[int] = None,
     today: Optional[datetime.date] = None,
 ) -> int:
-    """Supprime les partitions de données brutes plus anciennes que la période de rétention."""
+    """Supprime les partitions de données brutes plus anciennes que la période de rétention.
+
+    Args:
+        raw_dir: Répertoire racine contenant les partitions ``dt=``.
+            Par défaut ``config.RAW_DIR``.
+        retention_days: Nombre de jours à conserver. Par défaut
+            ``config.RAW_RETENTION_DAYS``.
+        today: Date de référence pour le calcul du seuil. Permet l’injection
+            en tests ; sinon ``datetime.date.today()``.
+
+    Returns:
+        Nombre total de fichiers supprimés.
+    """
     raw_dir = raw_dir or config.RAW_DIR
     raw_dir = Path(raw_dir)
 
@@ -225,7 +322,14 @@ def purge_raw(
 
 
 def main() -> int:
-    """Pipeline complet : chargement → nettoyage → contrôle qualité → écriture → purge."""
+    """Pipeline complet : chargement → nettoyage → contrôle qualité → écriture → purge.
+
+    Returns:
+        Code de sortie du pipeline (0 = succès, 1 = échec).
+
+    Pourquoi :
+        Fournit un point d’entrée unique exploitable par Airflow et les tests d’intégration.
+    """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
         raw_df = load_raw()

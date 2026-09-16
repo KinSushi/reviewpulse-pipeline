@@ -1,22 +1,33 @@
 """reviewpulse.decision
 ======================
 
-Ce module centralise la *convention de décision* utilisée par le projet.
-Le 16/09/2026, deux inversions successives du seuil de décision ont été
-observées : d’abord dans ``train.py`` puis dans ``score.py``,
-ce qui entraînait plus de 95 % d’avis prédits négatifs alors que seuls 4 %
-étaient réellement négatifs.  
-Pour éviter toute nouvelle incohérence, la logique de calcul du
-probabilité négative, du seuil et de la conversion en étiquette est
-maintenue ici, unique source de vérité.  
+Rôle
+----
+Définit la convention de décision unique du projet : `LABEL_NEGATIVE = 0`,
+`LABEL_POSITIVE = 1` et la règle « probabilité négative ≥ seuil → négatif ».
 
-La convention d’étiquetage est :
-- ``LABEL_NEGATIVE = 0``  (avis négatif, ``voted_up`` = ``False``)
-- ``LABEL_POSITIVE = 1``  (avis positif, ``voted_up`` = ``True``)
+Place dans la chaîne
+--------------------
+Appelé par les modules `train`, `score`, `api` et le tableau de bord
+(`dashboard/app.py`).
 
-Les fonctions suivantes utilisent ces constantes et le paramètre
-``config.DEFAULT_DECISION_THRESHOLD`` afin d’assurer une cohérence
-entre les modules *train*, *score* et l’API.
+Choix de conception
+-------------------
+`negative_proba` lit `model.classes_` pour identifier l’indice de la classe
+négative au lieu de supposer que la première colonne correspond à cette
+classe.  Décision documentée dans l’ADR 0009 (Convention de décision
+centralisée).
+
+Preuves
+-------
+* ADR 0009 (16/09/2026) : aucune comparaison au seuil n’est implémentée
+hors de ce module.  
+* Tests : `test_decision.py` (incluant un test de bout en bout) et
+`test_api.py` valident le comportement.
+
+Tests associés
+--------------
+`test_decision.py`, `test_api.py`
 """
 
 from __future__ import annotations
@@ -48,12 +59,11 @@ __all__ = [
 # Fonctions utilitaires
 # --------------------------------------------------------------------------- #
 def negative_proba(model: Any, texts: Sequence[str]) -> np.ndarray:
-    """Renvoie les probabilités de la classe négative (``0``) pour chaque texte.
+    """Calculer les probabilités de la classe négative (``0``) pour chaque texte.
 
     Le modèle doit implémenter ``predict_proba`` et posséder l’attribut
-    ``classes_``.  On ne suppose pas que la colonne 0 du tableau retourné
-    corresponde à la classe ``0`` ; on recherche explicitement l’indice
-    de cette classe dans ``model.classes_``.
+    ``classes_``.  L’indice de la classe négative est recherché explicitement
+    dans ``model.classes_``.
 
     Parameters
     ----------
@@ -67,24 +77,33 @@ def negative_proba(model: Any, texts: Sequence[str]) -> np.ndarray:
     np.ndarray
         Tableau unidimensionnel de probabilités (float64) de la classe
         négative, dans le même ordre que ``texts``.
+
+    Raises
+    ------
+    ValueError
+        Si la classe négative (``0``) n’est pas présente dans ``model.classes_``.
+
+    Pourquoi :
+        Centralise le calcul de la probabilité négative.
     """
     # ``predict_proba`` accepte n’importe quel itérable de textes.
     proba = model.predict_proba(list(texts))
+    # Recherche explicite de l’indice de la classe négative.
     try:
         idx_negative = list(model.classes_).index(LABEL_NEGATIVE)
     except ValueError as exc:
         raise ValueError(
             "Le modèle ne contient pas la classe négative (0)."
         ) from exc
+    # Retourne uniquement la colonne correspondant à la classe négative.
     return proba[:, idx_negative]
 
 
 def model_threshold(model: Any) -> float:
-    """Retourne le seuil de décision associé au modèle.
+    """Obtenir le seuil de décision associé au modèle.
 
-    Si le modèle possède l’attribut ``decision_threshold_`` (défini lors
-    de l’entraînement), on l’utilise ; sinon on se rabat sur la valeur
-    par défaut définie dans la configuration.
+    Si le modèle possède l’attribut ``decision_threshold_``, il est utilisé ;
+    sinon la valeur par défaut définie dans la configuration est renvoyée.
 
     Parameters
     ----------
@@ -95,15 +114,20 @@ def model_threshold(model: Any) -> float:
     -------
     float
         Seuil de décision.
+
+    Pourquoi :
+        Assure l’utilisation d’un même seuil même si le modèle ne possède pas
+        l’attribut ``decision_threshold_``.
     """
+    # Fallback vers la configuration si l’attribut n’est pas présent.
     return getattr(model, "decision_threshold_", config.DEFAULT_DECISION_THRESHOLD)
 
 
 def predict_labels(proba_negative: np.ndarray, threshold: float) -> np.ndarray:
-    """Convertit des probabilités négatives en étiquettes selon le seuil.
+    """Convertir des probabilités négatives en étiquettes selon le seuil.
 
-    Un avis est classé **négatif** si sa probabilité négative est supérieure
-    ou égale au seuil, sinon il est **positif**.
+    Un avis est classé **négatif** si sa probabilité négative est supérieure ou
+    égale au seuil, sinon il est **positif**.
 
     Parameters
     ----------
@@ -117,14 +141,20 @@ def predict_labels(proba_negative: np.ndarray, threshold: float) -> np.ndarray:
     np.ndarray
         Tableau d’étiquettes (int64) contenant ``LABEL_NEGATIVE`` ou
         ``LABEL_POSITIVE``.
+
+    Pourquoi :
+        Centralise la conversion des probabilités en étiquettes.
     """
+    # Normalisation du tableau d’entrée.
     proba_arr = np.asarray(proba_negative, dtype=np.float64)
+    # Application du critère de décision.
     labels = np.where(proba_arr >= threshold, LABEL_NEGATIVE, LABEL_POSITIVE)
+    # Retour sous forme d’entiers 64 bits, conforme aux constantes.
     return labels.astype(np.int64)
 
 
 def label_name(label: int) -> str:
-    """Retourne le nom lisible de l’étiquette.
+    """Obtenir le nom lisible d’une étiquette.
 
     Parameters
     ----------
@@ -140,6 +170,9 @@ def label_name(label: int) -> str:
     ------
     ValueError
         Si ``label`` n’est ni ``LABEL_NEGATIVE`` ni ``LABEL_POSITIVE``.
+
+    Pourquoi :
+        Fournit une traduction unique des étiquettes.
     """
     if label == LABEL_NEGATIVE:
         return "negative"

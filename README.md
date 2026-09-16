@@ -19,8 +19,10 @@ Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose 
 | Rappel / précision des négatifs | 0,639 / 0,657 |
 | Seuil de décision (choisi par validation croisée) | 0,75 |
 | Cohérence métier : part négative prédite ÷ réelle, par jeu et langue | 0,79 à 1,21 |
-| Tests automatisés | 45 réussis, lint propre |
-| Tests en conditions réelles | API, tableau de bord (navigateur), MLflow, DAG Airflow quotidien et hebdomadaire : tous réussis |
+| Tests automatisés | 48 réussis, lint propre |
+| **Tests inverses** (défauts injectés) | **13 / 13 détectés**, chacun par un test nommé ; mesure témoin réussie → [`docs/evidence/reverse_tests.md`](docs/evidence/reverse_tests.md) |
+| **Test de la stack déployée** | **12 / 12 contrôles** (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
+| Essais manuels en conditions réelles | tableau de bord piloté dans un navigateur ; DAG Airflow quotidien (3 exécutions) et hebdomadaire (1) réussis |
 
 *Avant l'ajout des avis négatifs complémentaires, le même test donnait F1 0,750 et AUC 0,896 ; le détail de la décision est dans la charte et le contrat de code.*
 
@@ -42,13 +44,20 @@ make jobs                   # une exécution complète de la chaîne
 make airflow                # Airflow :8080, DAG reviewpulse_daily
 ```
 
+Produire les preuves (tests, tests inverses, test de la stack déployée) :
+
+```bash
+make evidence               # rapports datés dans docs/evidence/
+```
+
 ## La chaîne
 
 | Étape | Module | Ce qu'il garantit |
 |---|---|---|
 | Ingestion | `src/reviewpulse/ingest.py` | objets reçus écrits **inchangés** ; idempotence par manifeste ; reprise sur 429 et 5xx |
 | Transformation | `src/reviewpulse/transform.py` | dédoublonnage, nettoyage, types, **pseudonymisation HMAC**, rétention 30 jours |
-| Qualité | `src/reviewpulse/quality.py` | 9 contrôles **bloquants** avant la zone propre |
+| Qualité | `src/reviewpulse/quality.py` | contrôles **bloquants** avant la zone propre (liste : ADR 0005) |
+| Décision | `src/reviewpulse/decision.py` | **seule** définition de la convention d'étiquettes et du seuil (ADR 0009) |
 | Modèle | `src/reviewpulse/train.py` | TF-IDF caractères + régression logistique, MLflow, promotion automatique si F1 macro ≥ 0,75 |
 | Score | `src/reviewpulse/score.py` | prédictions et résumé quotidien, version du modèle tracée |
 | API | `src/reviewpulse/api.py` | `/health`, `/predict`, `/insights` ; 503 si modèle indisponible |
@@ -64,8 +73,13 @@ make airflow                # Airflow :8080, DAG reviewpulse_daily
 | [`docs/03_matrice_reemploi_blocs.md`](docs/03_matrice_reemploi_blocs.md) | Ce que le projet apporte à chaque bloc CDSD et AIA |
 | [`docs/04_plan_jusqu_au_demo_day.md`](docs/04_plan_jusqu_au_demo_day.md) | Calendrier et déroulé de la démo |
 | [`docs/05_conformite_demo_day.md`](docs/05_conformite_demo_day.md) | Grille de conformité aux consignes |
+| [`docs/06_carte_des_modules.md`](docs/06_carte_des_modules.md) | Où, quoi, comment, pourquoi : chaque module |
+| [`docs/07_questions_jury.md`](docs/07_questions_jury.md) | Questions probables du jury, réponses chiffrées et preuves |
+| [`docs/adr/`](docs/adr/) | Douze décisions d'architecture, avec les mesures qui les motivent |
+| [`docs/evidence/`](docs/evidence/) | Rapports datés : tests inverses, test de la stack déployée |
 | [`docs/SPEC_CODE.md`](docs/SPEC_CODE.md) | Contrat de code |
 | [`docs/diagrams/`](docs/diagrams/) | Dix schémas (sources Mermaid, SVG, PNG) |
+| [`docs/00_sources/`](docs/00_sources/) | Consignes Jedha relevées sur la plateforme |
 
 ## Données et conformité
 

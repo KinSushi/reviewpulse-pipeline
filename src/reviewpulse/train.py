@@ -1,3 +1,38 @@
+"""Rôle
+    Entraîner, mesurer, enregistrer le modèle de classification de sentiment et, si les critères sont remplis, promouvoir la version.
+
+Place dans la chaîne
+    - Après le module `transform` (zone propre) et exécuté par le DAG hebdomadaire.
+    - Produit le modèle enregistré dans le registre MLflow, qui alimente ensuite les modules `score` et `api`.
+
+Fonctionnement
+    1. Le jeu de test (20 % stratifié) est tiré **uniquement** des avis dont `sample_source == config.SAMPLE_NATURAL`.
+    2. L’entraînement utilise le reste des avis naturels **plus** toutes les lignes `sample_source == config.SAMPLE_NEGATIVE_BOOST`.
+    3. Un seuil de décision est recherché par validation croisée stratifiée à 5 plis sur les avis naturels d’entraînement ; à chaque pli, les avis de boost sont ajoutés à l’entraînement mais ne sont jamais évalués.
+    4. Le modèle final (pipeline TF‑IDF + régression logistique) est entraîné sur l’ensemble des données d’entraînement et l’attribut `decision_threshold_` y est fixé.
+    5. Les métriques (`f1_macro`, `recall_negative`, `precision_negative`, `roc_auc`, etc.) sont calculées sur le jeu de test naturel au seuil retenu.
+    6. Le modèle, les métriques et l’artefact `top_terms.json` sont loggés dans MLflow.  
+       L’alias `challenger` pointe sur la version entraînée ; l’alias `champion` est mis à jour **si** `f1_macro >= config.F1_MACRO_MIN` (0,75) **et** supérieur au F1 du champion actuel.
+
+Choix de conception
+    - Pipeline TF‑IDF (char_wb, n‑grammes 2‑5) + `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000, random_state=config.RANDOM_STATE)` (ADR 0006).  
+    - Utilisation du flux négatif complémentaire uniquement pour l’entraînement et du seuil appris via CV (ADR 0007).  
+    - Barrière de promotion et gestion des alias `challenger` / `champion` (ADR 0008).  
+    - Pas d'input_example à l'enregistrement, seulement la signature : avec un input_example, MLflow valide l'exemple par son chemin générique, qui passe un tableau au vectoriseur et échoue (« 'int' object has no attribute 'lower' », constaté le 16/09/2026).  
+    - Enregistrement des artefacts via `mlflow.log_dict` avec emplacement absolu `config.ARTIFACT_DIR` (ADR 0010).
+
+Preuves
+    - F1 macro = 0,807 et AUC = 0,948 sur le jeu de test naturel (mesure documentée).  
+    - Un ré‑entraînement identique reproduit les mêmes métriques et ne déclenche pas de promotion, confirmant la règle « strictement supérieur » (ADR 0008).
+
+Tests associés
+    - `test_train_score.py`
+    - `test_boost.py`
+    - `test_decision.py`
+    - `test_artifacts_location.py`
+    - `test_fresh_dirs.py`
+"""
+
 import logging
 import json
 from pathlib import Path
@@ -28,19 +63,36 @@ logger = logging.getLogger(__name__)
 
 
 def _select_experiment(tracking_uri: str) -> None:
-    """Sélectionne ou crée l'expérience MLflow selon la règle d'emplacement des artefacts."""
+    """Sélectionne ou crée l’expérience MLflow selon la règle d’emplacement des artefacts.
+
+    Args:
+        tracking_uri: URI de suivi MLflow (ex. « sqlite:///… », « file:… », ou serveur HTTP).
+
+    Pourquoi :
+        Garantir que les artefacts sont stockés dans `config.ARTIFACT_DIR` lorsqu’on utilise un backend local, afin que l’API puisse les retrouver.
+    """
+    # Si le backend est local, on crée l’expérience avec un emplacement d’artefacts dédié.
     if tracking_uri.startswith("sqlite:") or tracking_uri.startswith("file:"):
         if mlflow.get_experiment_by_name(config.MLFLOW_EXPERIMENT) is None:
+            # Crée le répertoire d’artefacts s’il n’existe pas.
             Path(config.ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
             mlflow.create_experiment(
                 config.MLFLOW_EXPERIMENT,
                 artifact_location=Path(config.ARTIFACT_DIR).resolve().as_uri(),
             )
+    # Sélectionne (ou crée) l’expérience pour le reste du run.
     mlflow.set_experiment(config.MLFLOW_EXPERIMENT)
 
 
 def build_pipeline() -> Pipeline:
-    """Construit le pipeline de vectorisation TF‑IDF + régression logistique."""
+    """Construit le pipeline de vectorisation TF‑IDF + régression logistique.
+
+    Returns:
+        Pipeline scikit‑learn prêt à être entraîné.
+
+    Pourquoi :
+        TF‑IDF sur des n‑grammes de caractères capture les variations orthographiques fréquentes dans les avis courts ; la régression logistique avec `class_weight="balanced"` gère le déséquilibre des classes.
+    """
     tfidf = TfidfVectorizer(
         analyzer="char_wb",
         ngram_range=(2, 5),
@@ -59,7 +111,19 @@ def build_pipeline() -> Pipeline:
 
 
 def _top_terms(pipeline: Pipeline, n: int = 20) -> dict:
-    """Extrait les n termes les plus négatifs et les n plus positifs."""
+    """Extrait les n termes les plus négatifs et les n plus positifs.
+
+    Args:
+        pipeline: Pipeline entraîné contenant les étapes « tfidf » et « clf ».
+        n: Nombre de termes à extraire de chaque côté (défaut = 20).
+
+    Returns:
+        Dictionnaire avec les clés « negative » et « positive » contenant les
+        listes de termes.
+
+    Pourquoi :
+        Fournir un aperçu interprétable des caractéristiques influençant le modèle, utilisé dans le tableau de bord et les artefacts MLflow.
+    """
     vectorizer: TfidfVectorizer = pipeline.named_steps["tfidf"]
     clf: LogisticRegression = pipeline.named_steps["clf"]
     coeff = clf.coef_[0]
@@ -77,14 +141,26 @@ def _select_decision_threshold(
     y_train_nat: pd.Series,
     boost_df: pd.DataFrame,
 ) -> tuple[float, float]:
-    """
-    Recherche le seuil optimal sur les données naturelles d'entraînement.
+    """Recherche le seuil optimal sur les données naturelles d'entraînement.
 
     Le calcul des probabilités négatives utilise la fonction unique
     `decision.negative_proba` afin d'éviter toute duplication de la logique
     (classe 0 ↔ probabilité négative). Les prédictions hors‑seuil sont obtenues
     via `decision.predict_labels`, garantissant la même convention que le
     reste du code base.
+
+    Args:
+        pipeline: Pipeline de base (non entraîné) utilisé pour chaque pli.
+        X_train_nat: Série des textes d’avis naturels d’entraînement.
+        y_train_nat: Série des labels correspondants.
+        boost_df: DataFrame contenant les avis de boost négatif.
+
+    Returns:
+        Tuple contenant le seuil choisi et le F1 macro moyen obtenu
+        sur la validation croisée.
+
+    Pourquoi :
+        Centraliser la recherche de seuil afin d’assurer la cohérence avec le module `decision` et d’éviter les dérives de convention.
     """
     skf = StratifiedKFold(
         n_splits=5, shuffle=True, random_state=config.RANDOM_STATE
@@ -112,6 +188,7 @@ def _select_decision_threshold(
         # Prédictions selon le seuil grâce à la fonction unique
         preds = decision.predict_labels(oof_proba, thr)
         f1 = f1_score(y_train_nat, preds, average="macro")
+        # En cas d’égalité, on privilégie le seuil le plus proche de 0,5
         if f1 > best_f1 or (abs(f1 - best_f1) < 1e-9 and abs(thr - 0.5) < abs(best_thr - 0.5)):
             best_f1 = f1
             best_thr = thr
@@ -123,10 +200,27 @@ def train_and_log(
     tracking_uri: str | None = None,
     register: bool = True,
 ) -> dict:
-    """Entraîne le modèle, le logge dans MLflow et gère les alias."""
+    """Entraîne le modèle, le logge dans MLflow et gère les alias.
+
+    Args:
+        df: DataFrame contenant les avis nettoyés (conforme à `config.CLEAN_COLUMNS`).
+        tracking_uri: URI de suivi MLflow ; si None, utilise `config.MLFLOW_TRACKING_URI`.
+        register: Si True, enregistre le modèle dans le registre MLflow et crée les alias.
+
+    Returns:
+        Dictionnaire récapitulatif des métriques, identifiants de run et de version,
+        ainsi que du statut de promotion.
+
+    Raises:
+        MlflowException: Propagé si une opération MLflow échoue.
+
+    Pourquoi :
+        Centraliser tout le flux d’entraînement, de la création d’expérience à la promotion éventuelle, afin de garantir la traçabilité et la reproductibilité.
+    """
     if tracking_uri is None:
         tracking_uri = config.MLFLOW_TRACKING_URI
 
+    # Si le backend est SQLite, on s’assure que le répertoire du fichier existe.
     if tracking_uri.startswith("sqlite:///"):
         sqlite_path = tracking_uri[len("sqlite:///") :]
         Path(sqlite_path).parent.mkdir(parents=True, exist_ok=True)
@@ -235,6 +329,7 @@ def train_and_log(
     except MlflowException:
         champion_f1 = None
 
+    # Promotion éventuelle du challenger en champion
     if (
         register
         and f1_macro >= config.F1_MACRO_MIN
@@ -265,7 +360,14 @@ def train_and_log(
 
 
 def main() -> int:
-    """Charge les données nettoyées, entraîne le modèle et affiche les métriques."""
+    """Charge les données nettoyées, entraîne le modèle et affiche les métriques.
+
+    Returns:
+        Code de sortie du processus (0 = succès).
+
+    Pourquoi :
+        Fournir une interface exécutable conforme aux conventions du projet (journalisation, lecture du fichier `config.CLEAN_FILE`, affichage JSON).
+    """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",

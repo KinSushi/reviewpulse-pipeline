@@ -1,83 +1,103 @@
-## Help (default target, lists all commands)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down
+## Aide (cible par défaut, liste toutes les cibles avec une courte description)
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence
 
 help:
-	@echo "Makefile targets:"
-	@echo "  install   - Install development dependencies"
-	@echo "  lint      - Run ruff linting on source and tests"
-	@echo "  test      - Execute pytest suite"
-	@echo "  ingest    - Run data ingestion"
-	@echo "  transform - Run data transformation"
-	@echo "  quality   - Run data quality checks"
-	@echo "  train     - Train the model and log to MLflow"
-	@echo "  score     - Score the dataset with the champion model"
-	@echo "  pipeline  - Execute ingest → transform → train → score"
-	@echo "  api       - Start FastAPI server (reload mode)"
-	@echo "  dashboard - Launch Streamlit dashboard"
-	@echo "  up        - Build and start Docker services (mlflow, api, dashboard)"
-	@echo "  jobs      - Run pipeline job in Docker (profile jobs)"
-	@echo "  airflow   - Start Airflow services (profile airflow)"
-	@echo "  down      - Stop Docker services (profiles jobs and airflow)"
+	@echo "Cibles du Makefile :"
+	@echo "  help      - Affiche cette aide (cible par défaut)"
+	@echo "  install   - Installe les dépendances de développement"
+	@echo "  lint      - Analyse le code avec ruff (src, tests, dags, dashboard, tools)"
+	@echo "  test      - Exécute la suite de tests avec pytest"
+	@echo "  ingest    - Lance l'ingestion des données brutes"
+	@echo "  transform - Transforme les données brutes en données propres"
+	@echo "  quality   - Effectue les contrôles de qualité des données"
+	@echo "  train     - Entraîne le modèle et l'enregistre dans MLflow"
+	@echo "  score     - Calcule les scores avec le modèle champion"
+	@echo "  pipeline  - Exécute ingest → transform → train → score"
+	@echo "  api       - Démarre le serveur FastAPI en mode reload"
+	@echo "  dashboard - Lance le tableau de bord Streamlit"
+	@echo "  up        - Construit et démarre les services Docker (mlflow, api, dashboard)"
+	@echo "  jobs      - Exécute le job pipeline dans Docker (profil jobs)"
+	@echo "  airflow   - Démarre les services Airflow (profil airflow)"
+	@echo "  down      - Arrête les services Docker (profils jobs et airflow)"
+	@echo "  reverse   - Exécute les tests inverses et génère le rapport docs/evidence/reverse_tests.md"
+	@echo "  forward   - Vérifie la stack déployée et génère le rapport docs/evidence/forward_test.md"
+	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
-## Install development dependencies
+## Installation des dépendances de développement
 install:
 	pip install -r requirements-dev.txt
 
-## Lint source code
+## Analyse du code (lint) incluant le répertoire tools
 lint:
-	ruff check src tests dags dashboard
+	ruff check src tests dags dashboard tools
 
-## Run tests
+## Exécution des tests unitaires
 test:
 	pytest -q
 
-## Ingest raw data
+## Ingestion des données brutes
 ingest:
 	python -m reviewpulse.ingest
 
-## Transform raw data to clean data
+## Transformation des données brutes en données propres
 transform:
 	python -m reviewpulse.transform
 
-## Run data quality checks
+## Contrôles de qualité des données
 quality:
 	python -m reviewpulse.quality
 
-## Train model and log to MLflow
+## Entraînement du modèle et enregistrement dans MLflow
 train:
 	python -m reviewpulse.train
 
-## Score data with the champion model
+## Calcul des scores avec le modèle champion
 score:
 	python -m reviewpulse.score
 
-## Execute full pipeline: ingest → transform → train → score
+## Exécution complète du pipeline : ingest → transform → train → score
 pipeline:
 	$(MAKE) ingest
 	$(MAKE) transform
 	$(MAKE) train
 	$(MAKE) score
 
-## Start FastAPI server with reload
+## Démarrage du serveur FastAPI en mode reload
 api:
 	uvicorn reviewpulse.api:app --reload
 
-## Launch Streamlit dashboard
+## Lancement du tableau de bord Streamlit
 dashboard:
 	streamlit run dashboard/app.py
 
-## Build and start Docker services (mlflow, api, dashboard)
+## Construction et démarrage des services Docker (mlflow, api, dashboard)
 up:
 	docker compose up -d --build mlflow api dashboard
 
-## Run pipeline job in Docker (profile jobs)
+## Exécution du job pipeline dans Docker (profil jobs)
 jobs:
 	docker compose --profile jobs run --rm pipeline
 
-## Start Airflow services (profile airflow)
+## Démarrage des services Airflow (profil airflow)
 airflow:
 	docker compose --profile airflow up -d --build airflow
 
-## Stop Docker services (profiles jobs and airflow)
+## Arrêt des services Docker (profils jobs et airflow)
 down:
 	docker compose --profile jobs --profile airflow down
+
+## Tests inverses : injection de défauts connus et vérification de leur détection
+reverse:
+	python tools/reverse_tests.py
+	@echo "Rapport généré dans docs/evidence/reverse_tests.md"
+
+## Vérification de la stack déployée : API, tableau de bord, MLflow, fichiers
+forward:
+	python tools/forward_test.py
+	@echo "Rapport généré dans docs/evidence/forward_test.md"
+
+## Chaîne de preuves : exécute test, reverse puis forward
+evidence:
+	$(MAKE) test
+	$(MAKE) reverse
+	$(MAKE) forward

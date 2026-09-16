@@ -7,7 +7,8 @@ on:
 permissions:
   contents: read
 jobs:
-  build:
+  # Job principal qui exécute les vérifications de code et les tests unitaires
+  tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,8 +21,34 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Lint with Ruff
-        run: ruff check src tests dags dashboard
+        # Ajout du répertoire tools aux vérifications
+        run: ruff check src tests dags dashboard tools
       - name: Run tests
         env:
           REVIEWPULSE_SALT: ci-salt
         run: pytest -q
+
+  # Job secondaire qui vérifie que la batterie détecte les défauts connus
+  reverse-tests:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Exécuter les tests inversés
+        env:
+          REVIEWPULSE_COMMIT: ${{ github.sha }}
+        run: python tools/reverse_tests.py
+      - name: Téléverser le rapport des tests inversés
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reverse-tests-report
+          path: docs/evidence/reverse_tests.md

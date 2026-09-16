@@ -1,3 +1,51 @@
+"""reviewpulse.quality
+=====================
+
+Rôle
+----
+Dire si la zone propre est utilisable ; lever une erreur sinon.
+
+Place dans la chaîne
+-------------------
+* **Après** : appelé par :pymod:`reviewpulse.transform.main` (et par le script CLI) immédiatement après la transformation, avant l’écriture du parquet.
+* **Avant** : aucune étape suivante du pipeline n’est exécutée tant que la fonction ``assert_quality`` n’a pas validé le DataFrame ; en cas d’échec le DAG Airflow s’arrête avec un code de sortie non‑nul.
+
+Fonctionnement
+--------------
+1. ``_column_type_mismatch`` compare les colonnes et leurs types avec ``config.CLEAN_COLUMNS`` ; toute différence produit une erreur et interrompt les vérifications suivantes.
+2. ``check_clean`` exécute successivement :
+   - vérification d’ordre et de type,
+   - présence d’au moins une ligne,
+   - unicité et non‑nullité de ``review_id``,
+   - valeurs de ``label`` limitées à {0, 1},
+   - appartenance de ``language`` à ``config.LANGUAGES``,
+   - appartenance de ``sample_source`` à ``config.SAMPLE_SOURCES``,
+   - ``text_len`` ≥ 1,
+   - absence des colonnes listées dans ``config.FORBIDDEN_CLEAN_COLUMNS``,
+   - format hexadécimal 64 caractères de ``author_pseudo``,
+   - part de négatifs calculée uniquement sur les lignes où ``sample_source == config.SAMPLE_NATURAL`` et comprise entre 0,5 % et 95 %.
+   Les messages d’erreur sont agrégés dans une liste.
+3. ``assert_quality`` appelle ``check_clean`` et lève ``DataQualityError`` contenant tous les messages si la liste n’est pas vide.
+4. ``main`` lit ``config.CLEAN_FILE``, invoque ``assert_quality`` et renvoie 0 en cas de succès, 1 sinon.
+
+Choix de conception
+-------------------
+* Retourner une liste d’erreurs plutôt que d’interrompre au premier problème, pour fournir un diagnostic complet (ADR 0005).
+* Calculer la part de négatifs uniquement sur le flux « natural » conformément à la spécification v2 (ADR 0005 et 0007).
+* Le script expose un ``main() -> int`` compatible avec la convention du projet (voir SPEC_CODE.md).
+
+Preuves
+-------
+* Les contrôles sont couverts par les tests ``test_transform_quality.py`` et ``test_boost.py`` (ADR 0005).
+
+Tests associés
+--------------
+* ``test_transform_quality.py`` – couvre toutes les vérifications de ``check_clean``.
+* ``test_boost.py`` – confirme la prise en compte du champ ``sample_source``.
+* ``test_fresh_dirs.py`` – vérifie que le répertoire de sortie est créé avant l’appel à ``main``.
+* ``test_artifacts_location.py`` – s’assure que le module ne dépend pas d’un chemin codé en dur.
+"""
+
 import logging
 import re
 from pathlib import Path
@@ -6,14 +54,34 @@ import pandas as pd
 
 from reviewpulse import config
 
+# Logger dédié au module, conforme à la convention du projet.
 logger = logging.getLogger(__name__)
 
 
 class DataQualityError(Exception):
-    """Exception levée lorsqu'une ou plusieurs vérifications de qualité échouent."""
+    """Exception levée lorsqu'une ou plusieurs vérifications de qualité échouent.
+
+    Pourquoi :
+        Centraliser les échecs de validation sous une même classe permet aux
+        appelants (ex. :func:`assert_quality`, le CLI) de distinguer les
+        problèmes de données des autres types d’erreurs (IO, logique).
+    """
 
 
 def _column_type_mismatch(df: pd.DataFrame) -> list[str]:
+    """Détecte un désalignement entre les colonnes attendues et celles du DataFrame.
+
+    Args:
+        df: DataFrame à valider.
+
+    Returns:
+        Liste d’erreurs ; vide si les colonnes et leurs types correspondent à
+        ``config.CLEAN_COLUMNS``.
+
+    Pourquoi :
+        Séparer cette logique simplifie ``check_clean`` et évite de poursuivre
+        les contrôles de type lorsqu’un problème d’ordre/colonnes est déjà présent.
+    """
     errors = []
     expected_cols = list(config.CLEAN_COLUMNS.keys())
     actual_cols = list(df.columns)
@@ -38,6 +106,16 @@ def check_clean(df: pd.DataFrame) -> list[str]:
     """Vérifie la qualité du DataFrame nettoyé.
 
     Retourne la liste des messages d'erreur ; liste vide si tout est conforme.
+
+    Args:
+        df: DataFrame issu de :func:`reviewpulse.transform.clean`.
+
+    Returns:
+        list[str]: messages d’erreur accumulés.
+
+    Pourquoi :
+        Centraliser toutes les règles de validation afin que le pipeline puisse
+        les invoquer en une seule étape et obtenir un rapport complet.
     """
     errors: list[str] = []
 
@@ -77,8 +155,6 @@ def check_clean(df: pd.DataFrame) -> list[str]:
                 f"sample_source contient des valeurs non autorisées : {invalid_source['sample_source'].unique().tolist()}"
             )
     else:
-        # L'absence de la colonne aurait déjà été détectée dans _column_type_mismatch,
-        # mais on garde un message explicite au cas où.
         errors.append("Colonne 'sample_source' manquante")
 
     # 7. text_len >= 1
@@ -115,7 +191,18 @@ def check_clean(df: pd.DataFrame) -> list[str]:
 
 
 def assert_quality(df: pd.DataFrame) -> None:
-    """Lève DataQualityError si le DataFrame ne satisfait pas les contrôles."""
+    """Lève DataQualityError si le DataFrame ne satisfait pas les contrôles.
+
+    Args:
+        df: DataFrame à valider.
+
+    Raises:
+        DataQualityError: si au moins une règle de qualité échoue.
+
+    Pourquoi :
+        Fournir une fonction unique utilisable tant par le CLI que par le
+        pipeline de transformation, garantissant un comportement identique.
+    """
     failures = check_clean(df)
     if failures:
         message = "Échecs de qualité des données :\n" + "\n".join(failures)
@@ -123,7 +210,15 @@ def assert_quality(df: pd.DataFrame) -> None:
 
 
 def main() -> int:
-    """Charge le fichier nettoyé, vérifie la qualité et renvoie le code de sortie."""
+    """Charge le fichier nettoyé, vérifie la qualité et renvoie le code de sortie.
+
+    Returns:
+        int: 0 si le fichier passe toutes les vérifications, 1 sinon.
+
+    Pourquoi :
+        Point d’entrée scriptable du module, conforme à la convention du projet
+        (``if __name__ == "__main__": raise SystemExit(main())``).
+    """
     clean_path: Path = config.CLEAN_FILE
     try:
         df = pd.read_parquet(clean_path)

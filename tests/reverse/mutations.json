@@ -1,0 +1,106 @@
+[
+  {
+    "id": "M01",
+    "fichier": "src/reviewpulse/decision.py",
+    "avant": "np.where(proba_arr >= threshold, LABEL_NEGATIVE, LABEL_POSITIVE)",
+    "apres": "np.where(proba_arr >= threshold, LABEL_POSITIVE, LABEL_NEGATIVE)",
+    "defaut_simule": "Convention de décision inversée",
+    "pourquoi_grave": "Défaut réellement rencontré le 16/09/2026 : 95 % d'avis prédits négatifs pour 4 % réels (ADR 0009)"
+  },
+  {
+    "id": "M02",
+    "fichier": "src/reviewpulse/ingest.py",
+    "avant": "rev for rev in reviews if rev.get(\"recommendationid\") not in seen_ids",
+    "apres": "rev for rev in reviews",
+    "defaut_simule": "Manifeste d'idempotence ignoré",
+    "pourquoi_grave": "Chaque passage réécrit les mêmes avis dans la zone brute (ADR 0002)"
+  },
+  {
+    "id": "M03",
+    "fichier": "src/reviewpulse/ingest.py",
+    "avant": "if payload.get(\"success\") != 1:",
+    "apres": "if False:",
+    "defaut_simule": "Réponse d'erreur de l'API acceptée",
+    "pourquoi_grave": "Une panne de la source passerait pour une page vide et arrêterait la collecte sans alerte"
+  },
+  {
+    "id": "M04",
+    "fichier": "src/reviewpulse/transform.py",
+    "avant": "df = df.drop_duplicates(subset=\"review_id\", keep=\"first\")",
+    "apres": "df = df",
+    "defaut_simule": "Dédoublonnage supprimé",
+    "pourquoi_grave": "Un avis présent dans les deux flux ou modifié serait compté deux fois"
+  },
+  {
+    "id": "M05",
+    "fichier": "src/reviewpulse/transform.py",
+    "avant": "return hmac.new(salt, steamid.encode(), hashlib.sha256).hexdigest()",
+    "apres": "return steamid",
+    "defaut_simule": "Pseudonymisation supprimée",
+    "pourquoi_grave": "L'identifiant Steam en clair atteindrait la zone propre (RGPD, ADR 0004)"
+  },
+  {
+    "id": "M06",
+    "fichier": "src/reviewpulse/transform.py",
+    "avant": "quality.assert_quality(clean_df)",
+    "apres": "(clean_df)",
+    "defaut_simule": "Contrôle qualité bloquant désactivé",
+    "pourquoi_grave": "Une donnée non conforme atteindrait le modèle (ADR 0005)"
+  },
+  {
+    "id": "M07",
+    "fichier": "src/reviewpulse/train.py",
+    "avant": "and f1_macro >= config.F1_MACRO_MIN",
+    "apres": "and True",
+    "defaut_simule": "Barrière de promotion supprimée",
+    "pourquoi_grave": "Un modèle sous le seuil de qualité serait mis en service (ADR 0008)"
+  },
+  {
+    "id": "M08",
+    "fichier": "src/reviewpulse/train.py",
+    "avant": "and (champion_f1 is None or f1_macro > champion_f1)",
+    "apres": "and True",
+    "defaut_simule": "Comparaison au champion supprimée",
+    "pourquoi_grave": "Un modèle moins bon que celui en service le remplacerait (ADR 0008)"
+  },
+  {
+    "id": "M09",
+    "fichier": "src/reviewpulse/train.py",
+    "avant": "natural_df = df[df[\"sample_source\"] == config.SAMPLE_NATURAL]",
+    "apres": "natural_df = df",
+    "defaut_simule": "Avis complémentaires mélangés au jeu de test",
+    "pourquoi_grave": "La mesure ne refléterait plus la production (ADR 0007)"
+  },
+  {
+    "id": "M10",
+    "fichier": "src/reviewpulse/score.py",
+    "avant": "natural = scored[scored[\"sample_source\"] == config.SAMPLE_NATURAL]",
+    "apres": "natural = scored",
+    "defaut_simule": "Résumé quotidien incluant le flux complémentaire",
+    "pourquoi_grave": "La part négative affichée serait gonflée artificiellement (ADR 0007)"
+  },
+  {
+    "id": "M11",
+    "fichier": "src/reviewpulse/quality.py",
+    "avant": "natural_df = df[df[\"sample_source\"] == config.SAMPLE_NATURAL]",
+    "apres": "natural_df = df",
+    "defaut_simule": "Part de négatifs contrôlée sur tous les flux",
+    "pourquoi_grave": "Le contrôle de distribution ne détecterait plus une dérive du flux naturel (ADR 0005)"
+  },
+  {
+    "id": "M12",
+    "fichier": "src/reviewpulse/api.py",
+    "avant": "Field(min_length=1, max_length=100),",
+    "apres": "Field(min_length=1, max_length=100000),",
+    "defaut_simule": "Limite du nombre de textes par requête levée",
+    "pourquoi_grave": "Une seule requête pourrait saturer l'API"
+  },
+  {
+    "id": "M13",
+    "fichier": "src/reviewpulse/api.py",
+    "avant": "raise HTTPException(status_code=503, detail=\"Modèle indisponible\") from exc",
+    "apres": "raise exc",
+    "defaut_simule": "Absence de modèle transformée en erreur 500",
+    "pourquoi_grave": "Un état attendu (première installation) apparaîtrait comme une panne (ADR 0008)"
+  }
+]

@@ -1,9 +1,36 @@
-"""Configuration du projet ReviewPulse.
+"""reviewpulse.config
+====================
 
-Ce module centralise toutes les constantes et paramètres d'environnement
-utilisés par l'application. Les valeurs sont lues depuis les variables
-d'environnement au moment de l'import et peuvent être remplacées dans les
-tests via ``monkeypatch`` sur les attributs du module.
+Rôle
+----
+Source unique des paramètres du projet (chemins, identifiants d’applications, langues, seuils, schéma de la zone propre, sel).
+
+Place dans la chaîne
+--------------------
+Importé par tous les modules ; les valeurs sont lues au moment de l’appel (`config.X`). Aucun module ne doit copier les constantes ; les tests peuvent rediriger les chemins via la fixture ``data_env`` (voir la carte des modules).
+
+Fonctionnement
+--------------
+- Lecture des variables d’environnement au moment de l’import.
+- Construction des chemins avec :class:`pathlib.Path`.
+- Définition de listes d’identifiants d’applications, de langues et de sources d’échantillonnage.
+- Définition de paramètres numériques (pages, timeout, seuils, etc.).
+- Exposition de la fonction ``salt()`` qui lit ``REVIEWPULSE_SALT`` et lève ``RuntimeError`` si la variable est absente ou vide.
+
+Choix de conception
+--------------------
+- Toutes les valeurs configurables proviennent d’une variable d’environnement (compatible avec exécution locale, Airflow et GitHub Actions) – conformément à la description du module dans la carte des modules.  
+- ``salt()`` n’a aucune valeur par défaut (ADR 0004).  
+- ``F1_MACRO_MIN = 0.75`` (ADR 0008).  
+- ``THRESHOLD_GRID`` s’étend de 0.30 à 0.80 par pas de 0.025 (ADR 0007).
+
+Preuves
+-------
+Aucune preuve supplémentaire n’est documentée dans la carte des modules pour ce module.
+
+Tests associés
+--------------
+Tous les tests utilisent la fixture ``data_env`` pour rediriger les constantes de chemin et définir ``REVIEWPULSE_SALT``.
 """
 
 import os
@@ -18,7 +45,7 @@ CLEAN_DIR = DATA_DIR / "clean"
 SCORED_DIR = DATA_DIR / "scored"
 STATE_DIR = DATA_DIR / "state"
 
-# Répertoire des artefacts MLflow (défini pour éviter ./mlruns)
+# Répertoire des artefacts MLflow
 ARTIFACT_DIR = DATA_DIR / "mlartifacts"
 
 # Fichiers dérivés
@@ -64,7 +91,7 @@ DEFAULT_DECISION_THRESHOLD = 0.5
 
 # Autres paramètres
 RAW_RETENTION_DAYS = 30
-F1_MACRO_MIN = 0.75  # seuil mesuré le 16/09/2026, voir docs/01_charte.md
+F1_MACRO_MIN = 0.75  # ADR 0008
 RANDOM_STATE = 42
 FORBIDDEN_CLEAN_COLUMNS = ["steamid", "personaname", "profile_url", "avatar"]
 
@@ -85,16 +112,27 @@ CLEAN_COLUMNS = {
     "sample_source": "string",
 }
 
-def salt() -> bytes:
-    """Renvoie le sel utilisé pour le hachage des identifiants d'auteur.
 
-    Le sel est lu depuis la variable d'environnement ``REVIEWPULSE_SALT``.
+def salt() -> bytes:
+    """Renvoie le sel utilisé pour le hachage des identifiants d’auteur.
+
+    Le sel est lu depuis la variable d’environnement ``REVIEWPULSE_SALT``.
     Une ``RuntimeError`` est levée si la variable est absente ou vide.
 
     Returns
     -------
     bytes
         Le sel encodé en UTF‑8.
+
+    Raises
+    ------
+    RuntimeError
+        Si la variable d’environnement ``REVIEWPULSE_SALT`` n’est pas définie
+        ou est vide.
+
+    Pourquoi
+    -------
+    Le sel rend le pseudonyme non réversible par dictionnaire ; la donnée reste une donnée personnelle pseudonymisée (ADR 0004).
     """
     value = os.getenv("REVIEWPULSE_SALT")
     if not value:

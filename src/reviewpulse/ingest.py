@@ -1,3 +1,60 @@
+"""reviewpulse.ingest
+====================
+
+Rôle
+----
+Collecter les avis Steam et les déposer tels que reçus dans la zone brute,
+sans doublon.
+
+Place dans la chaîne
+--------------------
+Première étape du pipeline ; les fichiers produits sont consommés par
+``transform.py``.
+
+Fonctionnement
+-------------
+Pour chaque jeu (``config.APP_IDS``) et chaque langue (``config.LANGUAGES``) :
+
+* flux naturel : jusqu’à ``config.MAX_PAGES`` pages, ``review_type="all"`` ;
+* flux négatif complémentaire : jusqu’à ``config.BOOST_MAX_PAGES`` pages,
+  ``review_type="negative"`` (ADR 0007).
+
+La pagination utilise le curseur retourné par l’API. La boucle s’arrête
+lorsqu’une page ne contient aucun nouvel avis, que la liste ``reviews`` est vide,
+que le curseur ne change pas, ou que le nombre maximal de pages est atteint.
+
+Les appels réseau sont effectués avec ``requests.Session``,
+``timeout=config.HTTP_TIMEOUT_S`` et un back‑off exponentiel (1, 2, 4, 8 s)
+sur les codes 429 et 5xx, limité à ``config.HTTP_MAX_RETRIES`` (ADR 0002).
+
+Les avis dont l’identifiant ``recommendationid`` n’est pas présent dans le
+manifeste sont écrits dans un fichier ``batch_…jsonl`` sous
+``config.RAW_DIR`` (chemin différent pour le flux négatif, préfixe
+``sample=negative_boost``). Le manifeste est mis à jour atomiquement
+(``.tmp`` → ``os.replace``) (ADR 0002). Aucun fichier n’est créé si aucune
+nouvelle revue n’est disponible.
+
+Choix de conception
+--------------------
+* Injection du sommeil via le paramètre ``sleep`` pour faciliter les tests.
+* Retry exponentiel (1, 2, 4, 8 s) plutôt que back‑off fixe.
+* Écriture atomique du lot et du manifeste.
+* Séparation des répertoires par flux pour garder la compatibilité ascendante
+  (le flux naturel conserve le chemin historique).
+
+Preuves
+-------
+* 16/09/2026 : 6 000 avis au premier passage, 0 au second, confirmant
+  l’absence de doublons (ADR 0002).
+
+Tests associés
+---------------
+* ``test_ingest.py`` couvre ``fetch_page``, ``ingest_app`` et ``main``,
+  y compris les scénarios de pagination, de retry et d’écriture atomique.
+* ``test_fresh_dirs.py`` et ``test_boost.py`` vérifient la séparation des flux
+  et la compatibilité ascendante.
+"""
+
 import os
 import json
 import time
@@ -13,7 +70,15 @@ logger = logging.getLogger(__name__)
 
 
 def _sleep(seconds: float, sleep_func: Any = time.sleep) -> None:
-    """Helper to allow injection of sleep function."""
+    """Helper to allow injection of sleep function.
+
+    Args:
+        seconds: Durée en secondes à attendre.
+        sleep_func: Fonction de pause injectable (par défaut ``time.sleep``).
+
+    Pourquoi :
+        Facilite le test unitaire en évitant les pauses réelles.
+    """
     sleep_func(seconds)
 
 
@@ -26,13 +91,29 @@ def fetch_page(
     review_type: str = "all",
     sleep: Any = time.sleep,
 ) -> Dict[str, Any]:
-    """
-    Récupère une page d'avis depuis l'API Steam.
+    """Récupère une page d'avis depuis l'API Steam.
 
     Le paramètre ``review_type`` est ajouté à la requête (valeur ``all`` par défaut).
     Lève ``RuntimeError`` si le code HTTP n'est pas 200, si le champ
-    ``success`` n'est pas égal à 1, ou après épuisement des tentatives
-    de retry.
+    ``success`` n'est pas égal à 1, ou après épuisement des tentatives de retry.
+
+    Args:
+        session: Session ``requests`` réutilisable.
+        app_id: Identifiant Steam du jeu.
+        language: Code langue (ex. ``english`` ou ``french``).
+        cursor: Curseur de pagination fourni par l'API.
+        review_type: Type d'avis demandé (``all`` ou ``negative``).
+        sleep: Fonction de pause injectable pour le back‑off.
+
+    Returns:
+        Dictionnaire JSON décodé contenant les clés ``reviews`` et ``cursor``.
+
+    Raises:
+        RuntimeError: Erreur réseau, code HTTP inattendu, ou ``success`` != 1
+        après le nombre maximal de retries.
+
+    Pourquoi :
+        Centralise la logique d’appel HTTP avec gestion du retry exponentiel.
     """
     url = config.STEAM_URL.format(app_id=app_id)
     params = {
@@ -87,8 +168,7 @@ def ingest_app(
     state_dir: Optional[Path] = None,
     sample_source: Optional[str] = None,
 ) -> int:
-    """
-    Ingestion d'un jeu, d'une langue et d'une source d'échantillonnage.
+    """Ingestion d'un jeu, d'une langue et d'une source d'échantillonnage.
 
     Le paramètre ``sample_source`` indique la partition (``natural`` ou
     ``negative_boost``). S'il est ``None``, il est résolu à
@@ -97,7 +177,28 @@ def ingest_app(
     ``config.SAMPLE_NEGATIVE_BOOST``, sinon ``all``.
 
     Retourne le nombre d'avis nouveaux écrits.
+
+    Args:
+        app_id: Identifiant Steam du jeu.
+        language: Langue du flux (ex. ``english``).
+        session: Session HTTP réutilisable ; créée si ``None``.
+        max_pages: Nombre maximal de pages à parcourir ; résolu à ``config.MAX_PAGES``.
+        now: Horodatage de référence pour les dossiers ; résolu à ``datetime.now`` UTC.
+        sleep: Fonction de pause injectable pour le back‑off.
+        raw_dir: Répertoire racine des données brutes ; résolu à ``config.RAW_DIR``.
+        state_dir: Répertoire du manifeste d'ids ; résolu à ``config.STATE_DIR``.
+        sample_source: Source d'échantillonnage (``natural`` ou ``negative_boost``).
+
+    Returns:
+        Nombre total d'avis nouvellement écrits.
+
+    Raises:
+        RuntimeError: Propagation des erreurs de ``fetch_page`` ou d'écriture.
+
+    Pourquoi :
+        Orchestration de la pagination, du filtrage des doublons et de l'écriture atomique.
     """
+    # Résolution des répertoires et du timestamp (compatibilité tests)
     raw_dir = raw_dir or config.RAW_DIR
     state_dir = state_dir or config.STATE_DIR
     now = now or datetime.datetime.now(datetime.timezone.utc)
@@ -208,11 +309,16 @@ def ingest_app(
 
 
 def main() -> int:
-    """
-    Parcourt toutes les combinaisons APP_IDS × LANGUAGES,
+    """Parcourt toutes les combinaisons APP_IDS × LANGUAGES,
     consomme d'abord le flux naturel puis le flux de boost négatif,
     journalise le nombre total de nouveaux avis.
-    Retourne 0.
+
+    Returns:
+        0 en cas de succès (les exceptions sont propagées).
+
+    Pourquoi :
+        Point d’entrée exécutable du module, utilisé par le DAG Airflow et les
+        tests d’intégration.
     """
     logging.basicConfig(
         level=logging.INFO,
