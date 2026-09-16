@@ -1,0 +1,32 @@
+%% Parcours des données personnelles
+flowchart LR
+    A["steamid, personaname,<br/>profile_url, avatar,<br/>texte, temps de jeu"]
+    B["zone brute (accès restreint,<br/>30 jours)"]
+    C["zone propre (steamid pseudonymisé<br/>par HMAC‑SHA256 salé,<br/>identifiants directs supprimés)"]
+    D["tableau de bord (aucune info d'auteur,<br/>texte tronqué à 200 caractères)"]
+    E["Gestionnaire de secrets (sel)"]
+    F["Base légale : intérêt légitime<br/>RGPD 6.1.f"]
+    G["AI Act : risque minimal"]
+    subgraph RACI["RACI"]
+        R1["Responsable : Data Lead"]
+        R2["Approveur : DPO"]
+        R3["Consulté : équipe juridique"]
+        R4["Informé : community manager"]
+    end
+
+    A --> B --> C --> D
+    C --> E
+    B -.-> F
+    C -.-> G
+
+    class A,B raw
+    class C clean
+    class D dashboard
+    class E,F,G note
+    class R1,R2,R3,R4 raci
+
+    classDef raw fill:#e8f5e9,stroke:#2e7d32
+    classDef clean fill:#e3f2fd,stroke:#1565c0
+    classDef dashboard fill:#fff3e0,stroke:#ef6c00
+    classDef note fill:#fff8e1,stroke:#ffb300
+    classDef raci fill:#f5f5f5,stroke:#616161

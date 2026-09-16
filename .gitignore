@@ -1,0 +1,17 @@
+data/
+mlruns/
+mlartifacts/
+*.db
+.env
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
+logs/
+*.avant-remplacement
+src/reviewpulse/init/

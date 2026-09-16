@@ -1,0 +1,13 @@
+%% Diagramme des DAG ReviewPulse
+flowchart LR
+  subgraph daily["DAG quotidien"]
+    I[ingest] --> T[transform<br/>et check] --> Q{{"échec qualité"}}
+    Q -->|OK| C[(zone<br/>propre)]
+    Q -->|KO| X[fin]
+    C --> S[score]
+  end
+  subgraph weekly["DAG hebdo"]
+    T2[train] --> S
+  end
+  classDef dag fill:#f9f9f9,stroke:#333,stroke-width:2px;
+  class daily,weekly dag

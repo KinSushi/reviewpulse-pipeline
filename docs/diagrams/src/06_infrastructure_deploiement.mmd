@@ -1,0 +1,54 @@
+%% Diagramme d'architecture ReviewPulse
+flowchart TB
+    subgraph "Démo locale<br/>Docker Compose"
+        mlflow_local["mlflow<br/>5000"]
+        mlflow_data["mlflow_data<br/>volume"]
+        api_local["api<br/>8000"]
+        dash_local["dashboard<br/>8501"]
+        airflow_local["airflow<br/>8080"]
+        pipeline_local["pipeline<br/>jobs"]
+        data_vol["./data<br/>partagé"]
+        env_file[".env<br/>secrets"]
+    end
+
+    subgraph "Cible cloud<br/>proposition"
+        s3["S3<br/>stockage"]
+        mlflow_cloud["MLflow<br/>managed"]
+        pg["PostgreSQL<br/>managed"]
+        api_cloud["API<br/>service"]
+        dash_cloud["Dashboard<br/>service"]
+        airflow_cloud["Airflow<br/>MWAA"]
+        secret_mgr["Gestionnaire<br/>secrets"]
+        iam["IAM<br/>least privilege"]
+        tf["Terraform<br/>infra"]
+    end
+
+    %% Relations locales
+    mlflow_local --> mlflow_data
+    api_local --> dash_local
+    airflow_local --> pipeline_local
+    data_vol --> mlflow_local
+    env_file --> mlflow_local
+
+    %% Relations cloud
+    mlflow_cloud --> pg
+    api_cloud --> dash_cloud
+    airflow_cloud --> tf
+
+    %% Mapping local ↔ cloud (pointillés)
+    mlflow_local -.-> mlflow_cloud
+    api_local -.-> api_cloud
+    dash_local -.-> dash_cloud
+    airflow_local -.-> airflow_cloud
+    data_vol -.-> s3
+    env_file -.-> secret_mgr
+
+    class mlflow_local,api_local,dash_local,airflow_local,pipeline_local,data_vol,env_file local
+    class s3,mlflow_cloud,pg,api_cloud,dash_cloud,airflow_cloud,secret_mgr,iam,tf cloud
+    class s3 storage
+    class tf infra
+
+    classDef local fill:#f9f9f9,stroke:#333
+    classDef cloud fill:#e6f7ff,stroke:#0066cc
+    classDef storage fill:#fff8e1,stroke:#ff9800
+    classDef infra fill:#e8f5e9,stroke:#2e7d32

@@ -1,0 +1,39 @@
+%% diagramme ReviewPulse vue d'ensemble
+flowchart LR
+  subgraph SRC[Source]
+    S[API publique<br/>avis Steam]
+  end
+  subgraph ING[Ingestion]
+    I[ingest.py<br/>curseur + manifeste des ids]
+  end
+  subgraph LAKE[Lac de données]
+    R[raw<br/>JSONL]
+    C[clean<br/>Parquet]
+    SCZ[scored<br/>Parquet]
+  end
+  subgraph IA[IA]
+    M[train.py<br/>TF-IDF + LogReg]
+    MF[MLflow<br/>registre]
+    SC["score.py<br/>prédictions"]
+  end
+  subgraph REST[Restitution]
+    API["FastAPI<br/>/predict /insights"]
+    D["Streamlit<br/>tableau de bord"]
+    U[Utilisateur<br/>community manager]
+  end
+  subgraph AUTO[Automatisation]
+    AF["Airflow<br/>DAG quotidien"]
+    GH["GitHub Actions<br/>CI + planif"]
+  end
+
+  S --> I --> R --> C --> M --> MF --> SC --> SCZ
+  MF --> API
+  SCZ --> D
+  D --> U
+
+  AF -.-> I
+  AF -.-> C
+  AF -.-> SC
+  AF -.-> M
+  GH -.-> C
+  GH -.-> M

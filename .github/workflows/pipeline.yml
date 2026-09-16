@@ -1,0 +1,67 @@
+name: scheduled-pipeline
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    env:
+      REVIEWPULSE_SALT: ${{ secrets.REVIEWPULSE_SALT }}
+      REVIEWPULSE_MAX_PAGES: 5
+      MLFLOW_TRACKING_URI: sqlite:///data/mlflow.db
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate REVIEWPULSE_SALT secret
+        run: |
+          if [ -z "${REVIEWPULSE_SALT}" ]; then
+            echo "Error: REVIEWPULSE_SALT secret is not set or empty."
+            exit 1
+          fi
+
+      - name: Run ingest
+        run: python -m reviewpulse.ingest
+
+      - name: Run transform
+        run: python -m reviewpulse.transform
+
+      - name: Run train
+        run: python -m reviewpulse.train
+
+      - name: Run score
+        run: python -m reviewpulse.score
+
+      - name: Upload scored data artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scored-data
+          path: data/scored/
+          retention-days: 14
+
+      - name: Write summary of daily_summary.parquet
+        run: |
+          python - <<'PY'
+          import os, pandas as pd
+          summary_path = os.path.join("data", "scored", "daily_summary.parquet")
+          if os.path.exists(summary_path):
+              df = pd.read_parquet(summary_path)
+              line_count = len(df)
+          else:
+              line_count = 0
+          with open(os.getenv("GITHUB_STEP_SUMMARY"), "w") as f:
+              f.write(f"**Number of lines in daily_summary.parquet:** {line_count}\\n")
+          PY

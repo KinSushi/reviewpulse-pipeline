@@ -1,0 +1,28 @@
+%% Plan de monitoring ReviewPulse
+flowchart TB
+    subgraph Qualité[Qualité des données]
+        Q["volumétrie<br/>par jeu<br/>et langue<br/>part de textes vides<br/>doublons<br/>échecs de contrôles"]
+        Q_seuil["Seuil d'alerte"]
+        Q_action["bloquer"]
+        Q --> Q_seuil --> Q_action
+    end
+    subgraph Modèle[Modèle]
+        M["F1 macro de référence<br/>dérive de la distribution de proba_negative<br/>écart entre part négative prédite et réelle<br/>version servie"]
+        M_seuil["Seuil d'alerte"]
+        M_action["réentraîner"]
+        M --> M_seuil --> M_action
+    end
+    subgraph Service[Service]
+        S["latence et erreurs de l'API<br/>fraîcheur des fichiers<br/>succès des DAG"]
+        S_seuil["Seuil d'alerte"]
+        S_action["revenir au champion précédent"]
+        S --> S_seuil --> S_action
+    end
+
+    class Q,M,S data;
+    class Q_seuil,M_seuil,S_seuil seuil;
+    class Q_action,M_action,S_action action;
+
+    classDef data fill:#e8f5e9,stroke:#1b5e20;
+    classDef seuil fill:#fff3e0,stroke:#e65100;
+    classDef action fill:#ffebee,stroke:#b71c1c;

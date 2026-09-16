@@ -1,0 +1,47 @@
+%% Diagramme de flux ReviewPulse
+flowchart TB
+    subgraph RAW["Zone brute"]
+        R1["raw/<br/>JSONL<br/>partition jeu/langue/date"]
+        R2["Rétention 30j"]
+        R3["Accès restreint"]
+    end
+    subgraph CLEAN["Zone propre"]
+        C1["clean/<br/>Parquet<br/>pseudonymisé"]
+        C2["Fichier unique<br/>réécrit à chaque run"]
+        C3["Accès contrôlé"]
+    end
+    subgraph SCORED["Zone scorée"]
+        S1["scored/<br/>Parquet"]
+        S2["Résumé quotidien<br/>daily_summary.parquet"]
+        S3["Accès public limité"]
+    end
+    subgraph TRANS["Transformations"]
+        DED["Déduplication"]
+        BB["Nettoyage BBCode"]
+        HMAC["Pseudonymisation HMAC"]
+        SUP["Suppression id. directs"]
+        QCK["Contrôle qualité<br/>bloquant"]
+        SCR["Scoring"]
+        IDEM["Manifeste<br/>d’idempotence"]
+    end
+    subgraph CONFIG["Fichiers config"]
+        CF1["reviews.parquet"]
+        CF2["reviews_scored.parquet"]
+        CF3["daily_summary.parquet"]
+    end
+
+    API["API avis Steam"] --> ING["Ingestion"] --> R1
+    ING <--> IDEM
+    R1 --> DED --> BB --> HMAC --> SUP --> QCK --> C1
+    C1 --> SCR --> S1
+    S1 --> S2
+    C1 --> CF1
+    S1 --> CF2
+    S2 --> CF3
+
+    classDef zone fill:#f9f9f9,stroke:#333,stroke-width:1px;
+    classDef trans fill:#e8f5e9,stroke:#2e7d32;
+    classDef config fill:#e3f2fd,stroke:#1565c0;
+    class RAW,CLEAN,SCORED zone;
+    class TRANS trans;
+    class CONFIG config;

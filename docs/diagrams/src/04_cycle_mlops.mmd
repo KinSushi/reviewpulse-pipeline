@@ -1,0 +1,26 @@
+%% Cycle de vie du modèle
+flowchart LR
+    A["données<br/>propres"]
+    B["entrainement<br/>TF-IDF + régression<br/>logistique"]
+    C["validation<br/>croisée 5 plis"]
+    D["métriques de test"]
+    E["MLflow<br/>run"]
+    F["registre<br/>nouvelle version<br/>alias challenger"]
+    G["décision<br/>F1 macro ≥ 0,75 et meilleur<br/>que champion?"]
+    H["alias champion"]
+    I["service API<br/>score quotidien"]
+    J["monitoring<br/>dérive données<br/>dérive prédictions<br/>part négatifs"]
+    K["déclenchement<br/>réentraînement<br/>hebdomadaire"]
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> A
+
+    classDef data fill:#f0f0f0,stroke:#333;
+    classDef model fill:#e6f7ff,stroke:#006;
+    classDef mlflow fill:#fff3cd,stroke:#856404;
+    classDef service fill:#d1ecf1,stroke:#0c5460;
+    classDef monitor fill:#d4edda,stroke:#155724;
+
+    class A,B data
+    class C,D model
+    class E,F,G mlflow
+    class H,I service
+    class J,K monitor

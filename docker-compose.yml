@@ -1,0 +1,106 @@
+# docker-compose.yml – configuration des services ReviewPulse
+# Le sel de pseudonymisation vient du fichier .env (facultatif) OU de l'environnement du shell.
+# Pourquoi pas de contrôle ici : un contrôle Compose bloquerait aussi `docker compose ps` et `down`.
+# Le contrôle est fait par l'application : reviewpulse.config.salt() refuse un sel absent ou vide,
+# et la transformation s'arrête avant d'écrire la moindre donnée (vérifié le 16/09/2026).
+x-secrets: &secrets
+  REVIEWPULSE_SALT: ${REVIEWPULSE_SALT:-}
+
+x-envfile: &envfile
+  - path: .env
+    required: false
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.17.2
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/health').status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    profiles:
+      - jobs
+    command: sh -c 'python -m reviewpulse.ingest && python -m reviewpulse.transform && python -m reviewpulse.train && python -m reviewpulse.score'
+    env_file: *envfile
+    environment:
+      <<: *secrets
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file: *envfile
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      REVIEWPULSE_API_URL: http://api:8000
+    volumes:
+      - ./data:/app/data
+    # L'image partagée vérifie l'API sur :8000 ; ce conteneur fait tourner Streamlit sur :8501.
+    # Sans cette surcharge, le tableau de bord serait déclaré « unhealthy » à tort (constaté le 16/09/2026).
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8501/_stcore/health').status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+    profiles:
+      - airflow
+    # Même uid que l'utilisateur « app » (1000) des autres conteneurs, groupe 0 comme l'exige l'image Airflow.
+    # Sans cela, Airflow (uid 50000) ne peut pas réécrire ./data créé par le pipeline :
+    # PermissionError constatée le 16/09/2026 sur state/ et clean/.
+    user: "${REVIEWPULSE_UID:-1000}:0"
+    command: standalone
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+    env_file: *envfile
+    environment:
+      <<: *secrets
+      REVIEWPULSE_DATA_DIR: /opt/airflow/data
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+volumes:
+  mlflow_data:   # stockage persistant des artefacts et de la base SQLite de MLflow

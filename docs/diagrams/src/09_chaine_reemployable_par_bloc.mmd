@@ -1,0 +1,55 @@
+%% Diagramme ReviewPulse
+flowchart LR
+  subgraph gauche[Modèles]
+    M1["TF‑IDF + LogReg<br/>(Demo Day,<br/>septembre)"]
+    M2["Réseau profond<br/>sentiment +<br/>création de données<br/>(octobre)"]
+    M3["Modèle de prix<br/>Getaround<br/>(octobre)"]
+  end
+
+  subgraph centre[Chaîne commune]
+    ING["Ingestion"]
+    ZONES["Zones"]
+    QUAL["Qualité"]
+    MLREG["Registre MLflow"]
+    MODEL["Modèle<br/>interchangeable"]
+    API["API"]
+    DASH["Tableau<br/>de bord"]
+    CI["CI/CD"]
+    MON["Monitoring"]
+  end
+
+  subgraph droite[Blocs servis]
+    AIA4["AIA 4<br/>(support déclaré)"]
+    CDSD4["CDSD 4<br/>brique majeure"]
+    CDSD5["CDSD 5<br/>brique majeure"]
+    AIA1["AIA 1<br/>brique"]
+    AIA2["AIA 2<br/>brique"]
+    AIA3["AIA 3<br/>brique"]
+    CDSD1["CDSD 1<br/>brique"]
+    CDSD2["CDSD 2<br/>brique"]
+  end
+
+  M1 --> MODEL
+  M2 --> MODEL
+  M3 --> MODEL
+
+  ING --> ZONES --> QUAL --> MLREG --> MODEL --> API --> DASH --> CI --> MON
+
+  MON --> AIA4
+  MON --> CDSD4
+  MON --> CDSD5
+  MON --> AIA1
+  MON --> AIA2
+  MON --> AIA3
+  MON --> CDSD1
+  MON --> CDSD2
+
+  class ING,ZONES,QUAL,MLREG,API,DASH,CI,MON centre;
+  class MODEL model;
+  class M1,M2,M3 gauche;
+  class AIA4,CDSD4,CDSD5,AIA1,AIA2,AIA3,CDSD1,CDSD2 droite;
+
+  classDef centre fill:#e8f5e9 stroke:#2e7d32;
+  classDef model fill:#fff3e0 stroke:#ef6c00;
+  classDef gauche fill:#e3f2fd stroke:#1565c0;
+  classDef droite fill:#f3e5f5 stroke:#6a1b9a;
