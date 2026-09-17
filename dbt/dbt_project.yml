@@ -1,0 +1,35 @@
+# OÙ: dbt/dbt_project.yml
+# QUOI: configuration du projet dbt ReviewPulse
+# COMMENT: définit le profil, les chemins, les modèles, les seeds et les variables globales
+# POURQUOI: centraliser la configuration du pipeline de traitement des avis Steam
+
+name: reviewpulse
+profile: reviewpulse
+config-version: 2
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+
+models:
+  reviewpulse:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  reviewpulse:
+    games:
+      +column_types:
+        app_id: bigint
+        game_name: varchar
+
+# Aucune télémétrie : dbt enverrait sinon des statistiques d'usage anonymes vers un service tiers,
+# et tenterait d'écrire un identifiant dans le dossier des profils (en lecture seule dans les images).
+flags:
+  send_anonymous_usage_stats: false
+
+vars:
+  silver_reviews_metadata: ''
+  silver_predictions_metadata: ''

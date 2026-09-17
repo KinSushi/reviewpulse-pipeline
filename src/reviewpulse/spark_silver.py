@@ -68,6 +68,8 @@ Tests associés
 import logging
 import hashlib
 import hmac
+import sys  # nécessaire pour pointer Spark vers l'interpréteur du projet
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -88,12 +90,22 @@ _BBCODE_REGEX = r"\[/?[a-zA-Z*]+(?:=[^\]]*)?\]"
 def build_spark(app_name: str = "reviewpulse-silver") -> SparkSession:
     """Construit une ``SparkSession`` configurée selon ``config``.
 
-    Args:
-        app_name: Nom de l’application Spark.
+    Depuis le 16/09/2026 et confirmé le 17/09/2026, dans l'image Airflow
+    l'interpréteur Python par défaut (``python3``) ne possède pas *pandas*.
+    Avec PySpark 4.2, ``SparkContext.pythonExec`` lit **uniquement** les
+    variables d'environnement ``PYSPARK_PYTHON`` (et
+    ``PYSPARK_DRIVER_PYTHON``) ; la configuration ``spark.pyspark.python`` n’est
+    plus prise en compte.  On définit donc, avant la création de la session,
+    ces variables d’environnement avec ``sys.executable`` via
+    ``os.environ.setdefault``.  ``setdefault`` laisse la priorité à une valeur
+    déjà explicitement définie, ce qui permet de surcharger le comportement si
+    nécessaire.
 
-    Returns:
-        SparkSession prête à être utilisée.
     """
+    # Garantir que Spark utilise l'interpréteur du projet (avec pandas)
+    os.environ.setdefault('PYSPARK_PYTHON', sys.executable)
+    os.environ.setdefault('PYSPARK_DRIVER_PYTHON', sys.executable)
+
     return (
         SparkSession.builder.appName(app_name)
         .master(config.SPARK_MASTER)
@@ -301,7 +313,7 @@ def main() -> int:
         transform.purge_raw()
 
         _logger.info(
-            "Spark silver terminé : %d lignes écrites, %d snapshots créés",
+            "Spark silver terminé : %d lignes écrites, historique de la table : %d instantané(s)",
             len(silver_df),
             result.get("snapshots", 0),
         )

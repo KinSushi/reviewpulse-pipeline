@@ -11,18 +11,44 @@ from reviewpulse import config
 @pytest.fixture
 def data_env(tmp_path, monkeypatch):
     """
-    Crée l'arborescence de données sous ``tmp_path / "data"`` et
-    redirige toutes les constantes de chemin du module ``reviewpulse.config``.
-    Initialise également la variable d'environnement ``REVIEWPULSE_SALT`` et
-    la base SQLite de MLflow.
+    Où : crée une arborescence de données temporaire sous ``tmp_path / "data"``.
+    Quoi : ré‑initialise toutes les constantes de chemin du module
+    ``reviewpulse.config`` pour qu’elles pointent vers ce répertoire temporaire,
+    y compris les répertoires spécifiques à la couche *gold* et à Iceberg.
+    Comment : crée les dossiers nécessaires, applique les patches via
+    ``monkeypatch.setattr(..., raising=False)`` et définit la variable
+    d’environnement ``REVIEWPULSE_SALT``.
+    Pourquoi : les tests qui utilisent la couche Iceberg écrivent par défaut
+    dans le lac réel ``./data/lakehouse`` lorsqu’``pytest`` est lancé depuis la
+    racine du dépôt ; la redirection garantit l’isolation des tests et évite
+    toute pollution de données réelles (constat du 17/09/2026).
     """
+    # Arborescence principale
     data_dir = tmp_path / "data"
     raw_dir = data_dir / "raw"
     clean_dir = data_dir / "clean"
     scored_dir = data_dir / "scored"
     state_dir = data_dir / "state"
 
-    for p in (raw_dir, clean_dir, scored_dir, state_dir):
+    # Répertoires additionnels liés à la couche gold / Iceberg
+    lakehouse_dir = data_dir / "lakehouse"
+    gx_dir = data_dir / "quality_reports" / "gx"
+    gold_dir = data_dir / "gold"
+    dbt_target_dir = gold_dir / "dbt_target"
+    dbt_log_dir = gold_dir / "dbt_logs"
+
+    # Création de tous les dossiers
+    for p in (
+        raw_dir,
+        clean_dir,
+        scored_dir,
+        state_dir,
+        lakehouse_dir,
+        gx_dir,
+        gold_dir,
+        dbt_target_dir,
+        dbt_log_dir,
+    ):
         p.mkdir(parents=True, exist_ok=True)
 
     # Patch des chemins dans la configuration
@@ -35,6 +61,14 @@ def data_env(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CLEAN_FILE", clean_dir / "reviews.parquet", raising=False)
     monkeypatch.setattr(config, "SCORED_FILE", scored_dir / "reviews_scored.parquet", raising=False)
     monkeypatch.setattr(config, "SUMMARY_FILE", scored_dir / "daily_summary.parquet", raising=False)
+
+    # Répertoires spécifiques à la couche gold / Iceberg
+    monkeypatch.setattr(config, "LAKEHOUSE_DIR", lakehouse_dir, raising=False)
+    monkeypatch.setattr(config, "GX_DIR", gx_dir, raising=False)
+    monkeypatch.setattr(config, "GOLD_DIR", gold_dir, raising=False)
+    monkeypatch.setattr(config, "GOLD_DB", gold_dir / "reviewpulse.duckdb", raising=False)
+    monkeypatch.setattr(config, "DBT_TARGET_DIR", dbt_target_dir, raising=False)
+    monkeypatch.setattr(config, "DBT_LOG_DIR", dbt_log_dir, raising=False)
 
     # Ajout du répertoire d'artefacts ML (sans création du dossier)
     monkeypatch.setattr(config, "ARTIFACT_DIR", data_dir / "mlartifacts", raising=False)

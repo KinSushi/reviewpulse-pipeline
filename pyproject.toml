@@ -38,7 +38,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-markers = ["spark: tests qui démarrent une session PySpark (Java requis)"]
+markers = [
+    "spark: tests qui démarrent une session PySpark (Java requis)",
+    "dbt: tests qui construisent la gold avec dbt et DuckDB (extension iceberg requise)",
+]
 
 [tool.ruff]
 line-length = 110

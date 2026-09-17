@@ -1,5 +1,6 @@
 import json
 import pathlib
+import sys
 
 import pandas as pd
 import pyarrow as pa
@@ -228,3 +229,10 @@ def test_lakehouse_schema_mismatch(data_env):
     # Tentative d'écriture avec schéma différent → ValueError
     with pytest.raises(ValueError):
         lakehouse.write_table(identifier, mismatch_table)
+
+
+def test_workers_use_current_interpreter(spark):
+    """
+    c'est l'interpréteur réellement utilisé par les workers Python (lu dans PYSPARK_PYTHON) ; dans Airflow il doit être celui du projet, sinon « No module named 'pandas' » (constaté les 16 et 17/09/2026)
+    """
+    assert spark.sparkContext.pythonExec == sys.executable

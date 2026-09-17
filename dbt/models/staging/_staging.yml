@@ -1,0 +1,108 @@
+# OÙ : dbt/models/staging/_staging.yml
+# QUOI : contrats (types imposés) et tests des deux vues de staging.
+# COMMENT : contract.enforced fait échouer la construction si une colonne manque ou change de type ;
+#           les tests vérifient unicité, valeurs admises et intégrité entre avis et prédictions.
+# POURQUOI : un changement de schéma en silver doit casser ici, bruyamment, et non fausser la gold.
+
+version: 2
+
+models:
+  - name: stg_reviews
+    description: "Avis nettoyés de silver.reviews, sans texte ni auteur (minimisation RGPD)."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: review_id
+        data_type: varchar
+        description: "Identifiant Steam de l'avis."
+        data_tests: [unique, not_null]
+      - name: app_id
+        data_type: bigint
+        description: "Identifiant Steam du jeu."
+        data_tests: [not_null]
+      - name: language
+        data_type: varchar
+        description: "Langue demandée à l'API Steam."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['english', 'french']
+      - name: label
+        data_type: bigint
+        description: "Vérité terrain : 1 si l'auteur recommande le jeu, 0 sinon."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: "Date de publication de l'avis (UTC)."
+      - name: review_date
+        data_type: date
+        description: "Jour de publication (UTC)."
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: "Dernière modification de l'avis (UTC)."
+      - name: votes_up
+        data_type: bigint
+        description: "Nombre de votes « utile »."
+      - name: weighted_vote_score
+        data_type: double
+        description: "Score d'utilité calculé par Steam."
+      - name: playtime_at_review_min
+        data_type: bigint
+        description: "Temps de jeu de l'auteur au moment de l'avis, en minutes."
+      - name: text_len
+        data_type: bigint
+        description: "Longueur du texte nettoyé, en caractères."
+      - name: sample_source
+        data_type: varchar
+        description: "Flux d'origine : natural (représentatif) ou negative_boost (enrichi en négatifs pour l'entraînement)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['natural', 'negative_boost']
+
+  - name: stg_predictions
+    description: "Prédictions du modèle champion, une ligne par avis."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: review_id
+        data_type: varchar
+        description: "Identifiant de l'avis prédit."
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_reviews')
+                field: review_id
+      - name: pred_label
+        data_type: bigint
+        description: "Décision du modèle : 0 négatif, 1 positif (même convention que label)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: proba_negative
+        data_type: double
+        description: "Probabilité que l'avis soit négatif."
+        data_tests: [not_null]
+      - name: decision_threshold
+        data_type: double
+        description: "Seuil appliqué : négatif si proba_negative >= seuil (voir decision.py)."
+        data_tests: [not_null]
+      - name: model_version
+        data_type: varchar
+        description: "Version du modèle dans le registre MLflow."
+        data_tests: [not_null]
+      - name: scored_at
+        data_type: timestamp with time zone
+        description: "Horodatage du score (UTC)."

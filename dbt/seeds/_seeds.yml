@@ -1,0 +1,21 @@
+# OÙ: dbt/seeds/_seeds.yml
+# QUOI: seed « games » listant les jeux suivis, avec app_id et game_name.
+# COMMENT: chargé par `dbt seed` (inclus dans `dbt build`) ; noms relevés sur l'API Steam appdetails le 17/09/2026.
+# POURQUOI: fournir un référentiel stable des jeux pour les jointures de la couche gold, sans appel réseau au build.
+
+version: 2
+seeds:
+  - name: games
+    description: "Référentiel des jeux suivis, noms vérifiés sur l'API Steam appdetails le 17/09/2026."
+    columns:
+      - name: app_id
+        description: "Identifiant unique du jeu Steam."
+        data_type: bigint
+        data_tests:
+          - not_null
+          - unique
+      - name: game_name
+        description: "Nom officiel du jeu tel que retourné par l'API Steam."
+        data_type: varchar
+        data_tests:
+          - not_null

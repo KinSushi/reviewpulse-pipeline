@@ -64,6 +64,24 @@ SPARK_MASTER = os.getenv("REVIEWPULSE_SPARK_MASTER", "local[2]")
 # Mémoire allouée au driver Spark, configurable via l’environnement
 SPARK_DRIVER_MEMORY = os.getenv("REVIEWPULSE_SPARK_DRIVER_MEMORY", "2g")
 
+# --- Gold — entrepôt DuckDB construit par dbt ---
+GOLD_DIR = DATA_DIR / "gold"
+GOLD_DB = GOLD_DIR / "reviewpulse.duckdb"
+DBT_TARGET_DIR = GOLD_DIR / "dbt_target"  # artefacts dbt : manifest, catalogue, documentation
+DBT_LOG_DIR = GOLD_DIR / "dbt_logs"
+DBT_PROJECT_DIR = Path(
+    os.getenv(
+        "REVIEWPULSE_DBT_DIR",
+        str(Path(__file__).resolve().parents[2] / "dbt")
+    )
+)  # la valeur par défaut vaut pour un dépôt cloné (installation éditable), les images Docker fixent la variable
+DUCKDB_EXT_DIR = Path(
+    os.getenv(
+        "REVIEWPULSE_DUCKDB_EXT_DIR",
+        str(DATA_DIR / "duckdb_extensions")
+    )
+)  # les images préinstallent l'extension iceberg dans ce répertoire pour fonctionner sans réseau
+
 # Fichiers dérivés
 CLEAN_FILE = CLEAN_DIR / "reviews.parquet"
 SCORED_FILE = SCORED_DIR / "reviews_scored.parquet"

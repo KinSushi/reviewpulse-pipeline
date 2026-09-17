@@ -1,0 +1,19 @@
+# dbt/profiles.yml
+# OÙ : dans le répertoire dbt du projet ReviewPulse
+# QUOI : définit le profil de connexion DuckDB pour l'environnement de production
+# COMMENT : utilise les variables d'environnement définies par reviewpulse.gold pour le chemin du fichier DuckDB et le répertoire des extensions Iceberg
+# POURQUOI : centralise la configuration de connexion sans inclure de secrets, compatible avec les images pré‑installées contenant l'extension Iceberg
+
+reviewpulse:
+  target: prod
+  outputs:
+    prod:
+      type: duckdb
+      path: "{{ env_var('REVIEWPULSE_GOLD_DB') }}"
+      threads: 1
+      extensions:
+        - iceberg
+      settings:
+        extension_directory: "{{ env_var('REVIEWPULSE_DUCKDB_EXT_DIR') }}"
+        # Fuseau fixé : la conversion timestamptz -> date (review_date) dépend du fuseau de la session.
+        TimeZone: UTC

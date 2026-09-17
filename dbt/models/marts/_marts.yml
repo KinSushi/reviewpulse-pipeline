@@ -1,0 +1,139 @@
+# OÙ : dbt/models/marts/_marts.yml
+# QUOI : contrats et tests du schéma en étoile (dim_game, dim_date, fct_review_predictions)
+#        et de l'indicateur métier mart_sentiment_daily.
+# COMMENT : contract.enforced impose noms et types ; les relations vérifient l'intégrité de l'étoile ;
+#           les règles non exprimables en tests génériques sont dans dbt/tests/.
+# POURQUOI : c'est la couche lue par les consommateurs : son schéma est un engagement.
+
+version: 2
+
+models:
+  - name: dim_game
+    description: "Jeux suivis (seed games.csv)."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: app_id
+        data_type: bigint
+        description: "Identifiant Steam du jeu (clé)."
+        data_tests: [unique, not_null]
+      - name: game_name
+        data_type: varchar
+        description: "Nom officiel sur Steam."
+        data_tests: [not_null]
+
+  - name: dim_date
+    description: "Calendrier des jours de publication."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_day
+        data_type: date
+        description: "Jour (clé), en UTC."
+        data_tests: [unique, not_null]
+      - name: year
+        data_type: integer
+      - name: month
+        data_type: integer
+      - name: iso_week
+        data_type: integer
+        description: "Semaine ISO 8601."
+      - name: day_of_week
+        data_type: integer
+        description: "1 = lundi … 7 = dimanche."
+
+  - name: fct_review_predictions
+    description: "Un avis et sa prédiction (grain : review_id), deux flux confondus, distingués par sample_source."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: review_id
+        data_type: varchar
+        data_tests: [unique, not_null]
+      - name: app_id
+        data_type: bigint
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_game')
+                field: app_id
+      - name: language
+        data_type: varchar
+      - name: sample_source
+        data_type: varchar
+      - name: review_date
+        data_type: date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: created_at
+        data_type: timestamp with time zone
+      - name: label
+        data_type: bigint
+        description: "Vérité terrain (0 négatif, 1 positif)."
+      - name: pred_label
+        data_type: bigint
+        description: "Décision du modèle (0 négatif, 1 positif)."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: proba_negative
+        data_type: double
+      - name: decision_threshold
+        data_type: double
+      - name: model_version
+        data_type: varchar
+      - name: scored_at
+        data_type: timestamp with time zone
+      - name: votes_up
+        data_type: bigint
+      - name: playtime_at_review_min
+        data_type: bigint
+      - name: text_len
+        data_type: bigint
+
+  - name: mart_sentiment_daily
+    description: >
+      Part d'avis négatifs par jeu, langue et jour, prédite et réelle.
+      Flux naturel uniquement : le flux negative_boost est volontairement enrichi en avis
+      négatifs pour l'entraînement et fausserait les parts. Grain unique vérifié par
+      tests/assert_mart_grain_unique.sql.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: app_id
+        data_type: bigint
+      - name: game_name
+        data_type: varchar
+      - name: language
+        data_type: varchar
+      - name: review_date
+        data_type: date
+      - name: n_reviews
+        data_type: bigint
+        description: "Nombre d'avis du flux naturel."
+        data_tests: [not_null]
+      - name: n_pred_negative
+        data_type: bigint
+        description: "Avis classés négatifs par le modèle."
+      - name: n_actual_negative
+        data_type: bigint
+        description: "Avis réellement négatifs (l'auteur ne recommande pas)."
+      - name: share_pred_negative
+        data_type: double
+        description: "n_pred_negative / n_reviews."
+      - name: share_actual_negative
+        data_type: double
+        description: "n_actual_negative / n_reviews."
+      - name: model_version
+        data_type: varchar
+        description: "Version du modèle ayant produit les prédictions (la plus élevée si plusieurs)."
