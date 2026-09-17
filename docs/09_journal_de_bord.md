@@ -121,6 +121,7 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | `docker builder prune` (autorisé par Enzo : « fais ce qu'il convient ») : 19,22 Go libérés **dans** le disque virtuel, mais rien rendu à Windows (C: 2,6 Go). Image `reviewpulse-app` reconstruite en 221 s ; la reconstruction Airflow a saturé C: (« Read-only file system », moteur en erreur 500) | [X] |
 | Consigne d'Enzo : **construire sur D: (3 To), ne garder sur C: que le reproductible et léger**. Lac copié vers `D:\ReviewPulse_work\data` ; `docker-compose.override.yml` local (non versionné) monte ce dossier sous `/data` ; le dépôt garde `./data` par défaut | [U] [X] |
 | Déplacement du disque de Docker Desktop vers `D:\DockerDesktop` : à faire par Enzo dans l'interface (redémarre Docker, donc aussi la passerelle local-llm-docker, à prévenir avant et après) | [U] |
+| Consigne d'Enzo : **tout ce qui concerne ReviewPulse passe sur D:**. Projet déplacé vers `D:\ReviewPulse_work\ReviewPulse` (396 fichiers, copie vérifiée : aucun écart robocopy, `git status` propre, `git fsck` sans erreur) ; fichiers de travail vers `D:\ReviewPulse_work\session_scratch`. 82 fichiers OneDrive restent dans l'ancien dossier sur C: : leur suppression est refusée à ma session, **à supprimer par Enzo** (doublons vérifiés) | [U] [X] |
 
 ### Questions ouvertes (à Jedha)
 
