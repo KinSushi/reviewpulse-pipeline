@@ -122,6 +122,8 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Consigne d'Enzo : **construire sur D: (3 To), ne garder sur C: que le reproductible et léger**. Lac copié vers `D:\ReviewPulse_work\data` ; `docker-compose.override.yml` local (non versionné) monte ce dossier sous `/data` ; le dépôt garde `./data` par défaut | [U] [X] |
 | Déplacement du disque de Docker Desktop vers `D:\DockerDesktop` : à faire par Enzo dans l'interface (redémarre Docker, donc aussi la passerelle local-llm-docker, à prévenir avant et après) | [U] |
 | Consigne d'Enzo : **tout ce qui concerne ReviewPulse passe sur D:**. Projet déplacé vers `D:\ReviewPulse_work\ReviewPulse` (396 fichiers, copie vérifiée : aucun écart robocopy, `git status` propre, `git fsck` sans erreur) ; fichiers de travail vers `D:\ReviewPulse_work\session_scratch`. 82 fichiers OneDrive restent dans l'ancien dossier sur C: : leur suppression est refusée à ma session, **à supprimer par Enzo** (doublons vérifiés) | [U] [X] |
+| 20:30–20:45 : Enzo a supprimé toutes les images Docker et lancé la bascule du disque vers `D:\Program Files\DockerDesktopWSL` ; à 20:39, les deux copies (63,7 Go) existent encore, Docker est arrêté, et le réglage n'est pas enregistré. Rien à lancer avant la confirmation de la session local-llm-docker | [U] [X] |
+| Consigne d'Enzo : **rendre tout durable et reprenable** → `docs/11_reprise.md` (emplacements, état, blocages, étapes, règles), README et mémoire persistante mis à jour | [U] |
 
 ### Questions ouvertes (à Jedha)
 
