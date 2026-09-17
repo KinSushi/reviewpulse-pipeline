@@ -6,6 +6,11 @@
 x-secrets: &secrets
   REVIEWPULSE_SALT: ${REVIEWPULSE_SALT:-}
 
+# Convention : le lac de données est monté sous /data dans TOUS les conteneurs.
+# Pourquoi : le catalogue Iceberg enregistre des chemins absolus ; une table créée sous /data
+# était introuvable pour un conteneur qui voyait le lac sous /app/data (constaté le 16/09/2026).
+# En production, le même principe vaut pour un bucket S3 unique.
+
 x-envfile: &envfile
   - path: .env
     required: false
@@ -32,22 +37,26 @@ services:
       retries: 5
 
   pipeline:
+    image: reviewpulse-app:latest
     build:
       context: .
       dockerfile: docker/Dockerfile
     profiles:
       - jobs
-    command: sh -c 'python -m reviewpulse.ingest && python -m reviewpulse.transform && python -m reviewpulse.train && python -m reviewpulse.score'
+    # Même enchaînement que le DAG quotidien, plus l'entraînement :
+    # bronze → silver (Spark, Iceberg) → qualité → modèle → score → gold (dbt, DuckDB).
+    command: sh -c 'python -m reviewpulse.ingest && python -m reviewpulse.spark_silver && python -m reviewpulse.expectations && python -m reviewpulse.train && python -m reviewpulse.score && python -m reviewpulse.gold'
     env_file: *envfile
     environment:
       <<: *secrets
     volumes:
-      - ./data:/app/data
+      - ./data:/data
     depends_on:
       mlflow:
         condition: service_healthy
 
   api:
+    image: reviewpulse-app:latest
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -55,12 +64,13 @@ services:
       - "8000:8000"
     env_file: *envfile
     volumes:
-      - ./data:/app/data
+      - ./data:/data
     depends_on:
       mlflow:
         condition: service_healthy
 
   dashboard:
+    image: reviewpulse-app:latest
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -70,7 +80,7 @@ services:
     environment:
       REVIEWPULSE_API_URL: http://api:8000
     volumes:
-      - ./data:/app/data
+      - ./data:/data
     # L'image partagée vérifie l'API sur :8000 ; ce conteneur fait tourner Streamlit sur :8501.
     # Sans cette surcharge, le tableau de bord serait déclaré « unhealthy » à tort (constaté le 16/09/2026).
     healthcheck:
@@ -94,11 +104,11 @@ services:
       - "8080:8080"
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./data:/opt/airflow/data
+      - ./data:/data
     env_file: *envfile
     environment:
       <<: *secrets
-      REVIEWPULSE_DATA_DIR: /opt/airflow/data
+      REVIEWPULSE_DATA_DIR: /data
       MLFLOW_TRACKING_URI: http://mlflow:5000
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     depends_on:

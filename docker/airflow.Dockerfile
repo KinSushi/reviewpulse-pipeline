@@ -16,23 +16,35 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openjdk-17-jre-headless procps \
     && rm -rf /var/lib/apt/lists/* \
     && python -m venv /opt/rp-venv \
-    && chown -R airflow:root /opt/rp-venv
+    && mkdir -p /opt/duckdb_extensions \
+    && chown -R airflow:root /opt/rp-venv /opt/duckdb_extensions
 
 USER airflow
 
-COPY --chown=airflow:root pyproject.toml requirements.txt /opt/reviewpulse/
-COPY --chown=airflow:root src/ /opt/reviewpulse/src/
-
 # Le projet s'installe UNIQUEMENT dans /opt/rp-venv. La ligne « -e . » de requirements.txt
-# vise la racine du dépôt : on la retire et on installe le paquet depuis /opt/reviewpulse.
-# Les deux « pip check » garantissent que chaque environnement est cohérent.
+# vise la racine du dépôt : on la retire, les dépendances d'abord, le paquet ensuite.
+# Ordre des couches : la couche des dépendances (environ 3 Go) ne doit pas dépendre du code,
+# sinon chaque modification la reconstruit et remplit le cache (disque plein le 16/09/2026).
+COPY --chown=airflow:root requirements.txt /opt/reviewpulse/
 RUN set -eux; \
     grep -v -e '^-e' /opt/reviewpulse/requirements.txt > /tmp/requirements-projet.txt; \
     /opt/rp-venv/bin/pip install --no-cache-dir --upgrade pip; \
-    /opt/rp-venv/bin/pip install --no-cache-dir -r /tmp/requirements-projet.txt; \
-    /opt/rp-venv/bin/pip install --no-cache-dir /opt/reviewpulse; \
+    /opt/rp-venv/bin/pip install --no-cache-dir -r /tmp/requirements-projet.txt
+
+# Extension iceberg de DuckDB préinstallée : la tâche gold (dbt) fonctionne sans réseau.
+RUN /opt/rp-venv/bin/python -c "import duckdb; c = duckdb.connect(); c.execute(\"SET extension_directory='/opt/duckdb_extensions'\"); c.execute('INSTALL iceberg')"
+
+# Code du projet, installé sans dépendances. Les deux « pip check » garantissent que chaque
+# environnement (Airflow, projet) reste cohérent.
+COPY --chown=airflow:root pyproject.toml /opt/reviewpulse/
+COPY --chown=airflow:root src/ /opt/reviewpulse/src/
+COPY --chown=airflow:root dbt/ /opt/reviewpulse/dbt/
+RUN set -eux; \
+    /opt/rp-venv/bin/pip install --no-cache-dir --no-deps /opt/reviewpulse; \
     /opt/rp-venv/bin/pip check; \
     pip check
 
-# Chemin de l'interpréteur du projet, lu par les DAG.
-ENV REVIEWPULSE_PYTHON=/opt/rp-venv/bin/python
+# Interpréteur du projet (lu par les DAG), projet dbt et extensions DuckDB de la couche gold.
+ENV REVIEWPULSE_PYTHON=/opt/rp-venv/bin/python \
+    REVIEWPULSE_DBT_DIR=/opt/reviewpulse/dbt \
+    REVIEWPULSE_DUCKDB_EXT_DIR=/opt/duckdb_extensions

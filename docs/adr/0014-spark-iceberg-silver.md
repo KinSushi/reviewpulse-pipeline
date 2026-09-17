@@ -23,6 +23,7 @@ Le programme de la Lead enseigne PySpark (module Big Data, exercice sur des donn
 | `toPandas()` rend des dates sans fuseau (session en UTC) | Localisation UTC avant conversion |
 | **Sur les données réelles, 11 textes sur 8 800 différaient** (espace insécable U+00A0, séparateur de ligne U+2028) : `\s` est Unicode en Python, ASCII en Java | Expression `(?U)\s+` côté Spark ; cas ajoutés au test, qui échoue bien sans le correctif |
 | Hadoop exige un nom d'utilisateur pour l'uid courant | Les images définissent un utilisateur pour l'uid 1000 |
+| Le catalogue enregistre des **chemins absolus** : une table créée sous `/data` était introuvable pour un conteneur voyant le lac sous `/app/data` | Le lac est monté sous **`/data` dans tous les conteneurs** (comme un bucket unique en production) |
 
 ## Alternatives écartées
 

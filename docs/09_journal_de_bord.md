@@ -98,7 +98,29 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | **Divergence Spark/pandas trouvée sur données réelles** (11 textes sur 8 800 : U+00A0, U+2028) ; correctif `(?U)\s+` ; test enrichi, qui **échoue sans le correctif** | [X] ADR 0014 |
 | Équivalence stricte sur **8 231 lignes réelles** ; Spark 7,8 s contre pandas 1,7 s ; table `silver.reviews` écrite | [X] |
 | Régression de documentation dans `score.py` (lignes « Pourquoi » et « Preuves » supprimées par le banc) : à rétablir à la prochaine passe | [X] backlog |
+| Commit `a56708e` (pile du programme, Spark, Iceberg) ; aucune mention d'outil | [X] |
+| Image applicative : Java 21 et utilisateur nommé uid 1000 ajoutés ; job Compose aligné sur le DAG (ingest → spark_silver → expectations → train → score) | [X] |
+| **Défaut de conception** : le catalogue Iceberg enregistre des chemins **absolus** ; table créée sous `/data` introuvable pour un conteneur voyant le lac sous `/app/data` → **lac monté sous `/data` dans tous les conteneurs** | [X] ADR 0014, `docker-compose.yml` |
+| Job Compose réel complet : 10 nouveaux avis ; silver 8 241 lignes ; Great Expectations OK ; version 7 (F1 0,796) non promue ; score champion v2 ; table `silver.predictions` 8 241 lignes | [X] |
+| Message « 3 snapshots créés » trompeur (c'est la taille de l'historique) | [X] backlog |
 | Pile du programme vérifiée sur Julie ; **Tinder** = projet « Speed Dating » (CDSD 2) ; données dans `Downloads` ; aucun notebook réalisé | [J] [D] |
+| DAG dans Airflow : `spark_silver` échoue, `ModuleNotFoundError: No module named 'pandas'` dans le worker Python de Spark (la `pandas_udf` tourne avec l'interpréteur d'Airflow) | [X] |
+| 1er correctif (conf `spark.pyspark.python`) **inopérant** en réel malgré un test vert : le test lisait la conf, pas l'interpréteur utilisé. Lecture de PySpark 4.2 : `SparkContext.pythonExec = os.environ.get("PYSPARK_PYTHON", "python3")` | [X] `pyspark/core/context.py:342` |
+| 2e correctif : `os.environ.setdefault("PYSPARK_PYTHON", sys.executable)` avant la session ; test sur `sparkContext.pythonExec`, **qui échoue sans le correctif** (témoin) ; 4/4 | [X] |
+| Scheduler Airflow arrêté au démarrage (« database is locked », SQLite) quand des commandes CLI sont lancées pendant son initialisation → attendre ~2 min après un redémarrage | [X] |
+| Leçon : un test doit vérifier l'effet réel, pas la configuration qu'on croit utile | [X] |
+| DAG quotidien `spark_v3` : **ingest, spark_silver (18 s), gx_validate, score en succès dans Airflow** (17/09, 00:26 UTC) ; DAG remis en pause | [X] |
+| Gold dbt-duckdb : **`dbt build` réel 43/43 PASS** (silver Iceberg → DuckDB, 8 241 avis) ; parts négatives prédites proches du réel (Nightreign 14,2 % contre 17,7 %) | [X] |
+| Rendu du banc pour dbt inutilisable tel quel (colonnes et macros inventées, commentaires SQL dans du YAML, config dupliquée) → SQL et YAML réécrits à la main d'après les schémas mesurés | [X] |
+| dbt-duckdb garde sa connexion ouverte dans le processus : ouverture `read_only` refusée juste après ; banc qui « ajuste » les données d'un test pour coller à ses attentes fausses → corrigé | [X] |
+| `conftest.py` ne redirigeait ni `LAKEHOUSE_DIR` ni `GX_DIR` : un `pytest` lancé depuis la racine aurait écrit dans le vrai lac → corrigé | [X] |
+| **62 tests verts** (54 + 4 Spark + 4 dbt) ; témoin : le test de fraîcheur échoue sans `assert_every_review_is_scored` | [X] |
+| DAG : tâche `gold` après `score` (quotidien et hebdomadaire), rappels d'alerte (échec, SLA 1 h) vers le journal d'Airflow ; `tags` sortis de `default_args` | [X] |
+| **Incident disque (16/09, soir)** : C: plein (0 Go à 19:40 selon la session local-llm-docker ; 2,8 Go mesurés ensuite). Cache de construction Docker 24 Go dont 19 récupérables. **Cause : mes Dockerfiles copiaient le code avant `pip install`** ; chaque modification reconstruisait la couche de ~3 Go. Les images `pipeline`, `api`, `dashboard` sont une seule image (15 Ko propres chacune) | [X] |
+| Correctifs sans reconstruction : dépendances avant le code dans les deux Dockerfiles ; une seule image `reviewpulse-app` ; `.dockerignore`. Nettoyage du cache et compaction du disque virtuel : **décision d'Enzo** | [X] |
+| `docker builder prune` (autorisé par Enzo : « fais ce qu'il convient ») : 19,22 Go libérés **dans** le disque virtuel, mais rien rendu à Windows (C: 2,6 Go). Image `reviewpulse-app` reconstruite en 221 s ; la reconstruction Airflow a saturé C: (« Read-only file system », moteur en erreur 500) | [X] |
+| Consigne d'Enzo : **construire sur D: (3 To), ne garder sur C: que le reproductible et léger**. Lac copié vers `D:\ReviewPulse_work\data` ; `docker-compose.override.yml` local (non versionné) monte ce dossier sous `/data` ; le dépôt garde `./data` par défaut | [U] [X] |
+| Déplacement du disque de Docker Desktop vers `D:\DockerDesktop` : à faire par Enzo dans l'interface (redémarre Docker, donc aussi la passerelle local-llm-docker, à prévenir avant et après) | [U] |
 
 ### Questions ouvertes (à Jedha)
 

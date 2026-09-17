@@ -15,3 +15,6 @@ dist/
 logs/
 *.avant-remplacement
 src/reviewpulse/init/
+
+# Surcharge Compose propre au poste (chemins locaux)
+docker-compose.override.yml

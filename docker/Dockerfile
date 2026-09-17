@@ -1,21 +1,40 @@
 FROM python:3.11-slim
 
-# Crée l'utilisateur non root
-RUN useradd -m -s /bin/bash app
+# Utilisateur non root « app » (uid 1000). Un nom est indispensable : Hadoop, utilisé par Spark,
+# refuse de démarrer si l'uid courant n'a pas de nom (constaté le 16/09/2026).
+# Java 21 : exigé par PySpark 4 pour le job spark_silver (Debian 13 le propose).
+RUN useradd -m -u 1000 -s /bin/bash app \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends openjdk-21-jre-headless procps \
+    && rm -rf /var/lib/apt/lists/*
 
 # Répertoire de travail
 WORKDIR /app
 
-# Copie des fichiers de configuration et du code source
-COPY pyproject.toml requirements.txt ./
+# Ordre des couches : dépendances d'abord, code ensuite.
+# Pourquoi : la couche des dépendances pèse environ 3 Go (Spark, MLflow, dbt, Great Expectations).
+# Quand le code était copié avant elle, chaque modification du code la reconstruisait et laissait
+# une copie de plus dans le cache de construction : 24 Go de cache et disque plein le 16/09/2026.
+# La ligne « -e . » de requirements.txt vise le code : elle est installée après la copie, sans dépendances.
+COPY requirements.txt ./
+RUN grep -v -e '^-e' requirements.txt > /tmp/requirements-deps.txt \
+    && pip install --no-cache-dir -r /tmp/requirements-deps.txt
+
+# Extension iceberg de DuckDB téléchargée à la construction : la couche gold (dbt) lit les tables
+# Iceberg sans accès réseau à l'exécution.
+RUN python -c "import duckdb; c = duckdb.connect(); c.execute(\"SET extension_directory='/opt/duckdb_extensions'\"); c.execute('INSTALL iceberg')"
+
+# Code du projet : seule cette partie est reconstruite quand le code change.
+COPY pyproject.toml ./
 COPY src/ ./src/
 COPY dashboard/ ./dashboard/
-
-# Installation des dépendances
-RUN pip install --no-cache-dir -r requirements.txt
+COPY dbt/ ./dbt/
+RUN pip install --no-cache-dir --no-deps -e . && pip check
 
 # Variables d'environnement
-ENV REVIEWPULSE_DATA_DIR=/app/data \
+ENV REVIEWPULSE_DATA_DIR=/data \
+    REVIEWPULSE_DBT_DIR=/app/dbt \
+    REVIEWPULSE_DUCKDB_EXT_DIR=/opt/duckdb_extensions \
     MLFLOW_TRACKING_URI=http://mlflow:5000 \
     PYTHONUNBUFFERED=1
 
@@ -23,7 +42,7 @@ ENV REVIEWPULSE_DATA_DIR=/app/data \
 EXPOSE 8000 8501
 
 # L'utilisateur non-root doit pouvoir écrire ses données, et MLflow crée un dossier ./mlruns vide dans le dossier courant dès qu'il ouvre une base SQLite locale.
-RUN mkdir -p /app/data && chown -R app:app /app
+RUN mkdir -p /data && chown -R app:app /app /data
 
 # Exécution de l'application
 USER app
