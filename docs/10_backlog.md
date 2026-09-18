@@ -60,7 +60,7 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 | S4-3 | FinOps et GreenOps : mesure CPU, mémoire, durée par tâche | AIA 3 ind. 6.2, AIA 4 C4.5 | P2 | ⬜ |
 | S4-4 | Vidéo de la solution en production | AIA 4 livrable | P1 | ⬜ |
 | S4-5 | Slides sur le gabarit Jedha (ou Telco), script de 10 min, questions | Demo Day J3 | P1 | ⬜ |
-| S4-6 | Note d'orientation technologique (veille, livres KOS cités) | AIA 4 livrable | P1 | ⬜ |
+| S4-6 | Note d'orientation technologique écrite (`docs/13_note_orientation.md`, 18/09) : options essayées et mesurées, latence, sécurité, veille ; chiffres contrôlés contre les ADR. Reste à citer la bibliothèque KOS et les sources de veille externes | AIA 4 livrable | P1 | 🔄 |
 | S4-7 | Gel : tag `v1.0-demoday` | livraison | P1 | ⬜ |
 
 ## Après le 25/09 — applications de la plateforme
