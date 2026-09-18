@@ -102,5 +102,29 @@
     "apres": "raise exc",
     "defaut_simule": "Absence de modèle transformée en erreur 500",
     "pourquoi_grave": "Un état attendu (première installation) apparaîtrait comme une panne (ADR 0008)"
+  },
+  {
+    "id": "M14",
+    "fichier": "src/reviewpulse/spark_silver.py",
+    "avant": "                r\"(?U)\\s+\",",
+    "apres": "                r\"\\s+\",",
+    "defaut_simule": "Nettoyage des espaces Unicode désactivé",
+    "pourquoi_grave": "Des avis contenant des espaces non-ASCII restent inchangés, biaisant le comptage de mots (ADR 0014)"
+  },
+  {
+    "id": "M15",
+    "fichier": "src/reviewpulse/spark_silver.py",
+    "avant": "    return F.when(F.col(sample_col) == config.SAMPLE_NATURAL, 0).otherwise(1)",
+    "apres": "    return F.when(F.col(sample_col) == config.SAMPLE_NATURAL, 1).otherwise(0)",
+    "defaut_simule": "Priorité de dédoublonnage inversée",
+    "pourquoi_grave": "Les avis du flux ``negative_boost`` peuvent écraser ceux du flux naturel (ADR 0002)"
+  },
+  {
+    "id": "M16",
+    "fichier": "src/reviewpulse/lakehouse.py",
+    "avant": "            col = pc.cast(col, target_type)",
+    "apres": "            col = col",
+    "defaut_simule": "Conversion des timestamps nanosecondes ignorée",
+    "pourquoi_grave": "Les timestamps sont écrits en nanosecondes, provoquant une erreur d’écriture Iceberg (ADR 0014)"
   }
 ]

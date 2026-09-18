@@ -43,6 +43,8 @@ import requests
 
 from reviewpulse import config, quality
 from reviewpulse.decision import LABEL_NEGATIVE
+# Fonctions de lecture du lakehouse
+from reviewpulse.lakehouse import read_table, table_history
 
 # --------------------------------------------------------------------------- #
 # Configuration du logger
@@ -306,6 +308,39 @@ def _git_commit_short() -> str:
         return "inconnu"
 
 
+@_handle
+def F7(data_dir: Path) -> ControlResult:
+    """La table Iceberg `silver.reviews` est lisible et contient le même nombre de lignes que le parquet clean."""
+    # Lecture du parquet « zone propre »
+    clean_path = data_dir / "clean" / "reviews.parquet"
+    df_clean = pd.read_parquet(clean_path)
+    clean_rows = len(df_clean)
+
+    # Lecture de la table Iceberg
+    iceberg_table = read_table(config.SILVER_REVIEWS_TABLE)
+    iceberg_rows = iceberg_table.num_rows
+
+    if iceberg_rows != clean_rows:
+        raise AssertionError(
+            f"Nombre de lignes Iceberg ({iceberg_rows}) ≠ parquet clean ({clean_rows})"
+        )
+    return ("F7", "PASS", f"{iceberg_rows} lignes = {clean_rows} lignes")
+
+
+@_handle
+def F8(data_dir: Path) -> ControlResult:
+    """L'historique de la table Iceberg `silver.reviews` contient au moins un instantané."""
+    history = table_history(config.SILVER_REVIEWS_TABLE)
+    if not history:
+        raise AssertionError("Aucun instantané trouvé dans l'historique de la table Iceberg")
+    latest = history[-1]
+    return (
+        "F8",
+        "PASS",
+        f"{len(history)} instantané(s), dernier id={latest['snapshot_id']}",
+    )
+
+
 def _write_report(
     report_path: Path,
     results: List[ControlResult],
@@ -412,6 +447,8 @@ def main() -> int:
         F4(data_dir, args.ratio_min, args.ratio_max),
         F5(data_dir),
         F6(data_dir, model_version or ""),
+        F7(data_dir),
+        F8(data_dir),
     ]
 
     # Génération du rapport

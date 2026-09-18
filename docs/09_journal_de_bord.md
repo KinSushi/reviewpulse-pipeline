@@ -127,6 +127,11 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | 18/09, sans Docker : carte des modules complétée par le banc gratuit pour `lakehouse.py`, `spark_silver.py`, `expectations.py`, `gold.py` ; trois inventions corrigées après vérification dans le code (test `test_lakehouse.py` inexistant, ADR 0013 cité à tort deux fois, fichier de test « non identifié » alors que `test_expectations.py` existe) | [U] [X] |
 | Docstring ajoutée à `_hash_steamid` ; contrôle AST : code identique hors documentation | [X] |
 | S1-7 déjà satisfait par les ADR 0013 et 0014 ; `score.py` déjà documenté (5 objets sur 5) : les deux lignes du backlog sont closes | [X] |
+| 18/09 : CI complétée (Java 17 temurin, `JAVA_TOOL_OPTIONS: -Xss4m`) ; contrôle par analyse YAML : Java présent avant l'installation des dépendances dans les deux jobs | [X] |
+| Mutations M14, M15, M16 (Spark et Iceberg) ajoutées ; pour chacune, l'ancre existe une seule fois dans le fichier cible et le code muté reste syntaxiquement valide (contrôle AST) | [X] |
+| Contrôles F7 et F8 écrits dans `tools/forward_test.py`, inscrits dans la liste ordonnée ; ils n'emploient que `read_table` et `table_history`, réellement présents dans `lakehouse.py`. Documentation de F8 corrigée : elle annonçait une comparaison avec F7 que le code ne fait pas | [X] |
+| Deux ADR mal cités par le banc dans les mutations, corrigés : espaces Unicode → ADR 0014, priorité de dédoublonnage → ADR 0002 | [X] |
+| Ces trois travaux sont **écrits et contrôlés statiquement, jamais exécutés** : la CI demande le dépôt en ligne, les mutations et les contrôles demandent Docker | [X] |
 
 ### Questions ouvertes (à Jedha)
 
