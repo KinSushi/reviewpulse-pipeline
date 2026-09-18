@@ -134,6 +134,8 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Ces trois travaux sont **écrits et contrôlés statiquement, jamais exécutés** : la CI demande le dépôt en ligne, les mutations et les contrôles demandent Docker | [X] |
 | 18/09 : Model Card rédigée par le banc puis contrôlée : aucun chiffre absent des sources, hyperparamètres conformes à `train.py` (char_wb 2-5, min_df 2, 100 000 traits, C=4.0, max_iter=2000), rétention 30 jours conforme à `config.RAW_RETENTION_DAYS` | [X] |
 | Trois corrections apportées à la Model Card : 48 tests → 62 ; base légale présentée comme à valider par le DPO et non comme acquise ; identité du modèle renseignée depuis `config.MODEL_NAME` | [X] |
+| 18/09 : module `explain.py` (explicabilité) et ses cinq tests produits par le banc. Deux défauts corrigés après relecture : l'indice de la classe négative était calculé puis neutralisé par un `noqa` (le signe ne dépendait donc pas de l'ordre des classes), et le test de la somme comparait dix contributions tronquées à la fonction de décision complète — il ne pouvait que mentir | [X] |
+| Ces fichiers **n'ont jamais été exécutés** : scikit-learn n'est pas installé sur l'hôte, et c'est voulu (les dépendances restent dans les images) | [X] |
 
 ### Questions ouvertes (à Jedha)
 

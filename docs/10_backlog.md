@@ -46,7 +46,7 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 |---|---|---|---|---|
 | S3-1 | Great Expectations sur silver et gold ; porte de qualité | AIA 3 C3.4 | P1 | ⬜ |
 | S3-2 | Dérive des données et des prédictions + alerte ; réentraînement déclenché | AIA 4 C4.4, ind. 3.2-3.3 | P1 | ⬜ |
-| S3-3 | **Model Card** écrite (`docs/12_model_card.md`, 18/09) : chiffres contrôlés un à un contre le README, la charte et les ADR ; hyperparamètres vérifiés dans `train.py`. Reste l'explicabilité (termes, contributions locales) | AIA 4 C4.6, C4.8 | P1 | 🔄 |
+| S3-3 | **Model Card** écrite (`docs/12_model_card.md`, 18/09) : chiffres contrôlés un à un contre le README, la charte et les ADR ; hyperparamètres vérifiés dans `train.py`. explicabilité : module `explain.py` et `tests/test_explain.py` écrits le 18/09 (termes globaux, contributions locales exactes, lot vectorisé) — **jamais exécutés**, la batterie demande Docker ; reste à les brancher sur le tableau de bord | AIA 4 C4.6, C4.8 | P1 | 🔄 |
 | S3-4 | Déploiement progressif champion / challenger (part de trafic) | AIA 4 ind. 3.1 | P2 | ⬜ |
 | S3-5 | CI : Java, Spark, dbt ; entraînement continu | AIA 4 ind. 1.1 | P1 | ⬜ |
 | S3-6 | Recréer le dépôt GitHub propre ; secret ; workflow planifié vert | livraison | P1 | ⛔ Enzo |

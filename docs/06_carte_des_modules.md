@@ -112,6 +112,14 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 - **Choix** : utilisation de l’API Python `dbtRunner` plutôt que d’un sous-processus, passage des métadonnées Iceberg via `--vars` JSON, création explicite des répertoires et des variables d’environnement pour garantir la reproductibilité.
 - **Tests** : `tests/test_gold.py`.
 
+## `explain.py`
+
+- **Rôle** : expliquer une prédiction, globalement et avis par avis.
+- **Place** : lecture seule sur le modèle champion ; destiné au tableau de bord et à la Model Card, sans écriture disque ni appel à MLflow.
+- **Fonctionnement** : `global_terms` classe les coefficients du modèle par valeur absolue et rend les termes qui poussent vers « négatif » et vers « positif » ; `local_contributions` multiplie, pour un texte, chaque valeur TF-IDF par le coefficient de la classe négative, écarte les traits de valeur nulle, trie par valeur absolue et rend les `n` premiers ; `explain_batch` vectorise toute la liste en une fois. L'indice de la classe négative est cherché dans `clf.classes_`, comme dans `decision.negative_proba`, et le signe des coefficients en découle.
+- **Choix** : contribution linéaire exacte (le modèle est une régression logistique sur TF-IDF), donc pas besoin d'approximation par échantillonnage ; `ValueError` explicite si le modèle ne porte pas les étapes « tfidf » et « clf ».
+- **Tests** : `tests/test_explain.py` (tri et troncature, terme absent, somme des contributions égale à la fonction de décision, signes des termes globaux, cohérence de `explain_batch`) — **écrits, jamais exécutés** faute de Docker.
+
 ## `tools/forward_test.py` et `tools/reverse_tests.py`
 
 - **`forward_test.py`** : contrôle la stack **déployée** (API, tableau de bord, MLflow, fichiers réels) et écrit un rapport daté dans `docs/evidence/`.
