@@ -154,6 +154,10 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | **Test de stack : 14 contrôles sur 14**, F7 et F8 compris — leur première exécution réelle. `docs/evidence/forward_test.md` régénéré | [X] |
 | Les tests inverses attendent la correction des cinq échecs : `reverse_tests.py` lance `pytest -x`, donc chaque mutation s'arrêterait sur l'échec d'`explain`, sans rapport avec elle | [X] |
 | Correctifs en attente du banc gratuit : la passerelle `localhost:4000` ne répond pas (seuls `litellm-db` et `litellm-redis` tournent) ; délai demandé à la session local-llm-docker | [X] |
+| 18/09, 09:10 : passerelle du banc rétablie par la session local-llm-docker (le retard venait d'un `initdb` Postgres interrompu par la migration, pas du téléchargement). Les deux correctifs ont donc été produits par le banc, comme le veut le contrat | [X] |
+| Correctif `explain.py` : `X.multiply(coeff_neg)` rend une matrice COO, sans attribut `indices` ; conversion en CSR. Le banc a repéré le **même défaut latent dans `explain_batch`**, jamais atteint par les tests en échec | [X] |
+| Correctif `tests/test_drift.py` : `np.random.choice(..., random_state=…)` remplacé par `np.random.default_rng(graine).choice(...)`, trois graines distinctes, seuils inchangés | [X] |
+| Vérification par exécution : **11 tests sur 11 au vert** sur `test_explain.py` et `test_drift.py` | [X] |
 
 ### Questions ouvertes (à Jedha)
 

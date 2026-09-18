@@ -40,14 +40,17 @@ def test_psi_numerique_decalage_de_distribution_est_plus_grand_et_interprete_com
 def test_psi_categoriel_parts_identiques_et_categorie_disparue() -> None:
     """PSI catégoriel ≈ 0 quand les parts sont identiques, augmente quand une catégorie disparaît."""
     # Référence : 3 catégories, parts égales
-    reference = pd.Series(np.random.choice(["A", "B", "C"], size=3000, p=[1 / 3, 1 / 3, 1 / 3], random_state=2))
+    rng_ref = np.random.default_rng(2)
+    reference = pd.Series(rng_ref.choice(["A", "B", "C"], size=3000, p=[1 / 3, 1 / 3, 1 / 3]))
     # Courant identique
-    courant_identique = pd.Series(np.random.choice(["A", "B", "C"], size=3000, p=[1 / 3, 1 / 3, 1 / 3], random_state=3))
+    rng_ident = np.random.default_rng(3)
+    courant_identique = pd.Series(rng_ident.choice(["A", "B", "C"], size=3000, p=[1 / 3, 1 / 3, 1 / 3]))
     psi_zero = drift.psi_categoriel(reference, courant_identique)
     assert psi_zero < 0.01, f"PSI attendu proche de 0, obtenu {psi_zero}"
 
     # Courant sans la catégorie C
-    courant_sans_c = pd.Series(np.random.choice(["A", "B"], size=3000, p=[0.5, 0.5], random_state=4))
+    rng_sans = np.random.default_rng(4)
+    courant_sans_c = pd.Series(rng_sans.choice(["A", "B"], size=3000, p=[0.5, 0.5]))
     psi_augmente = drift.psi_categoriel(reference, courant_sans_c)
     assert psi_augmente > 0.1, "Le PSI doit augmenter sensiblement quand une catégorie disparaît"
 

@@ -196,7 +196,10 @@ def local_contributions(
 
     # Contributions = valeur TF‑IDF * coeff négatif
     # On exploite la multiplication élément‑par‑élément sur la matrice sparse.
-    contrib_sparse = X.multiply(coeff_neg)
+    # La multiplication peut retourner une matrice au format COO qui ne possède pas
+    # l’attribut ``indices``. On la convertit donc en CSR (format supportant ``indices``)
+    # avant d’en extraire les indices et les valeurs.
+    contrib_sparse = X.multiply(coeff_neg).tocsr()
 
     indices = contrib_sparse.indices
     values = contrib_sparse.data
@@ -245,7 +248,10 @@ def explain_batch(
     coeff_neg = _negative_coefficients(clf)
 
     # Contributions par élément (sparse multiplication)
-    contrib_matrix = X.multiply(coeff_neg)  # même forme que X, mais valeurs = tfidf * coeff_neg
+    # La multiplication peut produire une matrice au format COO qui ne possède pas
+    # l’attribut ``indices``. On la convertit en CSR pour pouvoir accéder aux indices
+    # et aux valeurs de chaque ligne.
+    contrib_matrix = X.multiply(coeff_neg).tocsr()  # même forme que X, mais valeurs = tfidf * coeff_neg
 
     terms = tfidf.get_feature_names_out()
     results: List[List[Tuple[str, float]]] = []
