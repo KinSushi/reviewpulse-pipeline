@@ -30,7 +30,24 @@ Règle d'Enzo : **rien de ReviewPulse sur C:** (ni build, ni cache, ni temporair
 | Images Docker | **toutes supprimées par Enzo** (16/09 soir) | à reconstruire |
 | Volume `mlflow_data` (registre, champion v2) | probablement supprimé avec le reste : **à vérifier** ; sinon réentraîner (`make jobs`) | — |
 
-Derniers commits : `7756b65`, `b5f92be`, `a1fa346`. Aucune mention d'outil dans l'historique (contrôle : `git log --format=%B | grep -ci claude` doit valoir 0).
+### Travail du 18/09, sans Docker — **écrit, jamais exécuté**
+
+| Élément | Fichier | Contrôle statique effectué |
+|---|---|---|
+| Carte des modules complétée (lakehouse, spark_silver, expectations, gold, explain, drift) | `docs/06_carte_des_modules.md` | affirmations vérifiées dans le code |
+| CI : Java 17 et `JAVA_TOOL_OPTIONS` | `.github/workflows/ci.yml` | analyse YAML : Java avant les dépendances |
+| Mutations M14, M15, M16 (Spark, Iceberg) | `tests/reverse/mutations.json` | ancre unique, code muté syntaxiquement valide |
+| Contrôles F7 et F8 (tables Iceberg) | `tools/forward_test.py` | fonctions existantes, inscrits dans la liste |
+| Model Card | `docs/12_model_card.md` | aucun chiffre étranger aux sources |
+| Note d'orientation technologique | `docs/13_note_orientation.md` | chiffres et ADR vérifiés |
+| Plan de monitoring | `docs/14_plan_monitoring.md` | noms de modules et de colonnes vérifiés |
+| Explicabilité | `src/reviewpulse/explain.py`, `tests/test_explain.py` | compile ; deux défauts corrigés |
+| Dérive | `src/reviewpulse/drift.py`, `tests/test_drift.py` | compile ; colonnes et `config` vérifiés |
+| ADR 0015 et 0016 (proposées) | `docs/adr/` | inscrites au registre |
+
+**Au retour de Docker, dans l'ordre :** reconstruire les images, lancer la batterie (elle doit passer de 62 à 73 tests : 62 + 5 d'explicabilité + 6 de dérive), relancer les tests inverses (16 mutations attendues) et le test de stack (14 contrôles attendus). Tout écart se traite comme un défaut réel, pas comme un test à ajuster.
+
+Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Aucune mention d'outil dans l'historique (contrôle : `git log --format=%B | grep -ci claude` doit valoir 0).
 
 ## 3. Ce qui bloque, et qui le débloque
 
