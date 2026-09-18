@@ -80,6 +80,38 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 - **Choix** : chaque tâche appelle le `main()` du module et échoue si le code de retour est non nul ; deux nouvelles tentatives à 5 minutes ; pas de rattrapage. ADR 0011.
 - **Preuves** : exécutions réussies dans Airflow le 16/09/2026 après alignement de l'uid.
 
+## `lakehouse.py`
+
+- **Rôle** : gestion du lakehouse Iceberg (catalogue, tables, lecture/écriture) sans Spark.
+- **Place** : utilisé par `spark_silver.py` pour écrire la table `silver.reviews` et par `score.py` (ou les tests) pour lire les tables Iceberg.
+- **Fonctionnement** : crée le répertoire configuré, instancie un `SqlCatalog` SQLite, crée le namespace `silver` si absent, fournit `write_table` (conversion timestamps ns→us, création ou validation du schéma, `overwrite` → nouveau snapshot), `read_table` (scan → `pyarrow.Table`), `table_history` (liste des snapshots) et un `main` minimal, sans logique autonome, qui renvoie 0.
+- **Choix** : aucune évolution de schéma silencieuse — l'écriture est refusée si les colonnes changent (`ValueError`) ; conversion explicite des timestamps nanosecondes en microsecondes avant écriture (ADR 0014).
+- **Tests** : `tests/test_spark_silver.py` (écriture, historique, schéma incompatible refusé), `tests/test_gold.py`.
+
+## `spark_silver.py`
+
+- **Rôle** : construire la zone « silver » avec Spark, reproduire le résultat de `transform.clean`, puis persister en parquet et Iceberg.
+- **Place** : s’insère après `ingest` et avant les contrôles Great Expectations, alimente `score` et la couche gold.
+- **Fonctionnement** : crée une `SparkSession` avec les variables d’environnement appropriées, lit les fichiers JSONL bruts, extrait les partitions (`app_id`, `language`, `sample_source`), nettoie le texte (suppression BBCode, espaces Unicode), dédoublonne selon priorité `natural`/`negative_boost`, crée les colonnes dérivées (`review_id`, `label`, timestamps, scores, etc.), pseudonymise le `steamid` via `pandas_udf` HMAC-SHA256, sélectionne les colonnes définies dans `config.CLEAN_COLUMNS`, convertit en pandas, localise les timestamps en UTC, cast les types, trie par `review_id`; convertit le DataFrame pandas en `pyarrow.Table` en castant les timestamps en µs, écrit le parquet (`transform.write_clean`) puis Iceberg (`lakehouse.write_table`), purge les données brutes.
+- **Choix** : spark uniquement pour la lecture/traitement massif, puis pandas pour réutiliser les fonctions existantes (ADR 0014) ; gestion explicite de `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON` ; `pandas_udf` pour HMAC afin d’éviter les limites Spark natives ; chaque `overwrite` crée un snapshot, garantissant l’idempotence.
+- **Tests** : `tests/test_spark_silver.py`.
+
+## `expectations.py`
+
+- **Rôle** : définir et exécuter une suite Great Expectations sur la zone propre, générant un rapport HTML exploitable.
+- **Place** : exécuté après `transform.main` (écriture du parquet) et avant `score.main` dans le DAG quotidien.
+- **Fonctionnement** : `build_expectations` crée la liste d’attentes (ordre des colonnes, comptage de lignes, non-null, unicité, ensembles autorisés, longueur texte, bornes de scores, format du pseudo) ; `validate` crée ou réutilise un contexte (éphémère ou fourni) et exécute la suite, `_summarize` construit un dictionnaire de synthèse ; `run_and_document` crée un contexte « file », exécute la suite, génère les Data Docs et renvoie le chemin `index.html` ; `main` lit le parquet, lance la génération et renvoie un code de sortie selon le succès.
+- **Choix** : contexte éphémère par défaut pour les tests unitaires, contexte « file » pour la persistance du rapport, réinitialisation du contexte avant chaque exécution afin d’éviter les duplications, messages d’erreur normalisés pour faciliter les assertions.
+- **Tests** : `tests/test_expectations.py`.
+
+## `gold.py`
+
+- **Rôle** : orchestrer la construction de l’entrepôt DuckDB via dbt après l’étape `score`.
+- **Place** : s’exécute dans le DAG quotidien après `score`, fournit la couche *gold* aux analystes.
+- **Fonctionnement** : `silver_vars` récupère les `metadata_location` des tables Iceberg `silver.reviews` et `silver.predictions` via `lakehouse.get_catalog`; `_prepare_env` crée les répertoires `GOLD_DIR` et `DUCKDB_EXT_DIR` et définit les variables d’environnement requises par dbt; `run_dbt` construit la ligne de commande dbt avec les répertoires configurés et les variables JSON, puis invoque `dbtRunner`; `main` exécute `dbt build`, journalise le comptage des statuts, arrête le pipeline en cas d’échec, exécute `dbt docs generate` et consigne le chemin du fichier DuckDB final.
+- **Choix** : utilisation de l’API Python `dbtRunner` plutôt que d’un sous-processus, passage des métadonnées Iceberg via `--vars` JSON, création explicite des répertoires et des variables d’environnement pour garantir la reproductibilité.
+- **Tests** : `tests/test_gold.py`.
+
 ## `tools/forward_test.py` et `tools/reverse_tests.py`
 
 - **`forward_test.py`** : contrôle la stack **déployée** (API, tableau de bord, MLflow, fichiers réels) et écrit un rapport daté dans `docs/evidence/`.

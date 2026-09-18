@@ -25,12 +25,12 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 | S1-4e | Message de journal corrigé (« historique de la table : N instantané(s) ») ✅ ; contrôles F7/F8 du test de stack sur les tables Iceberg ⬜ | AIA 3 C3.4 | P2 | 🔄 |
 | S1-4b | DAG `spark_silver` exécuté dans Airflow : 4/4 le 17/09 (exécution `spark_v3`) après correction de `PYSPARK_PYTHON` | AIA 3 C3.3 | P1 | ✅ |
 | S1-4c | Mutations Spark et Iceberg dans les tests inverses (`(?U)`, dédoublonnage Spark, conversion ns→us) | AIA 3 C3.4 | P1 | ⬜ |
-| S1-4d | Rétablir la documentation supprimée dans `score.py` ; documenter `lakehouse.py` et `spark_silver.py` dans la carte des modules ; contrôle AST | AIA 4 C4.8 | P1 | ⬜ |
+| S1-4d | `score.py` : documentation déjà complète (5 objets sur 5, contrôle AST du 18/09) ; carte des modules complétée pour `lakehouse.py`, `spark_silver.py`, `expectations.py` et `gold.py` ; docstring ajoutée à `_hash_steamid` (code identique hors documentation, vérifié par AST) | AIA 4 C4.8 | P1 | ✅ |
 | S1-5 | **dbt-duckdb** : staging, étoile, mart quotidien, 43 tests et contrats verts sur données réelles, `docs generate` ; `gold.py` + 4 tests (62 au total) ; exposures à ajouter quand un consommateur lira la gold | Demo Day 3, AIA 3 ind. 7.1, AIA 1 ind. 3.1-3.2 | P1 | ✅ |
 | S1-6 | DAG : ingest → spark_silver → gx → score → **gold** (dbt après le score : test de fraîcheur) ; retries ; alertes d'échec et de SLA (journal Airflow) — **écrit, pas encore exécuté** (disque plein) | AIA 3 C3.3, ind. 6.1 | P1 | 🔄 |
-| S1-7 | ADR : pile du programme (MLflow 3, Spark, Iceberg, dbt/DuckDB, Airbyte absent) | AIA 2 C2.3 | P1 | ⬜ |
+| S1-7 | ADR : pile du programme (MLflow 3, Spark, Iceberg, dbt/DuckDB, Airbyte absent) — couvert par l'ADR 0013 (pile et environnements) et l'ADR 0014 (Spark et Iceberg) | AIA 2 C2.3 | P1 | ✅ |
 
-| S1-8 | **Hygiène disque** : Dockerfiles réordonnés (dépendances avant le code), image unique `reviewpulse-app`, `.dockerignore` ; disque de Docker Desktop à déplacer vers `D:\DockerDesktop` (Enzo) ; lac sur `D:\ReviewPulse_work\data` ; puis reconstruction et DAG 5/5 | livraison | P1 | ⛔ Enzo |
+| S1-8 | **Hygiène disque** : Dockerfiles réordonnés (dépendances avant le code), image unique `reviewpulse-app`, `.dockerignore` ; disque de Docker Desktop à déplacer vers `D:\DockerDesktop` (Enzo ; au 18/09 il est revenu sur C:, backend Hyper-V, déplacement reporté le temps du passage icacls sur D:) ; lac sur `D:\ReviewPulse_work\data` ; puis reconstruction et DAG 5/5 | livraison | P1 | ⛔ Enzo |
 
 ## Sprint 2 — 19 et 20/09
 

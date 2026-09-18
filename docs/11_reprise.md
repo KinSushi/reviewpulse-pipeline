@@ -11,7 +11,7 @@ Mise à jour : 16/09/2026, 20:45 (heure de Paris). Ce fichier permet de reprendr
 | Sel de pseudonymisation de test (secret : ne jamais l'afficher) | `D:\ReviewPulse_work\session_scratch\salt.secret` |
 | Scripts de travail (`lot_run.py`, `ast_equiv.py`, `probe_gold.sh`, image de dev `devimg/`) | `D:\ReviewPulse_work\session_scratch` |
 | Archives (sauvegardes du banc, ancien lac, journaux de construction) | `D:\ReviewPulse_work\archives_2026-09-16` |
-| Disque de Docker Desktop (partagé entre projets) | cible `D:\Program Files\DockerDesktopWSL` — **bascule en cours**, voir §3 |
+| Disque de Docker Desktop (partagé entre projets) | cible `D:\DockerDesktop` — **bascule en cours**, voir §3 |
 | Ancien dossier `C:\Users\dibac\OneDrive\Bureau\Jedha_Exercices\Data_Lead\ReviewPulse` | 82 doublons OneDrive à supprimer par Enzo ; **ne plus y travailler** |
 
 Règle d'Enzo : **rien de ReviewPulse sur C:** (ni build, ni cache, ni temporaire). Les dépendances s'installent seulement dans les images Docker ; les tests tournent dans des conteneurs.
@@ -34,7 +34,11 @@ Derniers commits : `7756b65`, `b5f92be`, `a1fa346`. Aucune mention d'outil dans 
 
 ## 3. Ce qui bloque, et qui le débloque
 
-1. **Bascule du disque Docker vers D:** (Enzo, dans Docker Desktop). À 20:39, les deux copies du disque (C: et D:) existaient, Docker était arrêté, et le réglage n'était pas enregistré. Critère de fin : Docker démarre depuis `D:\Program Files\DockerDesktopWSL`, puis l'original de C: disparaît.
+1. **Bascule du disque Docker vers D:** (Enzo, dans Docker Desktop). À 20:39, les deux copies du disque (C: et D:) existaient, Docker était arrêté, et le réglage n'était pas enregistré. Critère de fin : Docker démarre depuis `D:\DockerDesktop`, puis l'original de C: disparaît.
+   Constat de 21:45 : la copie sur D: a disparu (il ne reste que des dossiers `DockerDesktop\` vides) ; l'unique exemplaire de `docker_data.vhdx` (63,7 Go) est sur C:, attaché à Windows comme disque virtuel (disque 5, vmwp/vmmem depuis 21:39) ; `wsl --shutdown` ne le libère pas ; `Dismount-VHD` demande une console administrateur. Dans `settings-store.json`, `WslEngineEnabled` vaut `false` : à réactiver avant de relancer Docker.
+   Constat de 22:00 : l'ancien disque est supprimé (C: à 64,5 Go libres). Docker tourne en **mode Hyper-V** (`WslEngineEnabled=false`, disque neuf de 44 Mo dans `C:\ProgramData\DockerDesktop\vm-data`, propriétaire Administrateurs). Le déplacement vers `D:\DockerDesktop` échoue (« owners mismatch ») parce que Docker crée `D:\DockerDesktop\DockerDesktop` au nom de `dibac`. Remède : réactiver le moteur WSL 2, puis refaire le déplacement.
+   Constat du 17/09 : sans Docker, la passerelle `localhost:4000` et donc `nexus_agent.py` sont hors service. Recours : l'Ollama natif (`%LOCALAPPDATA%\Programs\Ollama\ollama.exe serve`, port 11434, version 0.34.1), appelé directement par `/api/generate`, avec `think:false` et `temperature` 0,2 ; `deepseek-v4-flash:cloud` répond proprement, `glm-5.3:cloud` laisse passer sa réflexion dans la réponse. Ses 77 modèles occupent **584 Go sur C:** (`%USERPROFILE%\.ollama\models`) ; `D:\ollama\models` existe mais est vide.
+   Constat du 17/09 au soir : Docker 29.8.0 est reparti et la passerelle 4000 répond (le banc gratuit est de nouveau utilisable), mais **le disque Docker est sur C:** (`C:\ProgramData\DockerDesktop\vm-data\DockerDesktop.vhdx`, 2,45 Go ; C: 79 Go libres) et le backend est Hyper-V. Décision de l'opérateur : déplacement reporté tant que l'icacls parcourt D: (registre local-llm-docker T-20260917-003). **Ne rien reconstruire tant que le disque est sur C:.** En Hyper-V, le montage de `D:\ReviewPulse_work\data` sous `/data` exige le moteur WSL 2 ou D: déclaré en partage de fichiers.
 2. **Coordination** avec la session `local-llm-docker` (passerelle LiteLLM sur `localhost:4000`) : ne rien lancer sur Docker avant qu'elle ait confirmé que C: est libéré et que sa pile est revenue.
 3. Enzo : supprimer le dépôt GitHub `KinSushi/reviewpulse` (il contient d'anciens commits avec mention d'outil) ; valider le seuil F1 ≥ 0,75 ; autoriser le secret `REVIEWPULSE_SALT` sur le futur dépôt.
 

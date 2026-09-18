@@ -236,6 +236,7 @@ def build_silver(
     # ------------------------------------------------------------------ #
     @F.pandas_udf(StringType())
     def _hash_steamid(steamid_series: pd.Series) -> pd.Series:
+        """Pseudonymise le steamid en appliquant HMAC‑SHA256 avec le sel du projet, série par série."""
         return steamid_series.apply(
             lambda sid: hmac.new(salt, str(sid).encode(), hashlib.sha256).hexdigest()
         )
