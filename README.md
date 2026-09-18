@@ -68,6 +68,7 @@ make evidence               # rapports datés dans docs/evidence/
 
 | Document | Contenu |
 |---|---|
+| [`docs/12_model_card.md`](docs/12_model_card.md) | Model Card : usage prévu, données, modèle, évaluation, limites, données personnelles, traçabilité |
 | [`docs/11_reprise.md`](docs/11_reprise.md) | **À lire en premier pour reprendre le travail** : emplacements, état vérifié, blocages, étapes de reprise, règles |
 | [`docs/09_journal_de_bord.md`](docs/09_journal_de_bord.md) · [`docs/10_backlog.md`](docs/10_backlog.md) | Journal daté et sourcé ; travail restant par sprint |
 | [`docs/01_charte.md`](docs/01_charte.md) | Charte d'une page : utilisateur, décision, données personnelles, hors périmètre |

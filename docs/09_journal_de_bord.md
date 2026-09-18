@@ -132,6 +132,8 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Contrôles F7 et F8 écrits dans `tools/forward_test.py`, inscrits dans la liste ordonnée ; ils n'emploient que `read_table` et `table_history`, réellement présents dans `lakehouse.py`. Documentation de F8 corrigée : elle annonçait une comparaison avec F7 que le code ne fait pas | [X] |
 | Deux ADR mal cités par le banc dans les mutations, corrigés : espaces Unicode → ADR 0014, priorité de dédoublonnage → ADR 0002 | [X] |
 | Ces trois travaux sont **écrits et contrôlés statiquement, jamais exécutés** : la CI demande le dépôt en ligne, les mutations et les contrôles demandent Docker | [X] |
+| 18/09 : Model Card rédigée par le banc puis contrôlée : aucun chiffre absent des sources, hyperparamètres conformes à `train.py` (char_wb 2-5, min_df 2, 100 000 traits, C=4.0, max_iter=2000), rétention 30 jours conforme à `config.RAW_RETENTION_DAYS` | [X] |
+| Trois corrections apportées à la Model Card : 48 tests → 62 ; base légale présentée comme à valider par le DPO et non comme acquise ; identité du modèle renseignée depuis `config.MODEL_NAME` | [X] |
 
 ### Questions ouvertes (à Jedha)
 
