@@ -164,6 +164,11 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | **Reproductibilité mesurée.** Trois entraînements ont donné 0,782 (08:12), puis 0,797 (11:00), puis **0,797 exactement identique** (11:05) : `f1_macro=0.7972008452503808`, `recall=0.6339285714285714`, `roc_auc=0.9350803650372617`, `n_train=7225`, `n_test=1243`. Conclusion : **le code est déterministe** (graine 42), et **la seule source de variation est l'ingestion en direct** — 223 avis nouveaux le matin, d'autres après le DAG | [X] |
 | La barrière de promotion s'est comportée comme documentée : le troisième entraînement, à métriques égales, **n'a pas été promu** (`promoted: false`) | [X] |
 | Failles de reproductibilité restantes : aucune empreinte du jeu de données n'est enregistrée dans les runs MLflow ; les images de base sont épinglées par étiquette et non par empreinte (`python:3.11-slim`, `apache/airflow:slim-2.10.3-python3.11`) ; aucun mode « jeu gelé » documenté pour rejouer un entraînement à l'identique ; aucune procédure de restauration depuis un instantané Iceberg | [X] |
+| 18/09, 12:54 : **tests inverses 16 sur 16 TUÉES**, témoin vert (43 tests, 12 min). Les trois mutations Spark et Iceberg sont détectées : M14 et M15 par `test_spark_vs_pandas`, M16 par `test_lakehouse_write_and_history` | [X] |
+| Outil rendu praticable : chaque mutation déclare le fichier de test censé la détecter, l'outil ne lance que celui-là, et le rapport porte une colonne « Portée ». Durée passée de plusieurs heures à 20 minutes. La correspondance des treize mutations d'origine a été **récupérée dans l'historique git**, le rapport ayant été écrasé par l'exécution ratée du matin | [X] |
+| Batterie depuis un dossier temporaire : **73 sur 73**. L'échec du témoin de 10:47 était donc une instabilité ponctuelle, non un défaut lié au chemin | [X] |
+| Régression que j'avais introduite et corrigée : l'empreinte du jeu de données ouvrait la zone propre sans vérifier son existence, alors que les tests entraînent depuis un tableau en mémoire | [X] |
+| CI : le workflow ne se déclenchait que sur `main`, alors que tout le travail est sur `plateforme-v3` — il n'aurait jamais tourné. Il se déclenche désormais sur toutes les branches | [X] |
 
 ### Questions ouvertes (à Jedha)
 

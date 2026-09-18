@@ -135,6 +135,55 @@ def _top_terms(pipeline: Pipeline, n: int = 20) -> dict:
     return {"negative": negative, "positive": positive}
 
 
+def _dataset_fingerprint(df: pd.DataFrame, chemin: Path) -> dict:
+    """Génère l’empreinte du jeu de données utilisé pour l’entraînement.
+
+    Retourne un dictionnaire contenant le condensé SHA‑256 du fichier,
+    le nombre de lignes du DataFrame, les bornes de la colonne ``created_at``
+    et le comptage des lignes par source d’échantillonnage.
+
+    Les valeurs sont calculées sans charger le fichier complet en mémoire.
+    """
+    import hashlib
+
+    # Condensé SHA‑256 du fichier sur disque
+    sha256 = hashlib.sha256()
+    if chemin.exists():
+        with chemin.open("rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha256.update(chunk)
+        data_sha256 = sha256.hexdigest()
+    else:
+        # L'empreinte du fichier n'a de sens que lorsque l'entraînement lit la zone propre sur disque.
+        data_sha256 = "absent"
+
+    # Nombre de lignes du DataFrame
+    data_rows = int(len(df))
+
+    # Bornes temporelles de la colonne created_at
+    if "created_at" in df.columns and not df.empty:
+        first = df["created_at"].min()
+        last = df["created_at"].max()
+        data_first_review = first.isoformat()
+        data_last_review = last.isoformat()
+    else:
+        data_first_review = ""
+        data_last_review = ""
+
+    # Comptage par source d’échantillonnage
+    data_natural_rows = int((df["sample_source"] == config.SAMPLE_NATURAL).sum())
+    data_boost_rows = int((df["sample_source"] == config.SAMPLE_NEGATIVE_BOOST).sum())
+
+    return {
+        "data_sha256": data_sha256,
+        "data_rows": data_rows,
+        "data_first_review": data_first_review,
+        "data_last_review": data_last_review,
+        "data_natural_rows": data_natural_rows,
+        "data_boost_rows": data_boost_rows,
+    }
+
+
 def _select_decision_threshold(
     pipeline: Pipeline,
     X_train_nat: pd.Series,
@@ -279,9 +328,20 @@ def train_and_log(
         pipeline.predict_proba(example_input),
     )
 
+    # Empreinte du jeu de données (zone propre)
+    dataset_fingerprint = _dataset_fingerprint(df, config.CLEAN_FILE)
+
     with mlflow.start_run() as run:
         mlflow.log_param("decision_threshold", decision_threshold)
         mlflow.log_param("n_boost", n_boost)
+
+        # Enregistrement de l’empreinte du jeu de données
+        mlflow.log_param("data_rows", dataset_fingerprint["data_rows"])
+        mlflow.log_param("data_natural_rows", dataset_fingerprint["data_natural_rows"])
+        mlflow.log_param("data_boost_rows", dataset_fingerprint["data_boost_rows"])
+        mlflow.log_param("data_first_review", dataset_fingerprint["data_first_review"])
+        mlflow.log_param("data_last_review", dataset_fingerprint["data_last_review"])
+        mlflow.set_tag("data_sha256", dataset_fingerprint["data_sha256"])
 
         mlflow.log_metric("f1_macro", f1_macro)
         mlflow.log_metric("recall_negative", recall_negative)
@@ -355,6 +415,13 @@ def train_and_log(
         "n_test": n_test,
         "negative_share": negative_share,
         "f1_cv_mean": f1_cv_mean,
+        # Empreinte du jeu de données
+        "data_sha256": dataset_fingerprint["data_sha256"],
+        "data_rows": dataset_fingerprint["data_rows"],
+        "data_first_review": dataset_fingerprint["data_first_review"],
+        "data_last_review": dataset_fingerprint["data_last_review"],
+        "data_natural_rows": dataset_fingerprint["data_natural_rows"],
+        "data_boost_rows": dataset_fingerprint["data_boost_rows"],
     }
     return result
 

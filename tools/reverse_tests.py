@@ -100,9 +100,17 @@ def _apply_mutation(
     return "OK", target
 
 
-def _run_pytest(temp_dir: Path, timeout_s: int = 3600) -> Tuple[int, str, str]:
+def _run_pytest(
+    temp_dir: Path,
+    timeout_s: int = 3600,
+    chemins: list[str] | None = None,
+) -> Tuple[int, str, str]:
     """
     Lance ``pytest`` dans ``temp_dir`` avec les options requises.
+
+    Si *chemins* est fourni, les chemins de fichiers de test sont ajoutés à la
+    ligne de commande après les options habituelles. Sinon, la batterie
+    complète est exécutée.
 
     Retourne ``(code_retour, sortie_complète, dernière_ligne_de_sortie)``.
     """
@@ -122,6 +130,10 @@ def _run_pytest(temp_dir: Path, timeout_s: int = 3600) -> Tuple[int, str, str]:
         "no:cacheprovider",
         "-rf",  # pour que la ligne FAILED apparaisse
     ]
+
+    # Ajout des chemins de test éventuels
+    if chemins:
+        cmd.extend(chemins)
 
     try:
         proc = subprocess.run(
@@ -217,13 +229,13 @@ def _format_markdown_report(
     lines.append("")
 
     # Tableau des mutations
-    header = "| id | défaut simulé | pourquoi c’est grave | statut | résumé pytest | test qui détecte |"
-    separator = "|---|---------------|----------------------|--------|---------------|-----------------|"
+    header = "| id | défaut simulé | pourquoi c’est grave | statut | résumé pytest | test qui détecte | portée |"
+    separator = "|---|---------------|----------------------|--------|---------------|-----------------|-------|"
     lines.append(header)
     lines.append(separator)
     for r in results:
         lines.append(
-            f"| {r['id']} | {r['defaut_simule']} | {r['pourquoi_grave']} | {r['statut']} | {r['resume']} | {r['test_qui_detecte']} |"
+            f"| {r['id']} | {r['defaut_simule']} | {r['pourquoi_grave']} | {r['statut']} | {r['resume']} | {r['test_qui_detecte']} | {r.get('portee', 'batterie complète')} |"
         )
     lines.extend(
         [
@@ -305,10 +317,34 @@ def main() -> int:
     # ------------------------------------------------------------
     # 1️⃣ Mesure témoin (aucune mutation)
     # ------------------------------------------------------------
+    # Détermination de la portée de la mesure témoin :
+    # - si au moins une mutation ne déclare pas de champ ``tests``, on exécute
+    #   la batterie complète ;
+    # - sinon, on exécute l'union dédoublonnée et triée des chemins déclarés.
+    all_test_paths: set[str] = set()
+    besoin_batterie_complete = False
+    for m in mutations:
+        tests = m.get("tests")
+        if isinstance(tests, list):
+            all_test_paths.update(tests)
+        else:
+            besoin_batterie_complete = True
+
+    witness_paths: list[str] | None = None
+    if not besoin_batterie_complete and all_test_paths:
+        witness_paths = sorted(all_test_paths)
+
     with tempfile.TemporaryDirectory() as td_witness:
         witness_dir = Path(td_witness)
         _copy_project(witness_dir)
-        witness_retcode, witness_output, witness_last_line = _run_pytest(witness_dir, timeout_s=args.timeout)
+        # Journalisation de la portée retenue
+        if witness_paths is None:
+            log.info("Portée retenue : batterie complète")
+        else:
+            log.info("Portée retenue : %s", ", ".join(witness_paths))
+        witness_retcode, witness_output, witness_last_line = _run_pytest(
+            witness_dir, timeout_s=args.timeout, chemins=witness_paths
+        )
         witness_ok = witness_retcode == 0
         witness_summary = witness_last_line
 
@@ -345,6 +381,15 @@ def main() -> int:
         defaut = str(mut.get("defaut_simule", ""))
         pourquoi = str(mut.get("pourquoi_grave", ""))
 
+        # Détermination de la portée pour cette mutation
+        mut_tests = mut.get("tests")
+        if isinstance(mut_tests, list):
+            portée = ", ".join(mut_tests)
+            chemins_pytest = mut_tests
+        else:
+            portée = "batterie complète"
+            chemins_pytest = None
+
         with tempfile.TemporaryDirectory() as td:
             temp_dir = Path(td)
             _copy_project(temp_dir)
@@ -360,11 +405,17 @@ def main() -> int:
                         "statut": "OBSOLETE",
                         "resume": "N/A",
                         "test_qui_detecte": "-",
+                        "portee": portée,
                     }
                 )
                 continue
 
-            retcode, output, summary = _run_pytest(temp_dir, timeout_s=args.timeout)
+            # Journalisation de la portée retenue
+            log.info("Portée retenue : %s", portée)
+
+            retcode, output, summary = _run_pytest(
+                temp_dir, timeout_s=args.timeout, chemins=chemins_pytest
+            )
             test_name = _extract_failing_test(output)
 
             if retcode != 0:
@@ -382,6 +433,7 @@ def main() -> int:
                     "statut": statut,
                     "resume": summary,
                     "test_qui_detecte": test_name,
+                    "portee": portée,
                 }
             )
 

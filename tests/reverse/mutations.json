@@ -5,7 +5,10 @@
     "avant": "np.where(proba_arr >= threshold, LABEL_NEGATIVE, LABEL_POSITIVE)",
     "apres": "np.where(proba_arr >= threshold, LABEL_POSITIVE, LABEL_NEGATIVE)",
     "defaut_simule": "Convention de décision inversée",
-    "pourquoi_grave": "Défaut réellement rencontré le 16/09/2026 : 95 % d'avis prédits négatifs pour 4 % réels (ADR 0009)"
+    "pourquoi_grave": "Défaut réellement rencontré le 16/09/2026 : 95 % d'avis prédits négatifs pour 4 % réels (ADR 0009)",
+    "tests": [
+      "tests/test_api.py"
+    ]
   },
   {
     "id": "M02",
@@ -13,7 +16,10 @@
     "avant": "rev for rev in reviews if rev.get(\"recommendationid\") not in seen_ids",
     "apres": "rev for rev in reviews",
     "defaut_simule": "Manifeste d'idempotence ignoré",
-    "pourquoi_grave": "Chaque passage réécrit les mêmes avis dans la zone brute (ADR 0002)"
+    "pourquoi_grave": "Chaque passage réécrit les mêmes avis dans la zone brute (ADR 0002)",
+    "tests": [
+      "tests/test_fresh_dirs.py"
+    ]
   },
   {
     "id": "M03",
@@ -21,7 +27,10 @@
     "avant": "if payload.get(\"success\") != 1:",
     "apres": "if False:",
     "defaut_simule": "Réponse d'erreur de l'API acceptée",
-    "pourquoi_grave": "Une panne de la source passerait pour une page vide et arrêterait la collecte sans alerte"
+    "pourquoi_grave": "Une panne de la source passerait pour une page vide et arrêterait la collecte sans alerte",
+    "tests": [
+      "tests/test_ingest.py"
+    ]
   },
   {
     "id": "M04",
@@ -29,7 +38,10 @@
     "avant": "df = df.drop_duplicates(subset=\"review_id\", keep=\"first\")",
     "apres": "df = df",
     "defaut_simule": "Dédoublonnage supprimé",
-    "pourquoi_grave": "Un avis présent dans les deux flux ou modifié serait compté deux fois"
+    "pourquoi_grave": "Un avis présent dans les deux flux ou modifié serait compté deux fois",
+    "tests": [
+      "tests/test_boost.py"
+    ]
   },
   {
     "id": "M05",
@@ -37,7 +49,10 @@
     "avant": "return hmac.new(salt, steamid.encode(), hashlib.sha256).hexdigest()",
     "apres": "return steamid",
     "defaut_simule": "Pseudonymisation supprimée",
-    "pourquoi_grave": "L'identifiant Steam en clair atteindrait la zone propre (RGPD, ADR 0004)"
+    "pourquoi_grave": "L'identifiant Steam en clair atteindrait la zone propre (RGPD, ADR 0004)",
+    "tests": [
+      "tests/test_transform_quality.py"
+    ]
   },
   {
     "id": "M06",
@@ -45,7 +60,10 @@
     "avant": "quality.assert_quality(clean_df)",
     "apres": "(clean_df)",
     "defaut_simule": "Contrôle qualité bloquant désactivé",
-    "pourquoi_grave": "Une donnée non conforme atteindrait le modèle (ADR 0005)"
+    "pourquoi_grave": "Une donnée non conforme atteindrait le modèle (ADR 0005)",
+    "tests": [
+      "tests/test_reverse_gaps.py"
+    ]
   },
   {
     "id": "M07",
@@ -53,7 +71,10 @@
     "avant": "and f1_macro >= config.F1_MACRO_MIN",
     "apres": "and True",
     "defaut_simule": "Barrière de promotion supprimée",
-    "pourquoi_grave": "Un modèle sous le seuil de qualité serait mis en service (ADR 0008)"
+    "pourquoi_grave": "Un modèle sous le seuil de qualité serait mis en service (ADR 0008)",
+    "tests": [
+      "tests/test_reverse_gaps.py"
+    ]
   },
   {
     "id": "M08",
@@ -61,7 +82,10 @@
     "avant": "and (champion_f1 is None or f1_macro > champion_f1)",
     "apres": "and True",
     "defaut_simule": "Comparaison au champion supprimée",
-    "pourquoi_grave": "Un modèle moins bon que celui en service le remplacerait (ADR 0008)"
+    "pourquoi_grave": "Un modèle moins bon que celui en service le remplacerait (ADR 0008)",
+    "tests": [
+      "tests/test_train_score.py"
+    ]
   },
   {
     "id": "M09",
@@ -69,7 +93,10 @@
     "avant": "natural_df = df[df[\"sample_source\"] == config.SAMPLE_NATURAL]",
     "apres": "natural_df = df",
     "defaut_simule": "Avis complémentaires mélangés au jeu de test",
-    "pourquoi_grave": "La mesure ne refléterait plus la production (ADR 0007)"
+    "pourquoi_grave": "La mesure ne refléterait plus la production (ADR 0007)",
+    "tests": [
+      "tests/test_boost.py"
+    ]
   },
   {
     "id": "M10",
@@ -77,7 +104,10 @@
     "avant": "natural = scored[scored[\"sample_source\"] == config.SAMPLE_NATURAL]",
     "apres": "natural = scored",
     "defaut_simule": "Résumé quotidien incluant le flux complémentaire",
-    "pourquoi_grave": "La part négative affichée serait gonflée artificiellement (ADR 0007)"
+    "pourquoi_grave": "La part négative affichée serait gonflée artificiellement (ADR 0007)",
+    "tests": [
+      "tests/test_boost.py"
+    ]
   },
   {
     "id": "M11",
@@ -85,7 +115,10 @@
     "avant": "natural_df = df[df[\"sample_source\"] == config.SAMPLE_NATURAL]",
     "apres": "natural_df = df",
     "defaut_simule": "Part de négatifs contrôlée sur tous les flux",
-    "pourquoi_grave": "Le contrôle de distribution ne détecterait plus une dérive du flux naturel (ADR 0005)"
+    "pourquoi_grave": "Le contrôle de distribution ne détecterait plus une dérive du flux naturel (ADR 0005)",
+    "tests": [
+      "tests/test_reverse_gaps.py"
+    ]
   },
   {
     "id": "M12",
@@ -93,7 +126,10 @@
     "avant": "Field(min_length=1, max_length=100),",
     "apres": "Field(min_length=1, max_length=100000),",
     "defaut_simule": "Limite du nombre de textes par requête levée",
-    "pourquoi_grave": "Une seule requête pourrait saturer l'API"
+    "pourquoi_grave": "Une seule requête pourrait saturer l'API",
+    "tests": [
+      "tests/test_api.py"
+    ]
   },
   {
     "id": "M13",
@@ -101,7 +137,10 @@
     "avant": "raise HTTPException(status_code=503, detail=\"Modèle indisponible\") from exc",
     "apres": "raise exc",
     "defaut_simule": "Absence de modèle transformée en erreur 500",
-    "pourquoi_grave": "Un état attendu (première installation) apparaîtrait comme une panne (ADR 0008)"
+    "pourquoi_grave": "Un état attendu (première installation) apparaîtrait comme une panne (ADR 0008)",
+    "tests": [
+      "tests/test_artifacts_location.py"
+    ]
   },
   {
     "id": "M14",
@@ -109,7 +148,10 @@
     "avant": "                r\"(?U)\\s+\",",
     "apres": "                r\"\\s+\",",
     "defaut_simule": "Nettoyage des espaces Unicode désactivé",
-    "pourquoi_grave": "Des avis contenant des espaces non-ASCII restent inchangés, biaisant le comptage de mots (ADR 0014)"
+    "pourquoi_grave": "Des avis contenant des espaces non-ASCII restent inchangés, biaisant le comptage de mots (ADR 0014)",
+    "tests": [
+      "tests/test_spark_silver.py"
+    ]
   },
   {
     "id": "M15",
@@ -117,7 +159,10 @@
     "avant": "    return F.when(F.col(sample_col) == config.SAMPLE_NATURAL, 0).otherwise(1)",
     "apres": "    return F.when(F.col(sample_col) == config.SAMPLE_NATURAL, 1).otherwise(0)",
     "defaut_simule": "Priorité de dédoublonnage inversée",
-    "pourquoi_grave": "Les avis du flux ``negative_boost`` peuvent écraser ceux du flux naturel (ADR 0002)"
+    "pourquoi_grave": "Les avis du flux ``negative_boost`` peuvent écraser ceux du flux naturel (ADR 0002)",
+    "tests": [
+      "tests/test_spark_silver.py"
+    ]
   },
   {
     "id": "M16",
@@ -125,6 +170,9 @@
     "avant": "            col = pc.cast(col, target_type)",
     "apres": "            col = col",
     "defaut_simule": "Conversion des timestamps nanosecondes ignorée",
-    "pourquoi_grave": "Les timestamps sont écrits en nanosecondes, provoquant une erreur d’écriture Iceberg (ADR 0014)"
+    "pourquoi_grave": "Les timestamps sont écrits en nanosecondes, provoquant une erreur d’écriture Iceberg (ADR 0014)",
+    "tests": [
+      "tests/test_spark_silver.py"
+    ]
   }
 ]
