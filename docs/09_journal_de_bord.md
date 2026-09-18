@@ -144,6 +144,16 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | README complété d'une ligne datée : les chiffres du 16/09 valent pour 48 tests ; l'état au 18/09 est distinct et non encore exécuté | [X] |
 | 18/09 : ADR 0015 (surveillance de la dérive) et ADR 0016 (déploiement progressif) rédigés, statut « proposée », inscrits au registre ; aucun chiffre étranger aux sources | [X] |
 | Correction dans l'ADR 0016 : « le hash modulo 1 » n'a pas de sens ; le texte décrit maintenant les huit premiers octets du hachage ramenés dans [0, 1) | [X] |
+| 18/09, 05:30 : Docker rebasculé sur D: en moteur WSL 2 (`D:\DockerDesktop\DockerDesktopWSL`). Le blocage « owners mismatch » venait d'un seul dossier, `D:\DockerDesktop\DockerDesktop`, créé au nom de `dibac` ; un `icacls /setowner` ciblé l'a levé | [X] |
+| Le lac a survécu à la perte du volume Docker : il est monté depuis D:, écriture comprise. Seuls le registre MLflow et les artefacts avaient été détruits | [X] |
+| Images reconstruites : `reviewpulse-app` 3,38 Go (36 min), `reviewpulse-dev` 3,35 Go | [X] |
+| **Batterie : 73 tests, 68 verts, 5 rouges.** Les 62 tests d'origine passent. Les échecs sont dans le code écrit le 18/09 sans pouvoir l'exécuter : 4 dans `explain.py` (`coo_matrix` n'a pas d'attribut `indices`, ligne 201) et 1 dans `tests/test_drift.py` (`np.random.choice(..., random_state=...)`, argument inexistant — défaut du test, pas du module) | [X] |
+| **Pipeline complet réussi** : ingest → spark → gx → train → score → gold ; dbt 43/43, catalogue généré | [X] |
+| **F1 macro 0,782** (et non 0,807), rappel négatif 0,595, précision 0,611, AUC 0,931, F1 en validation croisée 0,809. **Explication vérifiée** : l'étape d'ingestion a collecté 223 avis nouveaux sur la source vivante (9 partitions datées du 18/09, zone brute passée de 8 831 à 9 054 lignes). Le jeu de test a changé (1 239 lignes contre ~1 195) : ce n'est pas une régression de code, c'est un jeu de données différent | [X] |
+| Modèle promu `champion` version 1 : la barrière F1 ≥ 0,75 est respectée. Le registre repart de zéro, comme prévu après la perte du volume | [X] |
+| **Test de stack : 14 contrôles sur 14**, F7 et F8 compris — leur première exécution réelle. `docs/evidence/forward_test.md` régénéré | [X] |
+| Les tests inverses attendent la correction des cinq échecs : `reverse_tests.py` lance `pytest -x`, donc chaque mutation s'arrêterait sur l'échec d'`explain`, sans rapport avec elle | [X] |
+| Correctifs en attente du banc gratuit : la passerelle `localhost:4000` ne répond pas (seuls `litellm-db` et `litellm-redis` tournent) ; délai demandé à la session local-llm-docker | [X] |
 
 ### Questions ouvertes (à Jedha)
 
