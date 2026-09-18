@@ -158,6 +158,12 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Correctif `explain.py` : `X.multiply(coeff_neg)` rend une matrice COO, sans attribut `indices` ; conversion en CSR. Le banc a repéré le **même défaut latent dans `explain_batch`**, jamais atteint par les tests en échec | [X] |
 | Correctif `tests/test_drift.py` : `np.random.choice(..., random_state=…)` remplacé par `np.random.default_rng(graine).choice(...)`, trois graines distinctes, seuils inchangés | [X] |
 | Vérification par exécution : **11 tests sur 11 au vert** sur `test_explain.py` et `test_drift.py` | [X] |
+| 18/09 : **batterie complète 73 tests sur 73**, en 31 min, après les deux correctifs | [X] |
+| **DAG à 5 tâches : 5/5** (ingest 9 s, spark_silver 17 s, gx 8 s, score 10 s, gold 14 s), `gold` exécutée dans Airflow pour la première fois. Défaut rencontré et compris : solliciter Airflow pendant son démarrage tue le scheduler (SQLite verrouillé) — attendre quatre minutes avant toute commande | [X] |
+| Défaut d'outillage corrigé : `reverse_tests.py` imposait un délai de 600 s par exécution, hérité d'une batterie de 2 min ; elle dure 31 min. `TimeoutExpired` n'était pas capturé. Délai désormais paramétrable (`--timeout`, défaut 3 600 s), dépassement rendu comme échec explicite | [X] |
+| **Reproductibilité mesurée.** Trois entraînements ont donné 0,782 (08:12), puis 0,797 (11:00), puis **0,797 exactement identique** (11:05) : `f1_macro=0.7972008452503808`, `recall=0.6339285714285714`, `roc_auc=0.9350803650372617`, `n_train=7225`, `n_test=1243`. Conclusion : **le code est déterministe** (graine 42), et **la seule source de variation est l'ingestion en direct** — 223 avis nouveaux le matin, d'autres après le DAG | [X] |
+| La barrière de promotion s'est comportée comme documentée : le troisième entraînement, à métriques égales, **n'a pas été promu** (`promoted: false`) | [X] |
+| Failles de reproductibilité restantes : aucune empreinte du jeu de données n'est enregistrée dans les runs MLflow ; les images de base sont épinglées par étiquette et non par empreinte (`python:3.11-slim`, `apache/airflow:slim-2.10.3-python3.11`) ; aucun mode « jeu gelé » documenté pour rejouer un entraînement à l'identique ; aucune procédure de restauration depuis un instantané Iceberg | [X] |
 
 ### Questions ouvertes (à Jedha)
 

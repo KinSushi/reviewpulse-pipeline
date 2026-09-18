@@ -100,7 +100,7 @@ def _apply_mutation(
     return "OK", target
 
 
-def _run_pytest(temp_dir: Path) -> Tuple[int, str, str]:
+def _run_pytest(temp_dir: Path, timeout_s: int = 3600) -> Tuple[int, str, str]:
     """
     Lance ``pytest`` dans ``temp_dir`` avec les options requises.
 
@@ -123,21 +123,29 @@ def _run_pytest(temp_dir: Path) -> Tuple[int, str, str]:
         "-rf",  # pour que la ligne FAILED apparaisse
     ]
 
-    proc = subprocess.run(
-        cmd,
-        cwd=temp_dir,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-    )
-    output = proc.stdout.strip() or proc.stderr.strip()
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=temp_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+        output = proc.stdout.strip() or proc.stderr.strip()
+        returncode = proc.returncode
+    except subprocess.TimeoutExpired:
+        # Code de retour 124 (comme dans GNU timeout), sortie explicative en français
+        output = f"Le délai de {timeout_s} secondes a été dépassé."
+        returncode = 124
+
+    # Extraction de la dernière ligne non vide de la sortie (ou du message d’erreur)
     last_line = ""
     for line in reversed(output.splitlines()):
         if line.strip():
             last_line = line.strip()
             break
-    return proc.returncode, output, last_line
+    return returncode, output, last_line
 
 
 def _extract_failing_test(pytest_output: str) -> str:
@@ -274,6 +282,13 @@ def main() -> int:
         default="docs/evidence/reverse_tests.md",
         help="Chemin du rapport Markdown généré (par défaut %(default)s).",
     )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=3600,
+        metavar="SECS",
+        help="Durée maximale (en secondes) autorisée pour chaque exécution de pytest (par défaut %(default)s).",
+    )
     args = parser.parse_args()
 
     root = _repo_root()
@@ -293,7 +308,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td_witness:
         witness_dir = Path(td_witness)
         _copy_project(witness_dir)
-        witness_retcode, witness_output, witness_last_line = _run_pytest(witness_dir)
+        witness_retcode, witness_output, witness_last_line = _run_pytest(witness_dir, timeout_s=args.timeout)
         witness_ok = witness_retcode == 0
         witness_summary = witness_last_line
 
@@ -349,7 +364,7 @@ def main() -> int:
                 )
                 continue
 
-            retcode, output, summary = _run_pytest(temp_dir)
+            retcode, output, summary = _run_pytest(temp_dir, timeout_s=args.timeout)
             test_name = _extract_failing_test(output)
 
             if retcode != 0:
