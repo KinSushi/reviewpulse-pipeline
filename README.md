@@ -68,6 +68,7 @@ make evidence               # rapports datés dans docs/evidence/
 
 | Document | Contenu |
 |---|---|
+| [`docs/14_plan_monitoring.md`](docs/14_plan_monitoring.md) | Plan de monitoring : fraîcheur, qualité, dérive, performance ; ce qui est en place et ce qui reste à construire |
 | [`docs/13_note_orientation.md`](docs/13_note_orientation.md) | Note d'orientation technologique : options essayées et mesurées, latence, sécurité, veille |
 | [`docs/12_model_card.md`](docs/12_model_card.md) | Model Card : usage prévu, données, modèle, évaluation, limites, données personnelles, traçabilité |
 | [`docs/11_reprise.md`](docs/11_reprise.md) | **À lire en premier pour reprendre le travail** : emplacements, état vérifié, blocages, étapes de reprise, règles |

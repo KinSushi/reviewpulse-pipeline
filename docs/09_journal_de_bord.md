@@ -138,6 +138,8 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Ces fichiers **n'ont jamais été exécutés** : scikit-learn n'est pas installé sur l'hôte, et c'est voulu (les dépendances restent dans les images) | [X] |
 | 18/09 : note d'orientation technologique rédigée ; contrôle des chiffres et des numéros d'ADR : aucun nombre étranger aux sources, aucun ADR inexistant cité | [X] |
 | Correction : le banc annonçait « pandas 1,7 s, Spark 5,3 s » en mélangeant deux mesures de l'ADR 0014 (comparaison pandas 1,7 s / Spark 7,8 s sur 8 231 lignes, et `spark_silver.main()` en 5,3 s) | [X] |
+| 18/09 : plan de monitoring rédigé ; contrôle des noms cités : `quality.check_clean`, `config.SUMMARY_FILE`, suite `zone_propre`, DAG `reviewpulse_weekly_train` existent bien | [X] |
+| Correction : le banc plaçait les zones brute et propre sous `lakehouse/`, alors qu'elles sont sous `data/` (`config.RAW_DIR`, `config.CLEAN_FILE`) | [X] |
 
 ### Questions ouvertes (à Jedha)
 
