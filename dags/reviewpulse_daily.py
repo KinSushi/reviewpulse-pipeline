@@ -163,6 +163,14 @@ with DAG(
         expect_airflow=False,
     )
 
+    drift_task = ExternalPythonOperator(
+        task_id="drift",
+        python=RP_PYTHON,
+        python_callable=_run_module,
+        op_args=["reviewpulse.drift"],
+        expect_airflow=False,
+    )
+
     gold_task = ExternalPythonOperator(
         task_id="gold",
         python=RP_PYTHON,
@@ -171,7 +179,7 @@ with DAG(
         expect_airflow=False,
     )
 
-    ingest_task >> spark_silver_task >> gx_validate_task >> score_task >> gold_task
+    ingest_task >> spark_silver_task >> gx_validate_task >> score_task >> drift_task >> gold_task
 
 # ---------------------------------------------------------------------------
 # DAG hebdomadaire : entraînement → scoring → gold (dbt)

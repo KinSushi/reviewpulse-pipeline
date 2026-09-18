@@ -131,11 +131,16 @@ def test_global_terms_n_et_signes(tiny_model):
     assert len(termes["negative"]) == n
     assert len(termes["positive"]) == n
 
-    # Les coefficients négatifs doivent être < 0, les positifs > 0
+    # Tous les coefficients doivent être strictement positifs et les termes doivent être disjoints
     for terme, coeff in termes["negative"]:
-        assert coeff < 0, f"Coefficient positif trouvé dans la liste négative : {coeff}"
+        assert coeff > 0, f"Coefficient non positif trouvé dans la liste négative : {coeff}"
     for terme, coeff in termes["positive"]:
-        assert coeff > 0, f"Coefficient négatif trouvé dans la liste positive : {coeff}"
+        assert coeff > 0, f"Coefficient non positif trouvé dans la liste positive : {coeff}"
+    # Vérifier que les ensembles de termes sont disjoints
+    termes_neg = {terme for terme, _ in termes["negative"]}
+    termes_pos = {terme for terme, _ in termes["positive"]}
+    intersection = termes_neg.intersection(termes_pos)
+    assert not intersection, f"Termes présents à la fois dans les listes négative et positive : {intersection}"
 
 
 def test_explain_batch_cohérence_avec_local_contributions(tiny_model):

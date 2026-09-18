@@ -34,6 +34,7 @@ from functools import lru_cache
 
 from reviewpulse import config
 from reviewpulse import decision
+from reviewpulse import explain
 
 # Initialise le logger dédié à ce module (pas de prints ailleurs)
 logger = logging.getLogger(__name__)
@@ -164,6 +165,64 @@ class PredictResponse(BaseModel):
     model_version: str
     decision_threshold: float
     predictions: List[PredictionItem]
+
+    model_config = ConfigDict(protected_namespaces=())
+
+
+class ExplainRequest(BaseModel):
+    """Requête d’explication d’un texte unique.
+
+    Attributes
+    ----------
+    text : str
+        Texte à expliquer, 1 ≤ longueur ≤ 5 000 caractères.
+    n : int, optional
+        Nombre maximal de contributions locales à retourner (1..50, défaut = 10).
+    """
+    text: Annotated[
+        str,
+        Field(min_length=1, max_length=5000, description="Texte à expliquer"),
+    ]
+    n: Annotated[
+        int,
+        Field(ge=1, le=50, default=10, description="Nombre de contributions locales"),
+    ] = 10
+
+
+class TermContribution(BaseModel):
+    """Terme et sa contribution locale."""
+    terme: str
+    contribution: float
+
+    model_config = ConfigDict(protected_namespaces=())
+
+
+class TermCoeff(BaseModel):
+    """Terme et son coefficient global."""
+    terme: str
+    coefficient: float
+
+    model_config = ConfigDict(protected_namespaces=())
+
+
+class ExplainResponse(BaseModel):
+    """Réponse de l’endpoint ``/explain``.
+
+    Attributes
+    ----------
+    model_version : str
+        Version du modèle utilisé.
+    terms : List[TermContribution]
+        Contributions locales triées par valeur absolue décroissante.
+    global_negative : List[TermCoeff]
+        Dix termes les plus influents pour la classe négative.
+    global_positive : List[TermCoeff]
+        Dix termes les plus influents pour la classe positive.
+    """
+    model_version: str
+    terms: List[TermContribution]
+    global_negative: List[TermCoeff]
+    global_positive: List[TermCoeff]
 
     model_config = ConfigDict(protected_namespaces=())
 
@@ -308,6 +367,40 @@ def predict(
         model_version=str(version),
         decision_threshold=threshold,
         predictions=predictions,
+    )
+
+
+@app.post("/explain", response_model=ExplainResponse)
+def explain_endpoint(
+    payload: ExplainRequest,
+    model_info: Tuple[object, str] = Depends(get_model),
+) -> ExplainResponse:
+    """Explique la décision pour le texte fourni.
+
+    Une contribution positive pousse vers l'étiquette négative,
+    tandis qu'une contribution négative pousse vers l'étiquette positive.
+    """
+    model, version = model_info
+    n_local = payload.n
+
+    # Contributions locales
+    local = explain.local_contributions(model, payload.text, n=n_local)
+    terms = [TermContribution(terme=t, contribution=c) for t, c in local]
+
+    # Termes globaux (toujours 10 par classe)
+    global_dict = explain.global_terms(model, n=10)
+    global_negative = [
+        TermCoeff(terme=t, coefficient=c) for t, c in global_dict["negative"]
+    ]
+    global_positive = [
+        TermCoeff(terme=t, coefficient=c) for t, c in global_dict["positive"]
+    ]
+
+    return ExplainResponse(
+        model_version=str(version),
+        terms=terms,
+        global_negative=global_negative,
+        global_positive=global_positive,
     )
 
 

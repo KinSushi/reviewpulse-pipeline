@@ -285,6 +285,74 @@ def main() -> int:
             except Exception as e:
                 st.error(f"Erreur lors de l’appel à l’API : {e}")
 
+        # ------------------------------------------------------------------
+        # Explication des termes qui pèsent (API /explain)
+        # ------------------------------------------------------------------
+        st.subheader("Termes qui pèsent")
+        # Appel à l'API /explain si un texte a été saisi
+        if user_text.strip():
+            try:
+                explain_resp = requests.post(
+                    f"{api_url.rstrip('/')}/explain",
+                    json={"text": user_text, "n": 10},
+                    timeout=10,
+                )
+                explain_resp.raise_for_status()
+                explain_data = explain_resp.json()
+                # Contributions locales
+                local_terms = explain_data.get("terms", [])
+                if local_terms:
+                    local_df = pd.DataFrame(
+                        [
+                            {
+                                "terme": t["terme"],
+                                "contribution": round(t["contribution"], 3),
+                            }
+                            for t in local_terms
+                        ]
+                    )
+                    st.write(
+                        "Une contribution positive pousse vers l’étiquette négative."
+                    )
+                    st.table(local_df)
+            except Exception as e:
+                st.error(f"Erreur lors de l’appel à l’API : {e}")
+
+        # Affichage des termes globaux, toujours
+        global_neg = explain_data.get("global_negative", []) if 'explain_data' in locals() else []
+        global_pos = explain_data.get("global_positive", []) if 'explain_data' in locals() else []
+        col_neg, col_pos = st.columns(2)
+        with col_neg:
+            st.subheader("Poussent vers négatif")
+            if global_neg:
+                df_neg = pd.DataFrame(
+                    [
+                        {
+                            "terme": t["terme"],
+                            "coefficient": round(t["coefficient"], 3),
+                        }
+                        for t in global_neg
+                    ]
+                )
+                st.table(df_neg)
+            else:
+                st.write("Aucun terme.")
+        with col_pos:
+            st.subheader("Poussent vers positif")
+            if global_pos:
+                df_pos = pd.DataFrame(
+                    [
+                        {
+                            "terme": t["terme"],
+                            "coefficient": round(t["coefficient"], 3),
+                        }
+                        for t in global_pos
+                    ]
+                )
+                st.table(df_pos)
+            else:
+                st.write("Aucun terme.")
+
     return 0
 
 # Streamlit exécute le script comme __main__ ; un SystemExit bloque le moteur de test AppTest (délai dépassé mesuré le 16/09/2026) et n'a pas de sens dans une application Streamlit.

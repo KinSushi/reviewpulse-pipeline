@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from reviewpulse import config
 from reviewpulse import api as api_module
+from reviewpulse import decision
 
 app = api_module.app
 
@@ -121,3 +122,111 @@ def test_insights_success_200(client, data_env):
     assert pytest.approx(row["share_negative_pred"], rel=1e-6) == 0.2
     assert pytest.approx(row["share_negative_true"], rel=1e-6) == 0.3
     assert row["model_version"] == "7"
+
+# ---------------------------------------------------------------------------
+# Fixture et tests pour l'endpoint /explain avec un vrai pipeline sklearn
+# ---------------------------------------------------------------------------
+
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+@pytest.fixture
+def client_pipeline():
+    """Construit un petit pipeline réel et le fournit via la dépendance get_model."""
+    # Jeux de données très simples (français)
+    texts = [
+        "Ce produit est terrible, je déteste tout.",
+        "J'adore ce jeu, c'est fantastique !",
+        "Mauvaise expérience, très décevant.",
+        "Excellent service, très satisfait.",
+        "Je n'aime pas ce film, c'est nul.",
+        "Superbe performance, je recommande.",
+        "Pire achat de ma vie.",
+        "Magnifique, je suis ravi.",
+        "Terrible, rien à voir avec la description.",
+        "Parfait, exactement ce que je voulais."
+    ]
+    labels = [
+        decision.LABEL_NEGATIVE,
+        decision.LABEL_POSITIVE,
+        decision.LABEL_NEGATIVE,
+        decision.LABEL_POSITIVE,
+        decision.LABEL_NEGATIVE,
+        decision.LABEL_POSITIVE,
+        decision.LABEL_NEGATIVE,
+        decision.LABEL_POSITIVE,
+        decision.LABEL_NEGATIVE,
+        decision.LABEL_POSITIVE,
+    ]
+
+    pipeline = Pipeline(
+        [
+            ("tfidf", TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 3))),
+            ("clf", LogisticRegression(max_iter=1000)),
+        ]
+    )
+    pipeline.fit(texts, labels)
+    # Le pipeline doit exposer l'attribut decision_threshold_ attendu par l'API
+    pipeline.decision_threshold_ = 0.5
+
+    original_overrides = dict(app.dependency_overrides)
+    app.dependency_overrides[api_module.get_model] = lambda: (pipeline, "real")
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides = original_overrides
+
+
+def test_explain_success(client_pipeline):
+    payload = {"text": "Ce produit est excellent, je l'adore vraiment.", "n": 5}
+    resp = client_pipeline.post("/explain", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    # version du modèle
+    assert data["model_version"] == "real"
+    # nombre de contributions locales ≤ n
+    assert len(data["terms"]) <= payload["n"]
+    # chaque terme rendu doit être présent dans le texte (insensible à la casse)
+    for term_obj in data["terms"]:
+        term = term_obj["terme"]
+        assert re.search(re.escape(term), payload["text"], re.IGNORECASE)
+    # contributions triées par valeur absolue décroissante
+    contributions = [t["contribution"] for t in data["terms"]]
+    abs_contrib = [abs(c) for c in contributions]
+    assert abs_contrib == sorted(abs_contrib, reverse=True)
+
+
+def test_explain_global_terms_signs(client_pipeline):
+    payload = {"text": "Mauvaise qualité, très décevant.", "n": 3}
+    resp = client_pipeline.post("/explain", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    # global_negative et global_positive contiennent exactement 10 termes
+    assert len(data["global_negative"]) == 10
+    assert len(data["global_positive"]) == 10
+    # les coefficients des deux listes sont strictement positifs,
+    # et les deux listes de termes sont disjointes
+    neg_coeffs = [t["coefficient"] for t in data["global_negative"]]
+    pos_coeffs = [t["coefficient"] for t in data["global_positive"]]
+    assert all(c > 0 for c in neg_coeffs)
+    assert all(c > 0 for c in pos_coeffs)
+    # vérifier que les termes sont disjoints
+    neg_terms = {t["terme"] for t in data["global_negative"]}
+    pos_terms = {t["terme"] for t in data["global_positive"]}
+    assert neg_terms.isdisjoint(pos_terms)
+
+
+def test_explain_empty_text_422(client_pipeline):
+    payload = {"text": "", "n": 5}
+    resp = client_pipeline.post("/explain", json=payload)
+    assert resp.status_code == 422
+
+
+def test_explain_n_limit(client_pipeline):
+    payload = {"text": "Très bon produit, je le recommande vivement.", "n": 2}
+    resp = client_pipeline.post("/explain", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    # le nombre de termes retournés ne doit pas dépasser n
+    assert len(data["terms"]) <= payload["n"]

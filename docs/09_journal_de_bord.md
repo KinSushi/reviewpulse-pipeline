@@ -169,6 +169,12 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Batterie depuis un dossier temporaire : **73 sur 73**. L'échec du témoin de 10:47 était donc une instabilité ponctuelle, non un défaut lié au chemin | [X] |
 | Régression que j'avais introduite et corrigée : l'empreinte du jeu de données ouvrait la zone propre sans vérifier son existence, alors que les tests entraînent depuis un tableau en mémoire | [X] |
 | CI : le workflow ne se déclenchait que sur `main`, alors que tout le travail est sur `plateforme-v3` — il n'aurait jamais tourné. Il se déclenche désormais sur toutes les branches | [X] |
+| 18/09, phase 1 : **dérive et explicabilité branchées**. Tâche `drift` ajoutée au DAG entre `score` et `gold` ; cible `make drift` ; point d'entrée **`POST /explain`** dans l'API (contributions locales et termes globaux) ; section « Termes qui pèsent » dans le tableau de bord, qui tient enfin la promesse de la charte | [X] |
+| Le tableau de bord ne charge aucun modèle : il interroge l'API. L'explicabilité passe donc par l'API, ce qui la rend disponible pour tout consommateur | [X] |
+| **Défaut sémantique trouvé dans `explain.global_terms`** : la liste « négative » retenait les coefficients inférieurs à zéro, c'est-à-dire les termes qui poussent vers le positif — les deux listes désignaient la même direction. Corrigé : les deux listes portent désormais des coefficients positifs, qui expriment une force | [X] |
+| **Un test avait été écrit pour épouser ce défaut** (`test_global_terms_n_et_signes` exigeait des coefficients négatifs). Il est corrigé et vérifie maintenant un effet réel : coefficients strictement positifs des deux côtés, et listes disjointes | [X] |
+| Quatre tests ajoutés pour `/explain` (contributions présentes dans le texte soumis, tri par valeur absolue, dix termes globaux de chaque côté, texte vide refusé en 422). **25 tests verts** sur le périmètre touché | [X] |
+| Récidive du marqueur tronqué par le banc, sur `AVANT` cette fois, avec en prime une ancre abrégée par des points de suspension. Artefact conservé intact (`phase1.jsonl`) et signalé à la session local-llm-docker. Remède employé : fournir moi-même l'ancre exacte et un gabarit littéral dans la consigne | [X] |
 
 ### Questions ouvertes (à Jedha)
 

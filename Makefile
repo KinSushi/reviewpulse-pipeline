@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift
 
 help:
 	@echo "Cibles du Makefile :"
@@ -65,6 +65,10 @@ train:
 ## Calcul des scores avec le modèle champion
 score:
 	python -m reviewpulse.score
+
+## Mesure de la dérive des entrées et des prédictions
+drift:
+	python -m reviewpulse.drift
 
 ## Construction de la zone gold : dbt build (modèles, tests, contrats) puis documentation
 gold:

@@ -143,8 +143,8 @@ def global_terms(model: Pipeline, n: int = 20) -> Dict[str, List[Tuple[str, floa
     coeff_pos = clf.coef_[0]               # coefficients de la classe positive
     coeff_neg = _negative_coefficients(clf)  # coefficients de la classe négative
 
-    # Sélection des termes négatifs (coeff négatif) et positifs (coeff positif)
-    neg_pairs = [(term, coeff) for term, coeff in zip(terms, coeff_neg) if coeff < 0]
+    # Sélection des termes négatifs (coeff positif pour la classe négative) et positifs (coeff positif pour la classe positive)
+    neg_pairs = [(term, coeff) for term, coeff in zip(terms, coeff_neg) if coeff > 0]
     pos_pairs = [(term, coeff) for term, coeff in zip(terms, coeff_pos) if coeff > 0]
 
     # Tri par valeur absolue décroissante
