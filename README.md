@@ -24,6 +24,8 @@ Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose 
 | **Test de la stack déployée** | **12 / 12 contrôles** (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
 | Essais manuels en conditions réelles | tableau de bord piloté dans un navigateur ; DAG Airflow quotidien (3 exécutions) et hebdomadaire (1) réussis |
 
+*Depuis cette mesure : 62 tests verts au 17/09/2026 (54, plus 4 Spark et 4 dbt) ; deux contrôles F7 et F8 (tables Iceberg) et trois mutations M14 à M16 (Spark, Iceberg) ont été ajoutés le 18/09 et **n'ont pas encore été exécutés**.*
+
 *Avant l'ajout des avis négatifs complémentaires, le même test donnait F1 0,750 et AUC 0,896 ; le détail de la décision est dans la charte et le contrat de code.*
 
 ## Démarrer

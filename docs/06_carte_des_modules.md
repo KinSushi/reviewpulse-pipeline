@@ -120,6 +120,14 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 - **Choix** : contribution linéaire exacte (le modèle est une régression logistique sur TF-IDF), donc pas besoin d'approximation par échantillonnage ; `ValueError` explicite si le modèle ne porte pas les étapes « tfidf » et « clf ».
 - **Tests** : `tests/test_explain.py` (tri et troncature, terme absent, somme des contributions égale à la fonction de décision, signes des termes globaux, cohérence de `explain_batch`) — **écrits, jamais exécutés** faute de Docker.
 
+## `drift.py`
+
+- **Rôle** : mesurer la dérive des données d'entrée et celle des prédictions.
+- **Place** : lecture de la zone propre et du résumé quotidien ; destiné à alimenter les alertes décrites dans le plan de monitoring.
+- **Fonctionnement** : `psi_numerique` et `psi_categoriel` calculent l'indice de stabilité de population, les bornes venant des quantiles de la fenêtre de référence ; `derive_entrees` l'applique à `text_len`, `language`, `app_id` et `sample_source`, en ignorant une colonne absente ; `derive_predictions` compare `share_negative_pred` à `share_negative_true` du résumé quotidien et marque les lignes hors bornes, en sautant les groupes de moins de `n_min` avis ; `interpretation` classe l'indice en « stable », « à surveiller » ou « dérive » ; `main` coupe la zone propre en deux fenêtres selon `created_at`, la plus ancienne servant de référence, et écrit `drift_report.json` dans la zone scorée.
+- **Choix** : indice de stabilité de population plutôt qu'un test statistique, car il se lit par seuils (0,1 et 0,2) et supporte les variables catégorielles ; aucune écriture hors du dossier de données, aucun appel à MLflow.
+- **Tests** : `tests/test_drift.py` (six tests : indice proche de zéro sur même distribution, décalage franc, catégorie disparue, colonne absente, bornes et filtrage, absence de fichier) — **écrits, jamais exécutés** faute de Docker.
+
 ## `tools/forward_test.py` et `tools/reverse_tests.py`
 
 - **`forward_test.py`** : contrôle la stack **déployée** (API, tableau de bord, MLflow, fichiers réels) et écrit un rapport daté dans `docs/evidence/`.

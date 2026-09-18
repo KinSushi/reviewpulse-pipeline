@@ -140,6 +140,8 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Correction : le banc annonçait « pandas 1,7 s, Spark 5,3 s » en mélangeant deux mesures de l'ADR 0014 (comparaison pandas 1,7 s / Spark 7,8 s sur 8 231 lignes, et `spark_silver.main()` en 5,3 s) | [X] |
 | 18/09 : plan de monitoring rédigé ; contrôle des noms cités : `quality.check_clean`, `config.SUMMARY_FILE`, suite `zone_propre`, DAG `reviewpulse_weekly_train` existent bien | [X] |
 | Correction : le banc plaçait les zones brute et propre sous `lakehouse/`, alors qu'elles sont sous `data/` (`config.RAW_DIR`, `config.CLEAN_FILE`) | [X] |
+| 18/09 : module `drift.py` et six tests produits ; contrôles : colonnes employées conformes à `config.CLEAN_COLUMNS` (`created_at`, `text_len`, `language`, `app_id`, `sample_source`), attributs de `config` tous existants, tolérances des tests explicites et non triviales | [X] |
+| README complété d'une ligne datée : les chiffres du 16/09 valent pour 48 tests ; l'état au 18/09 est distinct et non encore exécuté | [X] |
 
 ### Questions ouvertes (à Jedha)
 
