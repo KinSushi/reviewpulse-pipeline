@@ -19,7 +19,8 @@ x-envfile: &envfile
 
 services:
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v3.16.0
+    # Empreinte relevee le 19/09/2026 : l'etiquette seule ne garantit pas le meme contenu.
+    image: ghcr.io/mlflow/mlflow:v3.16.0@sha256:470607da2a70fa38724d3d7db0a54a78b50fac708f7291bfebe1935fa95259ae
     command: >
       mlflow server --host 0.0.0.0 --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db

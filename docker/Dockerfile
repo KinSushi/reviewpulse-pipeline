@@ -1,4 +1,6 @@
-FROM python:3.11-slim
+# Image de base epinglee par empreinte : une etiquette peut changer de contenu,
+# une empreinte non. Relevee le 19/09/2026 par `docker buildx imagetools inspect`.
+FROM python:3.11-slim@sha256:da047cb8f9d1d98e5c070f5300ba9f7274e33b8fc0e5be5ed88740aed1b95ba9
 
 # Utilisateur non root « app » (uid 1000). Un nom est indispensable : Hadoop, utilisé par Spark,
 # refuse de démarrer si l'uid courant n'a pas de nom (constaté le 16/09/2026).
