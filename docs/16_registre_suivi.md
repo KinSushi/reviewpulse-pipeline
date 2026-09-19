@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026, 21 h. **Sept sujets P1 attendent le retour de Docker (R40).**
+Mise à jour : 19/09/2026, 21 h 45. Batterie **125 verte** ; restent les 26 mutations, en cours.
 
 ## Sujets ouverts
 
@@ -28,12 +28,8 @@ Mise à jour : 19/09/2026, 21 h. **Sept sujets P1 attendent le retour de Docker 
 | R17 | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public | `03_matrice_reemploi_blocs.md` | P2 | ⬜ | Chaque bloc visé peut réemployer la brique | Terraform absent de la machine | Cadrer avec Enzo |
 | R18 | Droits sur D: : huit dossiers portent encore une interdiction de l'ancien compte | 18/09 | P2 | ⛔ Enzo | Plus aucune entrée orpheline | `icacls` interrompu volontairement | Passe ciblée (22 500 fichiers) |
 | R19 | Exécuter les **26 mutations** (M17 à M26 jamais passées) | 19/09 | P1 | ⛔ | 26 mutations sur 26 détectées | M01 à M16 tuées le 18/09 ; les dix suivantes n'ont jamais tourné | Dépend de R40 |
-| R21 | Vérifier la mesure de sur- et sous-apprentissage | critère transverse CDSD | P1 | ⛔ | Test vert dans la batterie complète | `test_ecart_train_test_raisonnable` vert le 19/09 dans une batterie de 90, mais pas sur l'arbre courant | Dépend de R40 |
-| R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | ⛔ | Six tests verts dans la batterie complète | 6 verts isolément le 19/09 ; jamais dans une batterie complète de l'arbre courant | Dépend de R40 |
 | R25 | Mutations pour `explain.py` et `drift.py` | audit du 18/09 | P2 | ⬜ | Chaque module branché a sa mutation | non couverts | Après R19 |
 | R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ✅ | Mentionnée dans la Model Card | `docs/12_model_card.md` : entropie croisée, `class_weight="balanced"`, régularisation L2 `C=4.0`, vérifié dans `train.py` | — |
-| R27 | `import os` absent de `train.py` : 6 échecs et 5 erreurs | témoin des tests inverses, 19/09 | P1 | ⛔ | Batterie verte sur l'arbre courant | défaut reproduit puis corrigé ; batterie de **90 verte** sur l'arbre du 19/09 à 17 h | Confirmer sur l'arbre courant, dépend de R40 |
-| R28 | Le banc de tests inverses ne recopiait pas `dbt/` | témoin, 19/09 | P1 | ⛔ | `tests/test_gold.py` s'exécute dans la copie temporaire | `_copy_project` corrigé ; jamais vérifié par une campagne complète | Dépend de R40 |
 | R29 | Base de documents (NoSQL) : **exigée par le bloc AIA 2** | `08_exigences_par_bloc.md`, cas Stripe | P2 | ⬜ | Le modèle NoSQL et les requêtes NoSQL du dossier Stripe sont produits ; décidé si ReviewPulse en fait la démonstration | Le cas Stripe demande une architecture OLTP + OLAP + **NoSQL**, avec « modèle NoSQL » et « requêtes SQL et NoSQL » parmi les livrables ; un travail de référence du parcours employait DocumentDB | Cadrer avec Enzo : livrable sur papier pour Stripe, ou démonstration réelle sur la zone brute de ReviewPulse |
 | R30 | Justifier l'architecture et les décisions dans les diapositives, le code et les questions du jury | Enzo, 19/09 | P1 | ✅ | Chaque ADR cité dans le code **et** dans les questions-réponses ; contrôle mécanique qui échoue sinon | `make justifications` : **20 ADR sur 20** cités des deux côtés. Mesure de départ : 6 sur 16 orphelins. Quatre ADR écrits (0017 à 0020), section « Architecture, choix et décisions » de 2 035 mots, renvois ajoutés aux trois jeux de diapositives | — |
 | R31 | Déploiement progressif : A/B ou canari | AIA 4, `18_briques_exigees.md` | P2 | ⬜ | Une part de trafic configurable, ou la décision écrite de s'en tenir à la bascule par alias | ADR 0016 est une proposition, aucune implémentation | Trancher avec Enzo : implémenter ou assumer par écrit |
@@ -80,6 +76,11 @@ Mise à jour : 19/09/2026, 21 h. **Sept sujets P1 attendent le retour de Docker 
 | F25 | Le contrôle des briques a trouvé quatre exigences que mon classement manuel avait ratées | `SCD2`, `médaillon batch et streaming` (AIA 2), `notification e-mail`, `démonstration de résilience` (AIA 3) ; sujets R35, R39 ouverts, R11 et R17 complétés | 19/09 |
 | F26 | Une campagne ne peut plus tourner des heures sans rien montrer | `tools/campagne_preuves.sh` : journal daté écrit au fil de l'eau (`stdbuf`), une garde `timeout` par phase, dépassement signalé et code de sortie non nul. `make campagne`, syntaxe shell vérifiée | 19/09 |
 | F27 | Les campagnes longues se bloquaient sur le journal du disque virtuel | diagnostic à la source : état `Dl`, attente `jbd2_log_wait_commit`, CPU à 0,2 %. Remède : `--tmpfs /tmp:size=3g`. Mesuré : compilation 32 s → **10 s**, copie du dépôt ~12 min → quelques secondes | 19/09 |
+| F28 | Batterie complète sur l'arbre courant | **125 tests verts en 8 min 07**, copie neuve, `tools/` compris. Le compte tombe juste : 90 + 7 (porte silver/gold) + 9 (justifications) + 9 (briques) + 10 (essai de charge) | 19/09 |
+| F29 | Mesure de sur- et sous-apprentissage (R21) | `test_ecart_train_test_raisonnable` vert dans la batterie de 125 | 19/09 |
+| F30 | Tests unitaires de `rollback.py` (R24) | six tests verts dans la batterie de 125, dont un témoin | 19/09 |
+| F31 | `import os` absent de `train.py` (R27) | défaut corrigé ; les six échecs et cinq erreurs qu'il causait ont disparu de la batterie | 19/09 |
+| F32 | Le banc de tests inverses recopie `dbt/` (R28) | `tests/test_gold.py::test_gold_build_and_mart` vert, 79 s | 19/09 |
 
 ## Comment se servir de ce registre
 

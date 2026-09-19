@@ -148,6 +148,33 @@ système de fichiers. La distinction se fait en une commande — `cat /proc/<pid
 en relisant le code.
 
 
+## KG-2026-09-19-f — `PARTIELLEMENT_VALIDE`
+
+**Commit** : `02f8f12` · **Date** : 19/09/2026, 21 h 45.
+
+| Preuve | Résultat | Quand |
+|---|---|---|
+| Compilation | code 0 en 10 s | 19/09 |
+| **Batterie complète**, copie neuve, `tools/` compris | **125 tests verts en 8 min 07** | 19/09 |
+| `make justifications` | code 0 — 20 ADR sur 20 | 19/09 |
+| `make briques` | code 0 — 73 briques classées | 19/09 |
+| Test de la stack déployée | 16 contrôles sur 16 | 19/09 |
+| **26 mutations** | **en cours** | — |
+| Essai de charge | outil écrit, 10 tests verts, **jamais lancé contre la stack** | — |
+
+**Pourquoi pas encore `KNOWN_GOOD`** : les mutations n'ont pas rendu, et l'essai de charge
+n'a pas tourné contre un service réel. Deux preuves manquent, donc l'état n'est pas sain au
+sens de ce fichier.
+
+**Ce que cette batterie ferme** : R21, R24, R27 et R28, avec leur preuve (F29 à F32).
+
+**Gain mesuré du `tmpfs`** : la même batterie passait de 53 minutes à **8 minutes 07**, soit
+six fois et demie plus vite, et sans blocage. Le disque virtuel était le goulot, pas le code.
+
+**Comment y revenir** : `git checkout 02f8f12`, puis
+`docker run --rm --tmpfs /tmp:size=3g … sh tools/campagne_preuves.sh`.
+
+
 ## Comment se servir de ce fichier
 
 1. Après une compaction, un changement de modèle ou une interruption : lire **ce fichier
