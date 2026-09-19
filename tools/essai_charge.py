@@ -75,7 +75,9 @@ def verifier_service(base_url: str, delai: float) -> None:
             code = resp.getcode()
             if code != 200:
                 raise RuntimeError(
-                    f"Le point d’accès /health a renvoyé le code {code} au lieu de 200."
+                    # L'URL fait partie du message : sans elle, on ne sait pas quel
+                    # deploiement a echoue quand on en eprouve plusieurs.
+                    f"Le service {url} a répondu {code} au lieu de 200 sur /health."
                 )
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Impossible de joindre le service à {url} : {exc}") from exc
