@@ -18,7 +18,7 @@ Mise à jour : 19/09/2026.
 | R04 | Six présentations calibrées (Demo Day 10 min ; CDSD 7-8 diapositives ; AIA 1 15 min ; AIA 2, 3 et 4 5 min) | référentiels | P1 | 🔄 | Un jeu par soutenance, avec script parlé, minuté | **Demo Day faite** : `docs/presentation/ReviewPulse_DemoDay.pptx`, 9 diapositives sur le gabarit Jedha, logo conservé | Contrôle visuel par Enzo, puis les cinq autres jeux |
 | R05 | Script de démonstration vérifié **contre l'écran réel** | 19/09 | P1 | 🔄 | Script minute par minute rejoué sans surprise, chronomètre en main | `docs/presentation/script_10_minutes.md`, écrit d'après l'écran parcouru le 19/09 | Répétition chronométrée par Enzo |
 | R06 | Rafraîchir les preuves : batterie, **18 mutations**, test de stack **16 contrôles** | 19/09 | P1 | 🔄 | Rapports régénérés dans `docs/evidence/` | batterie 73/73 (18/09), mutations 16/16 (18/09), stack 14/14 (18/09) | Exécuter après les ajouts du 19/09 |
-| R07 | Aligner README et `05_conformite_demo_day.md` sur les chiffres du jour | 18/09 | P1 | ⬜ | Plus aucun chiffre périmé (48 tests, 12 contrôles, F1 non daté) | — | Reprendre après R06 |
+| R07 | Aligner README et `05_conformite_demo_day.md` sur les chiffres du jour | 18/09 | P1 | ✅ | Plus aucun chiffre périmé | commit `e2af00a` : chiffres datés 16/09 contre 18-19/09, avertissement sur les preuves détruites puis reconstituées | À revoir après R06 (18 mutations, 16 contrôles) |
 | R08 | Dossier de gouvernance (AIA 1, pilote Spotify) | `08_exigences_par_bloc.md` | P1 | ⛔ | Dossier écrit à partir du cas réel | 8 PDF repérés sur D: | Lire les PDF dans un conteneur |
 | R09 | Lire les sources Julie : énoncés Kayak, Tinder, Steam, AT&T, Getaround ; modules `lead-data-v2` | 18/09 | P1 | ⛔ | Exigences relevées, non supposées | — | Enzo ouvre une session dans le navigateur intégré |
 | R10 | Great Expectations sur silver et gold | S3-1 | P1 | ⬜ | Suites écrites, porte bloquante dans le DAG, exécutées | GE couvre la zone propre seulement | Phase 2 du plan |
@@ -35,9 +35,9 @@ Mise à jour : 19/09/2026.
 | R21 | Vérifier la mesure de sur- et sous-apprentissage | critère transverse CDSD | P1 | 🔍 | Test vert dans la batterie | écrit | Batterie en cours |
 | R22 | Vérifier `rollback.py` en réel | 19/09 | P1 | 🔍 | Bascule d'alias effectuée puis annulée | défaut d'horodatage corrigé | Rejouer après reconstruction |
 | R23 | Trancher `confluent-kafka`, déclaré mais jamais importé | audit du 18/09 | P3 | ⬜ | Retiré, ou assumé par écrit | poids inutile dans chaque image | Décider avec R17 |
-| R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | ⬜ | Fonctions couvertes, un témoin par test | aucun test | Faire produire par le banc |
+| R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | 🔍 | Cinq tests verts, dont un témoin | `tests/test_rollback.py` écrit, faux client MLflow | Exécuter dans la batterie |
 | R25 | Mutations pour `explain.py` et `drift.py` | audit du 18/09 | P2 | ⬜ | Chaque module branché a sa mutation | non couverts | Après R19 |
-| R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ⬜ | Mentionnée dans la Model Card | — | À ajouter |
+| R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ✅ | Mentionnée dans la Model Card | `docs/12_model_card.md` : entropie croisée, `class_weight="balanced"`, régularisation L2 `C=4.0`, vérifié dans `train.py` | — |
 
 ## Sujets fermés (avec leur preuve)
 
