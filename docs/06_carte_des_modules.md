@@ -118,15 +118,31 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 - **Place** : lecture seule sur le modèle champion ; destiné au tableau de bord et à la Model Card, sans écriture disque ni appel à MLflow.
 - **Fonctionnement** : `global_terms` classe les coefficients du modèle par valeur absolue et rend les termes qui poussent vers « négatif » et vers « positif » ; `local_contributions` multiplie, pour un texte, chaque valeur TF-IDF par le coefficient de la classe négative, écarte les traits de valeur nulle, trie par valeur absolue et rend les `n` premiers ; `explain_batch` vectorise toute la liste en une fois. L'indice de la classe négative est cherché dans `clf.classes_`, comme dans `decision.negative_proba`, et le signe des coefficients en découle.
 - **Choix** : contribution linéaire exacte (le modèle est une régression logistique sur TF-IDF), donc pas besoin d'approximation par échantillonnage ; `ValueError` explicite si le modèle ne porte pas les étapes « tfidf » et « clf ».
-- **Tests** : `tests/test_explain.py` (tri et troncature, terme absent, somme des contributions égale à la fonction de décision, signes des termes globaux, cohérence de `explain_batch`) — **écrits, jamais exécutés** faute de Docker.
+- **Tests** : `tests/test_explain.py` (tri et troncature, terme absent, somme des contributions égale à la fonction de décision, signes des termes globaux, cohérence de `explain_batch`) — **exécutés et verts** depuis le 18/09/2026. Mutation M21 : le signe des coefficients de la classe négative.
 
 ## `drift.py`
 
 - **Rôle** : mesurer la dérive des données d'entrée et celle des prédictions.
-- **Place** : lecture de la zone propre et du résumé quotidien ; destiné à alimenter les alertes décrites dans le plan de monitoring.
-- **Fonctionnement** : `psi_numerique` et `psi_categoriel` calculent l'indice de stabilité de population, les bornes venant des quantiles de la fenêtre de référence ; `derive_entrees` l'applique à `text_len`, `language`, `app_id` et `sample_source`, en ignorant une colonne absente ; `derive_predictions` compare `share_negative_pred` à `share_negative_true` du résumé quotidien et marque les lignes hors bornes, en sautant les groupes de moins de `n_min` avis ; `interpretation` classe l'indice en « stable », « à surveiller » ou « dérive » ; `main` coupe la zone propre en deux fenêtres selon `created_at`, la plus ancienne servant de référence, et écrit `drift_report.json` dans la zone scorée.
-- **Choix** : indice de stabilité de population plutôt qu'un test statistique, car il se lit par seuils (0,1 et 0,2) et supporte les variables catégorielles ; aucune écriture hors du dossier de données, aucun appel à MLflow.
-- **Tests** : `tests/test_drift.py` (six tests : indice proche de zéro sur même distribution, décalage franc, catégorie disparue, colonne absente, bornes et filtrage, absence de fichier) — **écrits, jamais exécutés** faute de Docker.
+- **Place** : tâche `drift` du DAG quotidien, après `score` ; lit la zone propre et le résumé quotidien, écrit le rapport et, le cas échéant, une alerte.
+- **Fonctionnement** : `psi_numerique` et `psi_categoriel` calculent l'indice de stabilité de population, les bornes venant des quantiles de la fenêtre de référence ; `derive_entrees` l'applique à `text_len`, `language`, `app_id` et `sample_source`, en ignorant une colonne absente ; `derive_predictions` compare `share_negative_pred` à `share_negative_true` du résumé quotidien et marque les lignes hors bornes, en sautant les groupes de moins de `n_min` avis ; `interpretation` classe l'indice en « stable », « à surveiller » ou « dérive » ; `main` **filtre d'abord le flux naturel** — le flux `negative_boost` est une collecte ponctuelle qui n'arrive jamais en production —, coupe le reste en deux fenêtres selon `created_at`, la plus ancienne servant de référence, écrit `drift_report.json` dans la zone scorée, puis `evaluer_alerte` rend un verdict et `ecrire_alerte` dépose un fichier daté dans `scored/alertes/` quand un seuil est franchi. Seules les colonnes de `COLONNES_ALERTE` peuvent lever une alerte.
+- **Choix** : indice de stabilité de population plutôt qu'un test statistique, car il se lit par seuils (0,1 et 0,2) et supporte les variables catégorielles ; aucune écriture hors du dossier de données, aucun appel à MLflow. `language` et `app_id` restent **informatifs** : leur composition vient de notre plan de collecte, pas d'une population observée (mesure du 19/09/2026, ADR 0015).
+- **Tests** : `tests/test_drift.py`, **onze tests verts** le 19/09/2026, dont `test_evaluer_alerte_ignore_les_colonnes_de_collecte` et son témoin. Mutations M19 et M20.
+
+## `expectations_lake.py`
+
+- **Rôle** : porter les attentes Great Expectations des zones **silver (Iceberg)** et **gold (DuckDB)**, que `expectations.py` ne couvre pas.
+- **Place** : tâche `gx_lake` du DAG quotidien, après `gold` ; porte bloquante, le code de retour arrête le DAG.
+- **Fonctionnement** : quatre constructeurs d'attentes (`attentes_silver_reviews`, `attentes_silver_predictions`, `attentes_gold_faits`, `attentes_gold_mart`) ; `valider` exécute une suite sur un DataFrame dans un contexte éphémère et rend `{"suite", "success", "evaluees", "echecs"}` ; `lire_silver` passe par `lakehouse.read_table`, `lire_gold` par une connexion DuckDB en lecture seule ; `main(argv)` accepte `--zone silver|gold|toutes` et rend 1 dès qu'une suite échoue.
+- **Choix** : module **distinct** de `expectations.py`, qui fonctionne et garde la zone propre — on n'a pas voulu refondre une porte de qualité à quelques jours de la soutenance. `main` accepte une liste d'arguments parce qu'un module lancé par Airflow ne peut pas lire `sys.argv` : il appartient au processus hôte.
+- **Tests** : `tests/test_expectations_lake.py`, **sept tests verts**, dont le témoin (une table conforme passe). Mutations M23 et M24.
+
+## `rollback.py`
+
+- **Rôle** : ramener le modèle en service sur une version antérieure, en déplaçant l'alias `champion`.
+- **Place** : hors DAG, à la main ou par `make rollback VERSION=n` ; lit et écrit le registre MLflow, rien d'autre.
+- **Fonctionnement** : `versions_disponibles` liste les versions avec leurs métriques et leurs alias ; `champion_actuel` rend la version portant l'alias ; `basculer` vérifie que la version cible existe — sinon `ValueError` —, relève l'ancienne, déplace l'alias et rend `{"ancienne", "nouvelle"}` ; `main` affiche l'historique sans `--vers`, bascule avec.
+- **Choix** : déplacer un alias plutôt que recopier un artefact — l'opération est atomique côté registre et se défait par la commande inverse. L'horodatage est calculé par `datetime.fromtimestamp(ts / 1000, tz=timezone.utc)`.
+- **Tests** : `tests/test_rollback.py`, **six tests verts** avec un faux client MLflow, dont un témoin. Mutations M25 et M26. Vérifié **en réel** le 19/09/2026 : champion 2 → 1, puis 1 → 2.
 
 ## `tools/forward_test.py` et `tools/reverse_tests.py`
 
