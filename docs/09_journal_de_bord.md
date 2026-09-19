@@ -182,6 +182,10 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Contrôle mécanique ajouté au rituel : `python -m compileall` sur `src`, `tools`, `dags`, `dashboard`, `tests` — code de sortie 0 le 19/09 | [X] |
 | Matrice de réversibilité écrite (`docs/15_reversibilite.md`) et **étiquette `preuves-2026-09-19`** posée sur le dernier état prouvé : git devient un point de retour nommé, pas seulement un historique | [X] |
 | Constat git : `main` (2 commits) et `plateforme-v3` (24 commits) **n'ont aucun ancêtre commun** — deux départs distincts, pas une divergence. La lecture « 2 commits d'avance » donnée hier était fausse | [X] |
+| 19/09 : **présentation du Demo Day construite** à partir du gabarit Jedha existant (le projet Telco d'Enzo) : thème, mises en page et **logo conservés par construction**. Neuf diapositives, aucun texte Telco résiduel, archive valide | [U] [X] |
+| Le script `tools/construire_slides.py` régénère le fichier à l'identique depuis le gabarit : la présentation est reproductible, et son contenu traçable jusqu'aux chiffres du dépôt | [X] |
+| Script minuté écrit (`docs/presentation/script_10_minutes.md`) : la démonstration en direct occupe 2 min 30 au cœur des dix minutes, avec chemin de secours si l'API Steam ou un service manque | [X] |
+| Contrôle visuel non automatisable ici : ni LibreOffice ni convertisseur PDF sur la machine, et rien ne doit être installé sur l'hôte. À ouvrir par Enzo | [X] |
 
 ### Questions ouvertes (à Jedha)
 
