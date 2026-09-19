@@ -14,7 +14,7 @@ Où ?
 ----
 * Point d’accès de santé : ``GET {base_url}/health``
 * Point d’accès de prédiction : ``POST {base_url}/predict`` avec corps JSON
-  ``{"text": "…"}``
+  ``{"texts": ["…"]}``
 
 Comment ?
 ---------
@@ -108,7 +108,11 @@ def une_requete(base_url: str, texte: str, delai: float) -> Tuple[bool, float, i
         ``code_http`` vaut ``None`` dans ce cas.
     """
     url = f"{base_url.rstrip('/')}/predict"
-    payload = json.dumps({"text": texte}).encode("utf-8")
+    # Le contrat reel de /predict est une LISTE de textes, `texts`, de 1 a 100
+    # elements — verifie dans src/reviewpulse/api.py, classe PredictRequest. Un corps
+    # `{"text": ...}` est refuse avec un code 422, et la campagne ne mesurerait alors
+    # que des rejets (constate le 19/09/2026 en lancant l'outil contre le service).
+    payload = json.dumps({"texts": [texte]}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     debut = time.perf_counter()
@@ -372,7 +376,8 @@ def main() -> int:
     )
 
     # Générer le rapport
-    date_utc = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    # Horodatage conscient du fuseau : utcnow() est deprecie et rend un objet naif.
+    date_utc = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
     commit = _obtenir_commit()
     markdown = rapport_markdown(
         mesure=mesures,

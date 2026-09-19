@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026, 21 h 45. Batterie **125 verte** ; restent les 26 mutations, en cours.
+Mise à jour : 19/09/2026, 23 h 15. Batterie **125 verte**, mutations **26 sur 26**, charge mesurée.
 
 ## Sujets ouverts
 
@@ -27,7 +27,6 @@ Mise à jour : 19/09/2026, 21 h 45. Batterie **125 verte** ; restent les 26 muta
 | R16 | Trancher la stratégie de branches (`main` et `plateforme-v3` sans ancêtre commun) | audit du 19/09 | P1 | ⛔ Enzo | Une seule ligne principale | 2 commits contre 24, histoires disjointes | Décision d'Enzo à la publication |
 | R17 | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public | `03_matrice_reemploi_blocs.md` | P2 | ⬜ | Chaque bloc visé peut réemployer la brique | Terraform absent de la machine | Cadrer avec Enzo |
 | R18 | Droits sur D: : huit dossiers portent encore une interdiction de l'ancien compte | 18/09 | P2 | ⛔ Enzo | Plus aucune entrée orpheline | `icacls` interrompu volontairement | Passe ciblée (22 500 fichiers) |
-| R19 | Exécuter les **26 mutations** (M17 à M26 jamais passées) | 19/09 | P1 | ⛔ | 26 mutations sur 26 détectées | M01 à M16 tuées le 18/09 ; les dix suivantes n'ont jamais tourné | Dépend de R40 |
 | R25 | Mutations pour `explain.py` et `drift.py` | audit du 18/09 | P2 | ⬜ | Chaque module branché a sa mutation | non couverts | Après R19 |
 | R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ✅ | Mentionnée dans la Model Card | `docs/12_model_card.md` : entropie croisée, `class_weight="balanced"`, régularisation L2 `C=4.0`, vérifié dans `train.py` | — |
 | R29 | Base de documents (NoSQL) : **exigée par le bloc AIA 2** | `08_exigences_par_bloc.md`, cas Stripe | P2 | ⬜ | Le modèle NoSQL et les requêtes NoSQL du dossier Stripe sont produits ; décidé si ReviewPulse en fait la démonstration | Le cas Stripe demande une architecture OLTP + OLAP + **NoSQL**, avec « modèle NoSQL » et « requêtes SQL et NoSQL » parmi les livrables ; un travail de référence du parcours employait DocumentDB | Cadrer avec Enzo : livrable sur papier pour Stripe, ou démonstration réelle sur la zone brute de ReviewPulse |
@@ -42,7 +41,6 @@ Mise à jour : 19/09/2026, 21 h 45. Batterie **125 verte** ; restent les 26 muta
 | R39 | Démonstration de résilience : consommateur arrêté puis relancé | AIA 3, `18_briques_exigees.md` | P2 | ⬜ | Une coupure provoquée puis rattrapée, mesurée | dépend de la brique Kafka, absente | Dépend de R17 |
 | R40 | Docker Desktop ne démarre plus : `docker daemon did not become ready` | 19/09, 20 h | P1 | ⛔ Enzo | `docker version` rend une version de serveur | processus présents, démon absent ; survenu après un redémarrage pour un réglage IPv4/IPv6 | Enzo relance Docker Desktop ; ensuite `make campagne` |
 | R41 | Garde de temps **par test** dans la batterie | incident du 19/09 | P2 | ⬜ | Un test bloqué échoue seul, sans emporter la campagne | `pytest-timeout` absent de l'image ; la garde actuelle est par phase, pas par test | Ajouter `pytest-timeout` à `requirements-dev.txt` et reconstruire l'image de développement |
-| R42 | « Conteneurs et orchestration **sous charge** » : aucun essai de charge | AIA 4, indicateur du référentiel | P1 | 🔍 | Une mesure réelle : débit, latence et taux d'erreur de l'API sous requêtes concurrentes, avec le chiffre écrit | `tools/essai_charge.py` écrit, bibliothèque standard seule (importé sur Python 3.14 de l'hôte, sans dépendance du projet). Trois témoins verts : refus clair sur service absent, centiles justes sur une série connue, **code de retour 1** sur service absent. `make charge` | Lancer contre la stack, après la campagne en cours |
 | R43 | Le détecteur d'exigences ne lit que le gras | Enzo, 19/09 | P2 | ⬜ | Les exigences non mises en gras sont détectées aussi | `verifier_briques.py` extrait les termes entre doubles astérisques ; « orchestration sous charge » lui a échappé | Découper aussi les listes d'indicateurs sur le point-virgule |
 
 ## Sujets fermés (avec leur preuve)
@@ -81,6 +79,9 @@ Mise à jour : 19/09/2026, 21 h 45. Batterie **125 verte** ; restent les 26 muta
 | F30 | Tests unitaires de `rollback.py` (R24) | six tests verts dans la batterie de 125, dont un témoin | 19/09 |
 | F31 | `import os` absent de `train.py` (R27) | défaut corrigé ; les six échecs et cinq erreurs qu'il causait ont disparu de la batterie | 19/09 |
 | F32 | Le banc de tests inverses recopie `dbt/` (R28) | `tests/test_gold.py::test_gold_build_and_mart` vert, 79 s | 19/09 |
+| F33 | Tests inverses : **26 mutations sur 26 tuées** (R19) | campagne du 19/09, témoin vert à 88 tests ; M17 et M22 avaient survécu, leurs deux trous comblés puis vérifiés mutation par mutation | 19/09 |
+| F34 | « Conteneurs et orchestration **sous charge** » mesuré (R42) | `tools/essai_charge.py` contre le service réel : 300 requêtes, 10 en parallèle, **0 % d'erreur**, débit **29,3 req/s**, p50 285 ms, p90 492 ms, **p99 925 ms**. Témoins : borne p99 à 1 ms → code 1 ; service absent → code 1 | 19/09 |
+| F35 | Le contrôle de santé de MLflow le déclarait malade avant son démarrage | mesuré : 170 s pour devenir sain, migrations SQLite sur volume Docker. `start_period: 180s` ajouté ; sans lui `compose up` abandonnait sur « dependency failed to start » | 19/09 |
 
 ## Comment se servir de ce registre
 

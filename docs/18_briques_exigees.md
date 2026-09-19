@@ -94,7 +94,7 @@ le contrôle vérifie que tout terme en gras est classé, jamais l'inverse. Suje
 | médaillon batch et streaming | AIA 2 — travaux de référence | partielle | médaillon en place, aucun flux ; R17 |
 | notification e-mail | AIA 3 — travaux de référence | absente | R11 |
 | démonstration de résilience | AIA 3 — travaux de référence | absente | R39 |
-| conteneurs et orchestration sous charge | Bloc 4 — indicateur non mis en gras | absente | aucun essai de charge ; R42 |
+| conteneurs et orchestration sous charge | Bloc 4 — indicateur non mis en gras | présente | `make charge` : 300 requêtes, 10 en parallèle, 0 % d'erreur, 29,3 req/s, p99 925 ms ; `docs/evidence/essai_charge.md` |
 
 ## Termes non techniques
 

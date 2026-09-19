@@ -175,6 +175,44 @@ six fois et demie plus vite, et sans blocage. Le disque virtuel était le goulot
 `docker run --rm --tmpfs /tmp:size=3g … sh tools/campagne_preuves.sh`.
 
 
+## KG-2026-09-19-g — `KNOWN_GOOD`
+
+**Commit** : à celui de ce commit · **Date** : 19/09/2026, 23 h 15.
+
+| Niveau | Preuve | Résultat |
+|---|---|---|
+| 1 — compilation | `compileall src tools dags tests` | code 0 |
+| 2 — imports | `essai_charge` importé sur le Python 3.14 de l'hôte, sans dépendance du projet | OK |
+| 3 — exécution | API et MLflow levés, `/predict` interrogé | 200 en 170 ms |
+| 4 — test avant | batterie complète, copie neuve | **125 tests verts en 8 min 07** |
+| 4 — test avant | test de la stack déployée | **16 contrôles sur 16** |
+| 5 — test inverse | mutations | **26 sur 26 tuées**, témoin vert à 88 tests |
+| 6 — machine | essai de charge, 300 requêtes à 10 en parallèle | **0 % d'erreur**, 29,3 req/s, p99 925 ms |
+| 7 — non-régression | `make justifications`, `make briques` | code 0 tous les deux |
+
+**Ce qui distingue cet état des précédents** : c'est le premier où les six niveaux ont été
+franchis et datés le même jour, sur le même arbre.
+
+**Trois défauts trouvés en y arrivant, tous par la machine et non par relecture** :
+1. Mon outil de charge envoyait `{"text": …}` alors que `/predict` attend `{"texts": [...]}`.
+   Le service répondait 422 ; la campagne n'aurait mesuré que des rejets.
+2. J'ai lu un code de sortie **après un tuyau** et conclu à tort que la porte ne fermait pas.
+   Le statut lu était celui de `tail`. Vérifié sans tuyau : la porte ferme.
+3. Le contrôle de santé de MLflow n'avait pas de `start_period` : mesuré, 170 s pour devenir
+   sain, si bien que `compose up` abandonnait sur « dependency failed to start ».
+
+**Nuance à dire au jury** : le premier passage de charge donne un p99 de **5 874 ms**, le
+second **925 ms**. L'écart est le démarrage à froid, chargement du modèle compris. Un chiffre
+de latence sans cette précision serait trompeur.
+
+**Ce qui reste hors de cet état** : la vidéo, la publication du dépôt, quatre présentations
+sur six, et les briques absentes du registre R17. Aucune n'est un défaut du code.
+
+**Comment y revenir** : `git checkout <ce commit>`, puis
+`docker run --rm --tmpfs /tmp:size=3g … sh tools/campagne_preuves.sh`, puis `make charge`
+contre la stack levée.
+
+
 ## Comment se servir de ce fichier
 
 1. Après une compaction, un changement de modèle ou une interruption : lire **ce fichier

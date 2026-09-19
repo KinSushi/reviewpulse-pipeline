@@ -40,6 +40,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      # MLflow applique ses migrations au demarrage, sur une base SQLite portee par un
+      # volume Docker : mesure du 19/09/2026, 170 s avant de repondre. Sans start_period,
+      # le service est declare malade avant d'avoir pu demarrer et `compose up` abandonne.
+      start_period: 180s
 
   pipeline:
     image: reviewpulse-app:latest
