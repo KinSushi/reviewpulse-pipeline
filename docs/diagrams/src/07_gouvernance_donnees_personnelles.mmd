@@ -1,32 +1,24 @@
-%% Parcours des données personnelles
-flowchart LR
-    A["steamid, personaname,<br/>profile_url, avatar,<br/>texte, temps de jeu"]
-    B["zone brute (accès restreint,<br/>30 jours)"]
-    C["zone propre (steamid pseudonymisé<br/>par HMAC‑SHA256 salé,<br/>identifiants directs supprimés)"]
-    D["tableau de bord (aucune info d'auteur,<br/>texte tronqué à 200 caractères)"]
-    E["Gestionnaire de secrets (sel)"]
-    F["Base légale : intérêt légitime<br/>RGPD 6.1.f"]
-    G["AI Act : risque minimal"]
-    subgraph RACI["RACI"]
-        R1["Responsable : Data Lead"]
-        R2["Approveur : DPO"]
-        R3["Consulté : équipe juridique"]
-        R4["Informé : community manager"]
-    end
+%% Parcours des données personnelles. Sources : ADR 0004, dashboard/app.py, docs/01_charte.md
+%% Ce qui est marqué « à définir » n'existe pas encore comme livrable (registre R08).
+flowchart TB
+  A["reçu de l'API<br/>steamid, personaname, profile_url,<br/>avatar, texte, temps de jeu"]
+  B["zone brute<br/>conservée telle quelle, accès restreint"]
+  C["zone propre<br/>author_pseudo = HMAC-SHA256 salé du steamid<br/>steamid, personaname, profile_url et avatar supprimés"]
+  D["tableau de bord et API<br/>aucune information d'auteur<br/>texte tronqué à 200 caractères"]
+  E["sel REVIEWPULSE_SALT<br/>secret obligatoire, sans valeur par défaut"]
+  F["base légale : intérêt légitime<br/>RGPD article 6.1.f"]
+  G["AI Act : risque minimal"]
 
-    A --> B --> C --> D
-    C --> E
-    B -.-> F
-    C -.-> G
+  A --> B --> C --> D
+  E -.-> C
+  B -.-> F
+  C -.-> G
 
-    class A,B raw
-    class C clean
-    class D dashboard
-    class E,F,G note
-    class R1,R2,R3,R4 raci
+  subgraph GOUV["Gouvernance — à définir, cf. registre R08"]
+    R1["Data Owner"]
+    R2["Data Steward"]
+    R3["procédure d'incident"]
+    R4["journal d'audit des accès"]
+  end
 
-    classDef raw fill:#e8f5e9,stroke:#2e7d32
-    classDef clean fill:#e3f2fd,stroke:#1565c0
-    classDef dashboard fill:#fff3e0,stroke:#ef6c00
-    classDef note fill:#fff8e1,stroke:#ffb300
-    classDef raci fill:#f5f5f5,stroke:#616161
+  C -.-> GOUV

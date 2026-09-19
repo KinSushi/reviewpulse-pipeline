@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026, 15 h.
+Mise à jour : 19/09/2026, 16 h 20.
 
 ## Sujets ouverts
 
@@ -24,8 +24,6 @@ Mise à jour : 19/09/2026, 15 h.
 | R10 | Great Expectations sur silver et gold | S3-1 | P1 | ⬜ | Suites écrites, porte bloquante dans le DAG, exécutées | GE couvre la zone propre seulement | Phase 2 du plan |
 | R11 | Alerte de dérive hors journal Airflow et réentraînement déclenché par la dérive | AIA 4 C4.4 | P1 | 🔍 | Une exécution réelle du DAG montre les huit tâches, dont le déclenchement | mécanisme en place et mesuré hors Airflow (voir F17) ; DAG chargé, 8 tâches listées, aucune erreur d'import | Déclencher `reviewpulse_daily` après la batterie |
 | R13 | Épingler les images de base par empreinte | reproductibilité | P2 | ⬜ | `FROM` avec `@sha256:` dans les trois Dockerfiles | — | Relever les empreintes |
-| R14 | Sauvegarder le registre MLflow hors du volume Docker | incident du 16/09 | P1 | ⬜ | Sauvegarde automatisée et restauration essayée | — | Décider du support |
-| R15 | Mettre à niveau les schémas — **les dix**, pas huit, ignoraient Spark, Iceberg et dbt | audit du 18/09, vérifié le 19/09 | P1 | 🔄 | Les dix schémas conformes au code et rendus sans erreur | **5 sur 10 refaits et rendus** (01, 02, 03, 04, 10) ; `make diagrams` rend et **échoue** si un schéma est invalide ; trois contresens corrigés (dbt lisait les parquet, le journal Airflow déclenchait le réentraînement, le challenger était servi) | Refaire 05, 06, 07, 08, 09 |
 | R16 | Trancher la stratégie de branches (`main` et `plateforme-v3` sans ancêtre commun) | audit du 19/09 | P1 | ⛔ Enzo | Une seule ligne principale | 2 commits contre 24, histoires disjointes | Décision d'Enzo à la publication |
 | R17 | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public | `03_matrice_reemploi_blocs.md` | P2 | ⬜ | Chaque bloc visé peut réemployer la brique | Terraform absent de la machine | Cadrer avec Enzo |
 | R18 | Droits sur D: : huit dossiers portent encore une interdiction de l'ancien compte | 18/09 | P2 | ⛔ Enzo | Plus aucune entrée orpheline | `icacls` interrompu volontairement | Passe ciblée (22 500 fichiers) |
@@ -61,6 +59,9 @@ Mise à jour : 19/09/2026, 15 h.
 | F16 | Restauration d'un instantané Iceberg, outillée et prouvée | `lakehouse.read_table_at` et `restore_snapshot`, interface `python -m reviewpulse.lakehouse --table T [--restaurer ID]`, cible `make snapshots` ; `test_lakehouse_restore_snapshot` vert (témoin : la lecture d'instantané ne modifie pas la table) ; historique réel listé, 19 instantanés sur `silver.reviews` | 19/09 |
 | F17 | Alerte de dérive hors du journal Airflow | `drift.evaluer_alerte` et `ecrire_alerte` ; fichier daté `scored/alertes/derive_20260919-153751.json` portant motifs, horodatage UTC et `code_commit` ; 11 tests verts dans `tests/test_drift.py` | 19/09 |
 | F18 | La dérive mesurait la collecte, pas la population | corrigé : mesure sur le flux naturel seul, et seules les colonnes de `COLONNES_ALERTE` (`text_len`) peuvent alerter. Mesuré : fenêtre ancienne 85 % francophone contre récente 91 % anglophone, PSI `language` 3,098 écarté ; `text_len` 0,036 stable. ADR 0015 révisée, témoin dans `test_evaluer_alerte_ignore_les_colonnes_de_collecte` | 19/09 |
+| F19 | Sauvegarde du registre MLflow hors du volume Docker, **restauration essayée** | `make sauvegarde-mlflow` : archive de 15 Mo (277 Mo d'artefacts) écrite dans le lac ; `make restaure-mlflow` la restaure dans un volume d'essai, jamais sur le registre en service. Registre restauré relu : versions 1 à 4, alias champion sur la 2 | 19/09 |
+| F20 | Les dix schémas remis à niveau et rendus | 10 sur 10 rendus sans erreur ; `make diagrams` échoue si un schéma est invalide — c'est ce qui a trouvé trois erreurs de syntaxe. Trois contresens corrigés (dbt lisait les parquet, le journal Airflow déclenchait le réentraînement, le challenger était servi) et une affirmation non tenue retirée (RACI avec DPO, marquée « à définir ») | 19/09 |
+| F21 | Le workflow planifié `pipeline.yml` exécutait la chaîne d'avant Spark | corrigé : ingest, spark_silver, expectations, train, score, drift, gold, avec Java 17 ; les deux workflows relus par un analyseur YAML | 19/09 |
 
 ## Comment se servir de ce registre
 

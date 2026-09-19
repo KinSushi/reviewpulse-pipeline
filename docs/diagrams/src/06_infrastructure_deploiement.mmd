@@ -7,6 +7,7 @@ flowchart TB
         dash_local["dashboard<br/>8501"]
         airflow_local["airflow<br/>8080"]
         pipeline_local["pipeline<br/>jobs"]
+        airflow_db_local["airflow-db<br/>PostgreSQL 16<br/>healthcheck"]
         data_vol["./data<br/>partagé"]
         env_file[".env<br/>secrets"]
     end
@@ -25,10 +26,20 @@ flowchart TB
 
     %% Relations locales
     mlflow_local --> mlflow_data
-    api_local --> dash_local
-    airflow_local --> pipeline_local
     data_vol --> mlflow_local
+    data_vol --> api_local
+    data_vol --> dash_local
+    data_vol --> pipeline_local
+    data_vol --> airflow_local
+    data_vol --> airflow_db_local
     env_file --> mlflow_local
+    env_file --> api_local
+    env_file --> dash_local
+    env_file --> pipeline_local
+    env_file --> airflow_local
+    env_file --> airflow_db_local
+    airflow_local --> pipeline_local
+    airflow_local --> airflow_db_local
 
     %% Relations cloud
     mlflow_cloud --> pg
@@ -43,7 +54,7 @@ flowchart TB
     data_vol -.-> s3
     env_file -.-> secret_mgr
 
-    class mlflow_local,api_local,dash_local,airflow_local,pipeline_local,data_vol,env_file local
+    class mlflow_local,api_local,dash_local,airflow_local,pipeline_local,airflow_db_local,data_vol,env_file local
     class s3,mlflow_cloud,pg,api_cloud,dash_cloud,airflow_cloud,secret_mgr,iam,tf cloud
     class s3 storage
     class tf infra

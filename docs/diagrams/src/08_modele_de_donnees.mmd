@@ -1,42 +1,115 @@
 %% Diagramme ER ReviewPulse
+%% mart_sentiment_daily ne garde que le flux natural
 erDiagram
-    REVIEW_CLEAN {
+    REVIEWS_CLEAN {
         string review_id PK
-        int64 app_id
+        int app_id
         string language
         string review_text
-        int64 label
-        datetime created_at
-        datetime updated_at
-        int64 votes_up
-        float64 weighted_vote_score
-        int64 playtime_at_review_min
+        int label
+        timestamp created_at
+        timestamp updated_at
+        int votes_up
+        float weighted_vote_score
+        int playtime_at_review_min
         string author_pseudo
-        int64 text_len
+        int text_len
+        string sample_source
     }
-    REVIEW_SCORED {
-        string review_id FK
-        float64 proba_negative
-        int64 pred_label
+    REVIEWS_SCORED {
+        string review_id PK
+        int app_id
+        string language
+        string review_text
+        int label
+        timestamp created_at
+        timestamp updated_at
+        int votes_up
+        float weighted_vote_score
+        int playtime_at_review_min
+        string author_pseudo
+        int text_len
+        string sample_source
+        float proba_negative
+        int pred_label
+        float decision_threshold
         string model_version
-        datetime scored_at
+        timestamp scored_at
     }
     DAILY_SUMMARY {
-        int64 app_id
+        int app_id
         string language
         date date
-        int64 n_reviews
-        float64 share_negative_pred
-        float64 share_negative_true
+        int n_reviews
+        float share_negative_pred
+        float share_negative_true
         string model_version
     }
-    MODEL_VERSION {
-        string model_name
-        string version
-        string alias
-        string run_id
-        float64 f1_macro
+    STG_REVIEWS {
+        string review_id PK
+        int app_id
+        string language
+        int label
+        timestamp created_at
+        date review_date
+        timestamp updated_at
+        int votes_up
+        float weighted_vote_score
+        int playtime_at_review_min
+        int text_len
+        string sample_source
     }
-    REVIEW_CLEAN ||--|| REVIEW_SCORED : "1:1"
-    REVIEW_SCORED }|..|| MODEL_VERSION : "N:1"
-    DAILY_SUMMARY }o..|| REVIEW_SCORED : "agrège"
+    STG_PREDICTIONS {
+        string review_id PK
+        int pred_label
+        float proba_negative
+        float decision_threshold
+        string model_version
+        timestamp scored_at
+    }
+    DIM_DATE {
+        date date_day PK
+        int year
+        int month
+        int iso_week
+        int day_of_week
+    }
+    DIM_GAME {
+        int app_id PK
+        string game_name
+    }
+    FCT_REVIEW_PREDICTIONS {
+        string review_id PK
+        int app_id
+        string language
+        string sample_source
+        date review_date
+        timestamp created_at
+        int label
+        int pred_label
+        float proba_negative
+        float decision_threshold
+        string model_version
+        timestamp scored_at
+        int votes_up
+        int playtime_at_review_min
+        int text_len
+    }
+    MART_SENTIMENT_DAILY {
+        int app_id
+        string game_name
+        string language
+        date review_date
+        int n_reviews
+        int n_pred_negative
+        int n_actual_negative
+        float share_pred_negative
+        float share_actual_negative
+        string model_version
+    }
+    REVIEWS_CLEAN ||--|| REVIEWS_SCORED : "1:1"
+    STG_REVIEWS ||--|| FCT_REVIEW_PREDICTIONS : "1:1"
+    STG_PREDICTIONS ||--|| FCT_REVIEW_PREDICTIONS : "1:1"
+    FCT_REVIEW_PREDICTIONS }|..|| DIM_GAME : "N:1"
+    FCT_REVIEW_PREDICTIONS }|..|| DIM_DATE : "N:1"
+    FCT_REVIEW_PREDICTIONS }o..|| MART_SENTIMENT_DAILY : "N:1"

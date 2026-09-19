@@ -1,22 +1,31 @@
-%% titre du diagramme
+%% diagramme CI/CD
 flowchart LR
-    %% CI/CD pipeline
-    A["push / PR"]:::ci --> B["workflow CI"]:::ci
-    B --> C["checkout<br/>Python 3.11<br/>ruff<br/>pytest"]:::ci
-    C --> D["fusion sur main"]:::ci
-    D --> E["build Docker image"]:::ci
-    E --> F["déploiement<br/>docker compose:<br/>mlflow, api, dashboard"]:::ci
+    subgraph "Integration continue"
+        direction LR
+        A["push / PR"]:::ci --> B["workflow CI"]:::ci
+        B --> C["tests (checkout, Python3.11, Java17 temurin, deps, ruff, pytest)"]:::ci
+        C --> D["reverse-tests (tests inverses)"]:::ci
+        D --> E["rapport artefact"]:::ci
+    end
 
-    %% Scheduled pipeline
-    G["cron 6h30 UTC"]:::sched --> H["déclenchement manuel"]:::sched
-    G --> I["secret REVIEWPULSE_SALT"]:::sched
-    H --> I
-    I --> J["ingest"]:::sched
-    J --> K["transform"]:::sched
-    K --> L["train"]:::sched
-    L --> M["score"]:::sched
-    M --> N["artefact data/scored"]:::sched
-    N --> O["résumé du run"]:::sched
+    subgraph "Chaine planifiee"
+        direction LR
+        G["cron 6h30 UTC / manuel"]:::sched --> H["vérif secret REVIEWPULSE_SALT"]:::sched
+        H --> I["ingest"]:::sched
+        I --> J["spark_silver"]:::sched
+        J --> K["expectations"]:::sched
+        K --> L["train"]:::sched
+        L --> M["score"]:::sched
+        M --> N["drift"]:::sched
+        N --> O["gold"]:::sched
+        O --> P["artefact data/scored"]:::sched
+        P --> Q["résumé du run"]:::sched
+    end
+
+    %% Noeuds explicites pour construction et lancement locaux
+    R["construction d'images Docker"]:::local
+    S["lancement local via docker compose"]:::local
 
     classDef ci fill:#e0f7fa,stroke:#006064;
     classDef sched fill:#fff3e0,stroke:#bf360c;
+    classDef local fill:#e8f5e9,stroke:#1b5e20;

@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -30,6 +30,7 @@ help:
 	@echo "  forward   - Vérifie la stack déployée et génère le rapport docs/evidence/forward_test.md"
 	@echo "  snapshots - Historique Iceberg (TABLE=...) ou restauration (SNAPSHOT=<id>)"
 	@echo "  diagrams  - Rend les schemas Mermaid en SVG et PNG, echoue si l'un est invalide"
+	@echo "  sauvegarde-mlflow / restaure-mlflow - Registre MLflow hors du volume Docker"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -75,6 +76,26 @@ score:
 ## Retour arrière du modèle en service
 rollback:
 	python -m reviewpulse.rollback $(if $(VERSION),--vers $(VERSION),)
+
+## Sauvegarde du registre MLflow HORS du volume Docker.
+## Pourquoi : le 16/09/2026, la suppression du volume `mlflow_data` a detruit le
+## registre et ses artefacts ; le lac, lui, etait sur le disque et a survecu.
+## SAUVEGARDE_DIR designe un repertoire de l'hote ; par defaut le lac du projet.
+MLFLOW_VOLUME ?= reviewpulse_mlflow_data
+SAUVEGARDE_DIR ?= $(shell pwd)/data/sauvegardes/mlflow
+sauvegarde-mlflow:
+	@mkdir -p "$(SAUVEGARDE_DIR)"
+	@MSYS_NO_PATHCONV=1 docker run --rm -v $(MLFLOW_VOLUME):/mlflow:ro -v "$(SAUVEGARDE_DIR)":/sauvegarde alpine:3.20 	  sh -c 'tar czf /sauvegarde/mlflow_$$(date -u +%Y%m%d-%H%M%S).tar.gz -C /mlflow .'
+	@ls -1 "$(SAUVEGARDE_DIR)" | tail -1 | sed 's/^/Sauvegarde ecrite : /'
+
+## Restauration : make restaure-mlflow ARCHIVE=<nom.tar.gz> [VOLUME_CIBLE=<volume>]
+## Par defaut la restauration vise un volume d'essai, jamais le registre en service :
+## verifier une sauvegarde ne doit pas pouvoir detruire ce qui tourne.
+VOLUME_CIBLE ?= reviewpulse_mlflow_essai
+restaure-mlflow:
+	@test -n "$(ARCHIVE)" || { echo "Indiquer ARCHIVE=<nom.tar.gz>"; exit 1; }
+	@MSYS_NO_PATHCONV=1 docker run --rm -v $(VOLUME_CIBLE):/mlflow -v "$(SAUVEGARDE_DIR)":/sauvegarde:ro alpine:3.20 	  sh -c 'tar xzf /sauvegarde/$(ARCHIVE) -C /mlflow && ls -la /mlflow'
+	@echo "Restaure dans le volume $(VOLUME_CIBLE)"
 
 ## Rend les schemas Mermaid en SVG et PNG, et echoue si l'un d'eux est invalide.
 ## L'outil vit dans une image ; rien n'est installe sur la machine.

@@ -1,55 +1,43 @@
-%% Diagramme ReviewPulse
-flowchart LR
-  subgraph gauche[Modèles]
-    M1["TF‑IDF + LogReg<br/>(Demo Day,<br/>septembre)"]
-    M2["Réseau profond<br/>sentiment +<br/>création de données<br/>(octobre)"]
-    M3["Modèle de prix<br/>Getaround<br/>(octobre)"]
+%% Ce que la chaîne ReviewPulse réemploie, bloc par bloc.
+%% Source : docs/03_matrice_reemploi_blocs.md. Les blocs CDSD 3 et CDSD 6 sont déjà produits ailleurs.
+flowchart TB
+  subgraph CHAINE["Chaîne commune, indépendante du modèle"]
+    direction LR
+    ING["ingestion idempotente<br/>zone brute immuable"]
+    SPARK["PySpark et Iceberg<br/>instantanés et restauration"]
+    QUAL["Great Expectations<br/>porte bloquante"]
+    DBT["dbt et DuckDB<br/>contrats et tests"]
+    REG["MLflow<br/>barrière, alias, retour arrière"]
+    SERV["API, tableau de bord<br/>explicabilité"]
+    OPS["Airflow, CI/CD<br/>dérive, alerte, réentraînement"]
+    ING --> SPARK --> QUAL --> DBT --> REG --> SERV --> OPS
   end
 
-  subgraph centre[Chaîne commune]
-    ING["Ingestion"]
-    ZONES["Zones"]
-    QUAL["Qualité"]
-    MLREG["Registre MLflow"]
-    MODEL["Modèle<br/>interchangeable"]
-    API["API"]
-    DASH["Tableau<br/>de bord"]
-    CI["CI/CD"]
-    MON["Monitoring"]
+  MOD["modèle interchangeable<br/>aujourd'hui TF-IDF et régression logistique"]
+  MOD --> REG
+
+  subgraph SERVIS["Blocs servis"]
+    direction LR
+    AIA4["AIA 4 — support déclaré<br/>tout le dépôt"]
+    CDSD4["CDSD 4 — brique majeure<br/>analyse de sentiment"]
+    CDSD5["CDSD 5 — brique majeure<br/>Docker, MLflow, API, URL publique"]
+    AIA3["AIA 3 — brique<br/>DAG, qualité, traçabilité"]
+    AIA2["AIA 2 — brique<br/>compose, zonage, secrets"]
+    AIA1["AIA 1 — brique<br/>RGPD, AI Act, RACI"]
+    CDSD1["CDSD 1 — brique<br/>collecte API, Spark"]
+    CDSD2["CDSD 2 — brique<br/>même domaine Steam"]
   end
 
-  subgraph droite[Blocs servis]
-    AIA4["AIA 4<br/>(support déclaré)"]
-    CDSD4["CDSD 4<br/>brique majeure"]
-    CDSD5["CDSD 5<br/>brique majeure"]
-    AIA1["AIA 1<br/>brique"]
-    AIA2["AIA 2<br/>brique"]
-    AIA3["AIA 3<br/>brique"]
-    CDSD1["CDSD 1<br/>brique"]
-    CDSD2["CDSD 2<br/>brique"]
+  CHAINE --> SERVIS
+
+  subgraph MANQUE["Briques manquantes, registre R17"]
+    direction LR
+    X1["stockage objet S3 ou MinIO"]
+    X2["Kafka, Avro, DLQ"]
+    X3["Terraform"]
+    X4["déploiement public"]
   end
 
-  M1 --> MODEL
-  M2 --> MODEL
-  M3 --> MODEL
+  MANQUE -.->|bloque| SERVIS
 
-  ING --> ZONES --> QUAL --> MLREG --> MODEL --> API --> DASH --> CI --> MON
-
-  MON --> AIA4
-  MON --> CDSD4
-  MON --> CDSD5
-  MON --> AIA1
-  MON --> AIA2
-  MON --> AIA3
-  MON --> CDSD1
-  MON --> CDSD2
-
-  class ING,ZONES,QUAL,MLREG,API,DASH,CI,MON centre;
-  class MODEL model;
-  class M1,M2,M3 gauche;
-  class AIA4,CDSD4,CDSD5,AIA1,AIA2,AIA3,CDSD1,CDSD2 droite;
-
-  classDef centre fill:#e8f5e9 stroke:#2e7d32;
-  classDef model fill:#fff3e0 stroke:#ef6c00;
-  classDef gauche fill:#e3f2fd stroke:#1565c0;
-  classDef droite fill:#f3e5f5 stroke:#6a1b9a;
+  NON["CDSD 3 et CDSD 6<br/>déjà produits ailleurs, non servis"]
