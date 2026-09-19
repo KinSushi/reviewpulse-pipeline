@@ -49,7 +49,7 @@
     "6": {
       "0": "2.   Les données",
       "2": "API publique des avis Steam",
-      "3": "9 054 lignes brutes — 3 jeux, anglais et français",
+      "3": "9 271 lignes brutes — 3 jeux, anglais et français",
       "4": "Traitement en 5 étapes, testé à chaque passage",
       "5": " 1. ",
       "6": "Zone brute inchangée",
@@ -71,7 +71,7 @@
       "23": "Idempotence : un second passage n'écrit aucun doublon ",
       "24": "(manifeste)",
       "25": "Zone silver Iceberg ",
-      "26": "→ 9 instantanés versionnés ",
+      "26": "→ 19 instantanés versionnés ",
       "27": ""
     },
     "13": {
@@ -114,8 +114,8 @@
       "13": "0,931",
       "14": " ; rappel des négatifs 0,634",
       "15": "Tests : ",
-      "16": "73 verts",
-      "17": " ; 16 mutations sur 16 détectées",
+      "16": "125 verts",
+      "17": " ; 26 mutations sur 26 détectées",
       "18": "Deux entraînements successifs donnent ",
       "19": "le même F1",
       "20": " à la seizième décimale.",

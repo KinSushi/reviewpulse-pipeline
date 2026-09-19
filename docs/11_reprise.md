@@ -25,7 +25,7 @@ Règle d'Enzo : **rien de ReviewPulse sur C:** (ni build, ni cache, ni temporair
 | Tests inverses | 13/13 avec témoin (avant Spark et dbt) | `evidence/reverse_tests.md` |
 | DAG Airflow quotidien (4 tâches) | succès avec Spark (exécution `spark_v3`) | journal, 17/09 00:26 UTC |
 | Gold dbt-duckdb | 43/43 sur données réelles | journal |
-| DAG à 5 tâches (avec `gold`) | **écrit, jamais exécuté** | — |
+| DAG à **9 tâches** | exécuté le 19/09, aucune erreur d'import | `airflow tasks list reviewpulse_daily` |
 | Dockerfiles réordonnés, image unique `reviewpulse-app` | **écrits, jamais construits** | commit `b5f92be` |
 | Images Docker | **toutes supprimées par Enzo** (16/09 soir) | à reconstruire |
 | Volume `mlflow_data` (registre, champion v2) | probablement supprimé avec le reste : **à vérifier** ; sinon réentraîner (`make jobs`) | — |
@@ -45,7 +45,7 @@ Règle d'Enzo : **rien de ReviewPulse sur C:** (ni build, ni cache, ni temporair
 | Dérive | `src/reviewpulse/drift.py`, `tests/test_drift.py` | compile ; colonnes et `config` vérifiés |
 | ADR 0015 et 0016 (proposées) | `docs/adr/` | inscrites au registre |
 
-**Au retour de Docker, dans l'ordre :** reconstruire les images, lancer la batterie (elle doit passer de 62 à 73 tests : 62 + 5 d'explicabilité + 6 de dérive), relancer les tests inverses (16 mutations attendues) et le test de stack (14 contrôles attendus). Tout écart se traite comme un défaut réel, pas comme un test à ajuster.
+**Pour reprendre, dans l'ordre :** lire `19_known_good.md` — le dernier état sain est `KG-2026-09-19-g` —, puis `16_registre_suivi.md`, puis le plan unique. Les chiffres attendus y sont : **125 tests**, **26 mutations sur 26**, **16 contrôles**, **9 tâches** au DAG, et une charge à 0 % d'erreur et p99 925 ms. La campagne se relance par `make campagne`, en montant `/tmp` en mémoire (`--tmpfs /tmp:size=3g`), sans quoi le journal du disque virtuel devient le goulot. Tout écart se traite comme un défaut réel, jamais comme un test à ajuster.
 
 Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Aucune mention d'outil dans l'historique (contrôle : `git log --format=%B | grep -ci claude` doit valoir 0).
 

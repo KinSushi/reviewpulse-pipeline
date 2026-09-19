@@ -2,7 +2,7 @@
 
 Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé sur Julie le 16/09 (`00_sources/2026-09-16_sources_primaires.md`).
 
-**Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09 : batterie 73 tests, tests inverses 16 mutations, test de stack 14 contrôles, DAG à six tâches 6/6. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
+**Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09, et le 19/09 au soir l'ensemble a été rejoué **le même jour sur le même arbre** : batterie **125 tests**, tests inverses **26 mutations sur 26**, test de stack **16 contrôles sur 16**, DAG quotidien à **9 tâches**, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
 
 **Légende.** ✅ vérifié par exécution le 16/09 · 🟡 écrit, pas encore exécuté dans son environnement cible · ⬜ à faire · ⚠ écart ou risque.
 
@@ -45,7 +45,7 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 
 1. **Précision des avis négatifs : 0,657.** Environ un avis signalé sur trois est en réalité positif (contre un sur deux avant l'ADR 0007). Pour un outil de *priorisation de lecture*, une lecture inutile coûte peu ; le rappel (0,639) compte davantage.
 2. **Seuil de promotion revu de 0,80 à 0,75** après mesure ; l'objectif de 0,80 est atteint depuis (0,807). Histoire complète : ADR 0008.
-3. **Great Expectations** n'est pas encore utilisé (contrôles maison bloquants, eux-mêmes couverts par les tests inverses) : prévu après le cours du 21/09.
+3. **Great Expectations** couvre désormais la zone propre (`expectations.py`) **et** les zones silver et gold (`expectations_lake.py`, 28 attentes, tâche `gx_lake` bloquante dans le DAG). ADR 0020.
 4. **Le pipeline tourne en conteneurs locaux ou sur GitHub**, pas dans un cloud public : la fiche AIA l'admet (« dans le cloud ou on-premise ») ; la cible cloud est décrite (schéma 06).
 5. **Airflow en mode `standalone`** (base SQLite, une tâche à la fois) : adapté à la démo, pas à la production (ADR 0011).
 
