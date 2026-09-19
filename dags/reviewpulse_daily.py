@@ -80,6 +80,25 @@ def _run_module(module_name: str) -> None:
         raise RuntimeError(f"{module_name}.main() a renvoyé {result}")
 
 
+def _run_module_avec_args(module_name: str, argv: list) -> None:
+    """Comme ``_run_module``, mais transmet *argv* à ``module.main()``.
+
+    Pourquoi : un module dont ``main`` analyse des arguments ne peut pas lire
+    ``sys.argv`` ici — il appartient au processus lancé par Airflow, pas au module.
+    """
+    try:
+        import importlib
+
+        module = importlib.import_module(module_name)
+        result = module.main(argv)
+    except Exception as exc:  # pragma: no cover
+        logger.exception("Erreur lors de l'exécution de %s.main(%s)", module_name, argv)
+        raise RuntimeError(str(exc)) from exc
+
+    if result != 0:
+        raise RuntimeError(f"{module_name}.main({argv}) a renvoyé {result}")
+
+
 # ---------------------------------------------------------------------------
 # Alertes (exécutées dans le processus Airflow, aucun import de reviewpulse)
 # ---------------------------------------------------------------------------
@@ -216,7 +235,16 @@ with DAG(
         reset_dag_run=True,
     )
 
-    ingest_task >> spark_silver_task >> gx_validate_task >> score_task >> drift_task >> gold_task
+    # Porte de qualité sur les zones silver et gold, après la construction de la zone gold.
+    gx_lake_task = ExternalPythonOperator(
+        task_id="gx_lake",
+        python=RP_PYTHON,
+        python_callable=_run_module_avec_args,
+        op_args=["reviewpulse.expectations_lake", ["--zone", "toutes"]],
+        expect_airflow=False,
+    )
+
+    ingest_task >> spark_silver_task >> gx_validate_task >> score_task >> drift_task >> gold_task >> gx_lake_task
     drift_task >> derive_gate >> trigger_train
 
 # ---------------------------------------------------------------------------
