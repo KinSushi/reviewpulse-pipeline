@@ -1,39 +1,51 @@
-%% diagramme ReviewPulse vue d'ensemble
-flowchart LR
-  subgraph SRC[Source]
-    S[API publique<br/>avis Steam]
-  end
-  subgraph ING[Ingestion]
-    I[ingest.py<br/>curseur + manifeste des ids]
-  end
-  subgraph LAKE[Lac de données]
-    R[raw<br/>JSONL]
-    C[clean<br/>Parquet]
-    SCZ[scored<br/>Parquet]
-  end
-  subgraph IA[IA]
-    M[train.py<br/>TF-IDF + LogReg]
-    MF[MLflow<br/>registre]
-    SC["score.py<br/>prédictions"]
-  end
-  subgraph REST[Restitution]
-    API["FastAPI<br/>/predict /insights"]
-    D["Streamlit<br/>tableau de bord"]
-    U[Utilisateur<br/>community manager]
-  end
-  subgraph AUTO[Automatisation]
-    AF["Airflow<br/>DAG quotidien"]
-    GH["GitHub Actions<br/>CI + planif"]
+%% ReviewPulse — vue d'ensemble. Sources : dags/reviewpulse_daily.py, src/reviewpulse/*.py
+flowchart TB
+  S["API publique<br/>avis Steam"]
+
+  subgraph LAC["Lac de données"]
+    direction LR
+    R["zone brute<br/>JSONL immuable"]
+    C["zone propre<br/>Parquet"]
+    SIL["Iceberg silver<br/>reviews et predictions"]
+    G["zone gold<br/>DuckDB"]
   end
 
-  S --> I --> R --> C --> M --> MF --> SC --> SCZ
-  MF --> API
-  SCZ --> D
+  subgraph CHAINE["Chaîne quotidienne"]
+    direction LR
+    I["ingest.py"]
+    SP["spark_silver.py<br/>PySpark"]
+    GX{{"expectations.py<br/>porte bloquante"}}
+    SC["score.py"]
+    DR["drift.py"]
+    GO["gold.py<br/>dbt"]
+  end
+
+  subgraph MOD["Modèle, hebdomadaire"]
+    direction LR
+    T["train.py"]
+    MF["MLflow<br/>champion"]
+  end
+
+  subgraph REST["Restitution"]
+    direction LR
+    A["FastAPI<br/>predict, insights, explain"]
+    D["Streamlit<br/>tableau de bord"]
+    U["community manager"]
+  end
+
+  AF["Airflow<br/>DAG quotidien et hebdomadaire"]
+  GH["GitHub Actions<br/>intégration continue"]
+
+  S --> I --> R --> SP --> C --> GX --> SC --> DR --> GO --> G
+  SP --> SIL
+  SC --> SIL
+  SIL --> GO
+  T --> MF --> SC
+  MF --> A
+  G --> D
+  A --> U
   D --> U
 
-  AF -.-> I
-  AF -.-> C
-  AF -.-> SC
-  AF -.-> M
-  GH -.-> C
-  GH -.-> M
+  AF -.-> CHAINE
+  AF -.-> MOD
+  GH -.-> CHAINE

@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -29,6 +29,7 @@ help:
 	@echo "  reverse   - Exécute les tests inverses et génère le rapport docs/evidence/reverse_tests.md"
 	@echo "  forward   - Vérifie la stack déployée et génère le rapport docs/evidence/forward_test.md"
 	@echo "  snapshots - Historique Iceberg (TABLE=...) ou restauration (SNAPSHOT=<id>)"
+	@echo "  diagrams  - Rend les schemas Mermaid en SVG et PNG, echoue si l'un est invalide"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -74,6 +75,13 @@ score:
 ## Retour arrière du modèle en service
 rollback:
 	python -m reviewpulse.rollback $(if $(VERSION),--vers $(VERSION),)
+
+## Rend les schemas Mermaid en SVG et PNG, et echoue si l'un d'eux est invalide.
+## L'outil vit dans une image ; rien n'est installe sur la machine.
+DIAGRAMS_IMAGE ?= minlag/mermaid-cli:latest
+diagrams:
+	@for f in docs/diagrams/src/*.mmd; do 	  n=$$(basename $$f .mmd); 	  echo "  $$n"; 	  MSYS_NO_PATHCONV=1 docker run --rm -u 0 -v "$$(pwd)/docs/diagrams:/data" $(DIAGRAMS_IMAGE) -i /data/src/$$n.mmd -o /data/svg/$$n.svg >/dev/null 2>&1 || { echo "ECHEC sur $$n"; exit 1; }; 	  MSYS_NO_PATHCONV=1 docker run --rm -u 0 -v "$$(pwd)/docs/diagrams:/data" $(DIAGRAMS_IMAGE) -i /data/src/$$n.mmd -o /data/png/$$n.png >/dev/null 2>&1 || { echo "ECHEC sur $$n"; exit 1; }; 	done
+	@echo "Schemas regeneres dans docs/diagrams/svg et docs/diagrams/png"
 
 ## Historique et restauration d'un instantane Iceberg : make snapshots TABLE=silver.reviews [SNAPSHOT=<id>]
 TABLE ?= silver.reviews

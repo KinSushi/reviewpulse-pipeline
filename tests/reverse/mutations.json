@@ -196,5 +196,49 @@
     "tests": [
       "tests/test_gold.py"
     ]
+  },
+  {
+    "id": "M19",
+    "fichier": "src/reviewpulse/drift.py",
+    "avant": "        if psi_max >= SEUIL_PSI_ALERTE:\n            resultat[\"alerte\"] = True",
+    "apres": "        if False:\n            resultat[\"alerte\"] = True",
+    "defaut_simule": "Le franchissement du seuil de PSI ne lève plus d'alerte",
+    "pourquoi_grave": "La dérive des entrées passerait inaperçue et le réentraînement ne serait jamais déclenché",
+    "tests": [
+      "tests/test_drift.py"
+    ]
+  },
+  {
+    "id": "M20",
+    "fichier": "src/reviewpulse/drift.py",
+    "avant": "    if not verdict.get(\"alerte\"):\n        return None",
+    "apres": "    if False:\n        return None",
+    "defaut_simule": "Un fichier d'alerte est écrit même sans alerte",
+    "pourquoi_grave": "Le canal d'alerte crierait en permanence : plus personne ne le lirait, et le réentraînement partirait pour rien",
+    "tests": [
+      "tests/test_drift.py"
+    ]
+  },
+  {
+    "id": "M21",
+    "fichier": "src/reviewpulse/explain.py",
+    "avant": "    if idx_negative == 1:\n        return clf.coef_[0]\n    else:\n        return -clf.coef_[0]",
+    "apres": "    if idx_negative == 1:\n        return -clf.coef_[0]\n    else:\n        return clf.coef_[0]",
+    "defaut_simule": "Le signe des coefficients de la classe négative est inversé",
+    "pourquoi_grave": "Les termes présentés au jury comme « ce qui pèse vers le négatif » seraient exactement les termes positifs : l'explication mentirait",
+    "tests": [
+      "tests/test_explain.py"
+    ]
+  },
+  {
+    "id": "M22",
+    "fichier": "src/reviewpulse/lakehouse.py",
+    "avant": "    if snapshot_id not in known_ids:\n        raise ValueError(",
+    "apres": "    if False:\n        raise ValueError(",
+    "defaut_simule": "Une restauration vers un instantané inexistant n'est plus refusée",
+    "pourquoi_grave": "La table silver pourrait être basculée vers un état qui n'existe pas, sans message clair",
+    "tests": [
+      "tests/test_spark_silver.py"
+    ]
   }
 ]
