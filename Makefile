@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -33,6 +33,7 @@ help:
 	@echo "  sauvegarde-mlflow / restaure-mlflow - Registre MLflow hors du volume Docker"
 	@echo "  justifications - Verifie que chaque ADR est cite dans le code et dans les questions du jury"
 	@echo "  briques   - Verifie que chaque exigence est classee et suivie"
+	@echo "  campagne  - Batterie puis tests inverses, sous garde de temps, journal date"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -91,6 +92,13 @@ justifications:
 ## registre. Ne : le 19/09/2026 une exigence dormait dans le depot sans etre vue.
 briques:
 	python tools/verifier_briques.py
+
+## Campagne de preuves : compilation, batterie, tests inverses, chacune sous une garde
+## de temps, journal date dans docs/evidence/. Ne le 19/09/2026 : une campagne a tourne
+## 3 h 09 a 0,13 % de CPU sans que rien ne le montre.
+campagne:
+	sh tools/campagne_preuves.sh
+
 
 
 ## ADR 0018 — Sauvegarde du registre MLflow HORS du volume Docker.

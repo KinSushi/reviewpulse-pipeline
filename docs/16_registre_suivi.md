@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026, 18 h 45.
+Mise à jour : 19/09/2026, 20 h 30.
 
 ## Sujets ouverts
 
@@ -44,6 +44,8 @@ Mise à jour : 19/09/2026, 18 h 45.
 | R36 | Backlog conduit en sprints | Bloc 3, `18_briques_exigees.md` | P3 | ⬜ | Un découpage en sprints daté, ou la décision écrite de s'en passer | `10_backlog.md` et le registre existent, aucun sprint | Trancher avec Enzo |
 | R37 | Tracing de l'explicabilité | AIA 4, `18_briques_exigees.md` | P3 | ⬜ | Traces d'explication conservées, ou décision écrite | contribution linéaire exacte servie par `/explain`, rien n'est tracé | Après R11 |
 | R39 | Démonstration de résilience : consommateur arrêté puis relancé | AIA 3, `18_briques_exigees.md` | P2 | ⬜ | Une coupure provoquée puis rattrapée, mesurée | dépend de la brique Kafka, absente | Dépend de R17 |
+| R40 | Docker Desktop ne démarre plus : `docker daemon did not become ready` | 19/09, 20 h | P1 | ⛔ Enzo | `docker version` rend une version de serveur | processus présents, démon absent ; survenu après un redémarrage pour un réglage IPv4/IPv6 | Enzo relance Docker Desktop ; ensuite `make campagne` |
+| R41 | Garde de temps **par test** dans la batterie | incident du 19/09 | P2 | ⬜ | Un test bloqué échoue seul, sans emporter la campagne | `pytest-timeout` absent de l'image ; la garde actuelle est par phase, pas par test | Ajouter `pytest-timeout` à `requirements-dev.txt` et reconstruire l'image de développement |
 
 ## Sujets fermés (avec leur preuve)
 
@@ -74,6 +76,7 @@ Mise à jour : 19/09/2026, 18 h 45.
 | F23 | `confluent-kafka`, déclaré et jamais importé | vérifié sur tout le dépôt : une seule occurrence, dans `requirements.txt`. Retiré, la ligne exacte conservée en commentaire pour le jour où la brique Kafka sera construite (R17) | 19/09 |
 | F24 | Toute exigence en gras de `08_exigences_par_bloc.md` est classée et suivie | `docs/18_briques_exigees.md` : **73 briques techniques** — 27 présentes, 16 partielles, 30 absentes — et 38 termes non techniques ; chaque brique non présente porte un sujet vivant du registre. `make briques` rend 0. Né de l'erreur du 19/09 : j'avais nié une exigence qui dormait dans le dépôt | 19/09 |
 | F25 | Le contrôle des briques a trouvé quatre exigences que mon classement manuel avait ratées | `SCD2`, `médaillon batch et streaming` (AIA 2), `notification e-mail`, `démonstration de résilience` (AIA 3) ; sujets R35, R39 ouverts, R11 et R17 complétés | 19/09 |
+| F26 | Une campagne ne peut plus tourner des heures sans rien montrer | `tools/campagne_preuves.sh` : journal daté écrit au fil de l'eau (`stdbuf`), une garde `timeout` par phase, dépassement signalé et code de sortie non nul. `make campagne`, syntaxe shell vérifiée | 19/09 |
 
 ## Comment se servir de ce registre
 

@@ -65,6 +65,36 @@ détectées sur cet arbre. La campagne est lancée ; son résultat conditionne l
 
 ---
 
+## KG-2026-09-19-c — `BLOQUE` (environnement)
+
+**Commit** : `563e675` · **Date** : 19/09/2026, 20 h 30.
+
+**Ce qui bloque** : Docker Desktop ne démarre plus — `docker daemon did not become ready`.
+Les processus `Docker Desktop.exe` et `com.docker.backend.exe` tournent, le démon non.
+Cause déclarée par Enzo : un redémarrage de Docker pour un réglage IPv4/IPv6.
+
+**Ce qui a précédé, et qui compte** : la campagne lancée à 17 h 30 a tourné **3 h 09 à
+0,13 % de CPU**. Observation à la source : `wchan` du processus pytest = `submit_bio_wait`,
+descripteurs ouverts sur une base SQLite MLflow d'un dossier temporaire de test, et une JVM
+Spark vivante depuis 2 h 25 sans activité. Ce n'était donc **pas** un défaut du projet mais
+un blocage d'entrées-sorties du disque virtuel. La campagne est morte avec le démon, sans
+rien produire.
+
+**Deux causes, deux remèdes** :
+1. *Environnement* : le démon doit redémarrer. Hors de mon périmètre, c'est l'interface
+   d'Enzo.
+2. *Harnais, de mon fait* : la sortie était tuyautée dans `tail -12`, donc invisible pendant
+   trois heures, et aucune garde de temps ne bornait la course. Corrigé par
+   `tools/campagne_preuves.sh` (`make campagne`) : journal daté écrit au fil de l'eau par
+   `stdbuf`, une garde `timeout` par phase, code de sortie non nul au dépassement.
+
+**État de la preuve** : inchangé depuis `KG-2026-09-19-a`. Les tests ajoutés depuis restent
+vérifiés isolément seulement.
+
+**Prochaine action** : au retour du démon, `make campagne`, puis étiqueter
+`KG-2026-09-19-b` selon le résultat.
+
+
 ## Comment se servir de ce fichier
 
 1. Après une compaction, un changement de modèle ou une interruption : lire **ce fichier
