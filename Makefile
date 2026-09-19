@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -34,6 +34,7 @@ help:
 	@echo "  justifications - Verifie que chaque ADR est cite dans le code et dans les questions du jury"
 	@echo "  briques   - Verifie que chaque exigence est classee et suivie"
 	@echo "  campagne  - Batterie puis tests inverses, sous garde de temps, journal date"
+	@echo "  charge    - Essai de charge de l'API : debit, latence, taux d'erreur"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -98,6 +99,14 @@ briques:
 ## 3 h 09 a 0,13 % de CPU sans que rien ne le montre.
 campagne:
 	sh tools/campagne_preuves.sh
+
+## Essai de charge de l'API : repond a l'indicateur AIA 4 « conteneurs et orchestration
+## sous charge ». Rend un code non nul si le taux d'erreur ou la latence p99 depassent
+## les bornes. Exige que la stack tourne (make up).
+CHARGE_URL ?= http://localhost:8000
+charge:
+	python tools/essai_charge.py --url $(CHARGE_URL) --concurrence $(or $(CONCURRENCE),10) --requetes $(or $(REQUETES),200)
+
 
 
 
