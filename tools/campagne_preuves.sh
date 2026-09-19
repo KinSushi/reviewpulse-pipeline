@@ -63,11 +63,9 @@ cd "${COPIE}" || exit 1
 OPTIONS_DELAI=""
 if python -c "import pytest_timeout" >/dev/null 2>&1; then
     OPTIONS_DELAI="--timeout=900 --timeout-method=thread"
-    printf 'Garde par test active : %s
-' "${OPTIONS_DELAI}" | tee -a "${JOURNAL}"
+    echo "Garde par test active : ${OPTIONS_DELAI}" | tee -a "${JOURNAL}"
 else
-    printf 'pytest-timeout absent de l image : garde par phase seulement (R41)
-' | tee -a "${JOURNAL}"
+    echo "pytest-timeout absent de l'image : garde par phase seulement (R41)" | tee -a "${JOURNAL}"
 fi
 
 # shellcheck disable=SC2086
