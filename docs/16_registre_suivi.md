@@ -29,7 +29,6 @@ Mise à jour : 19/09/2026, 16 h 20.
 | R18 | Droits sur D: : huit dossiers portent encore une interdiction de l'ancien compte | 18/09 | P2 | ⛔ Enzo | Plus aucune entrée orpheline | `icacls` interrompu volontairement | Passe ciblée (22 500 fichiers) |
 | R19 | Exécuter les mutations M17 et M18 (porte de qualité, entrepôt) | 19/09 | P1 | 🔄 | 18 mutations sur 18 détectées | premier lancement interrompu par le témoin : il a trouvé R27, défaut réel | Relancer après la batterie verte |
 | R21 | Vérifier la mesure de sur- et sous-apprentissage | critère transverse CDSD | P1 | 🔍 | Test vert dans la batterie | `test_ecart_train_test_raisonnable` **en échec** le 19/09 par le défaut R27 | Relire le résultat après la batterie |
-| R23 | Trancher `confluent-kafka`, déclaré mais jamais importé | audit du 18/09 | P3 | ⬜ | Retiré, ou assumé par écrit | poids inutile dans chaque image | Décider avec R17 |
 | R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | 🔍 | Cinq tests verts, dont un témoin | `tests/test_rollback.py`, faux client MLflow ; le résultat du 19/09 matin appartient à une batterie non reproductible | Relire le résultat après la batterie |
 | R25 | Mutations pour `explain.py` et `drift.py` | audit du 18/09 | P2 | ⬜ | Chaque module branché a sa mutation | non couverts | Après R19 |
 | R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ✅ | Mentionnée dans la Model Card | `docs/12_model_card.md` : entropie croisée, `class_weight="balanced"`, régularisation L2 `C=4.0`, vérifié dans `train.py` | — |
@@ -63,6 +62,7 @@ Mise à jour : 19/09/2026, 16 h 20.
 | F20 | Les dix schémas remis à niveau et rendus | 10 sur 10 rendus sans erreur ; `make diagrams` échoue si un schéma est invalide — c'est ce qui a trouvé trois erreurs de syntaxe. Trois contresens corrigés (dbt lisait les parquet, le journal Airflow déclenchait le réentraînement, le challenger était servi) et une affirmation non tenue retirée (RACI avec DPO, marquée « à définir ») | 19/09 |
 | F21 | Le workflow planifié `pipeline.yml` exécutait la chaîne d'avant Spark | corrigé : ingest, spark_silver, expectations, train, score, drift, gold, avec Java 17 ; les deux workflows relus par un analyseur YAML | 19/09 |
 | F22 | Les huit PDF du cas Spotify, lus | extraits dans un conteneur `python:3.11-slim` avec `pypdf`, rien installé sur la machine ; 8 documents, 56 pages. Le critère de sélection du vrai PDF est l'en-tête `%PDF-`, **pas la taille** — la note antérieure était fausse | 19/09 |
+| F23 | `confluent-kafka`, déclaré et jamais importé | vérifié sur tout le dépôt : une seule occurrence, dans `requirements.txt`. Retiré, la ligne exacte conservée en commentaire pour le jour où la brique Kafka sera construite (R17) | 19/09 |
 
 ## Comment se servir de ce registre
 

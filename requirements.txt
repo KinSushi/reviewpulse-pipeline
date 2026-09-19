@@ -13,5 +13,9 @@ pyiceberg[sql-sqlite,pyarrow]==0.12.0
 duckdb==1.5.5
 dbt-core==1.12.5
 dbt-duckdb==1.11.0
-confluent-kafka[avro,schemaregistry]==2.15.1
+# confluent-kafka a ete retire le 19/09/2026 : declare, jamais importe (verifie sur
+# tout le depot). Chaque image le portait pour rien, et la place disque nous a deja
+# coute une nuit. A remettre le jour ou la brique Kafka sera reellement construite
+# (registre R17) ; la ligne exacte etait :
+#   confluent-kafka[avro,schemaregistry]==2.15.1
 -e .
