@@ -174,5 +174,27 @@
     "tests": [
       "tests/test_spark_silver.py"
     ]
+  },
+  {
+    "id": "M17",
+    "fichier": "src/reviewpulse/expectations.py",
+    "avant": "    if summary[\"success\"]:",
+    "apres": "    if True:",
+    "defaut_simule": "Porte de qualité rendue non bloquante",
+    "pourquoi_grave": "Une suite Great Expectations en échec laisserait passer des données non conformes vers le modèle (ADR 0005)",
+    "tests": [
+      "tests/test_expectations.py"
+    ]
+  },
+  {
+    "id": "M18",
+    "fichier": "src/reviewpulse/gold.py",
+    "avant": "    if not res.success:\n        log.error(\"dbt build a échoué\")",
+    "apres": "    if False:\n        log.error(\"dbt build a échoué\")",
+    "defaut_simule": "Échec de dbt build ignoré",
+    "pourquoi_grave": "Une zone gold incomplète ou fausse serait servie aux tableaux de bord sans que rien ne le signale",
+    "tests": [
+      "tests/test_gold.py"
+    ]
   }
 ]

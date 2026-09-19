@@ -178,6 +178,10 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | 19/09, 08:26 : **DAG à six tâches, 6 sur 6**, `drift` exécutée pour la première fois dans Airflow. Le scheduler a survécu à une interrogation par minute pendant toute l'exécution — c'est le test du correctif, puisque c'est cet usage qui le tuait | [X] |
 | **Airflow migré de SQLite vers PostgreSQL** (service `airflow-db`, `LocalExecutor`). Trois défauts successifs trouvés par l'exécution : test de santé sans délai de grâce (la première initialisation dépasse 50 s) ; pilote `psycopg2` absent de l'image slim ; et surtout un correctif du banc qui avait **supprimé la ligne `USER airflow`**, installant le pilote pour `root` — le conteneur a bouclé toute la nuit sur la même erreur | [X] |
 | Leçon d'outillage : `nexus_appliquer.py` affiche « RETIRE : le bloc supprime N ligne(s) de l'AVANT absente(s) de l'APRES ». J'ai traité ce message comme du bruit ; c'est un **signal d'alerte** disant que le remplacement perd des lignes. Il doit interrompre, pas informer | [X] |
+| 19/09 : **registre de suivi créé** (`docs/16_registre_suivi.md`) — 26 sujets ouverts, 13 fermés avec leur preuve, chacun avec critère de fin et prochaine action. Il manquait : rien ne garantissait qu'un sujet ancien ne disparaisse par oubli de contexte | [U] [X] |
+| Contrôle mécanique ajouté au rituel : `python -m compileall` sur `src`, `tools`, `dags`, `dashboard`, `tests` — code de sortie 0 le 19/09 | [X] |
+| Matrice de réversibilité écrite (`docs/15_reversibilite.md`) et **étiquette `preuves-2026-09-19`** posée sur le dernier état prouvé : git devient un point de retour nommé, pas seulement un historique | [X] |
+| Constat git : `main` (2 commits) et `plateforme-v3` (24 commits) **n'ont aucun ancêtre commun** — deux départs distincts, pas une divergence. La lecture « 2 commits d'avance » donnée hier était fausse | [X] |
 
 ### Questions ouvertes (à Jedha)
 

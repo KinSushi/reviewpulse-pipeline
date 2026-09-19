@@ -314,6 +314,12 @@ def train_and_log(
 
     f1_macro = f1_score(y_test_nat, y_pred_test, average="macro")
     recall_negative = recall_score(y_test_nat, y_pred_test, pos_label=0)
+
+    # Mesure du sur‑apprentissage : calcul du F1 macro sur le jeu d'entraînement
+    proba_train = decision.negative_proba(pipeline, X_train_nat)
+    y_pred_train = decision.predict_labels(proba_train, decision_threshold)
+    f1_macro_train = f1_score(y_train_nat, y_pred_train, average="macro")
+    ecart_train_test = f1_macro_train - f1_macro
     precision_negative = precision_score(y_test_nat, y_pred_test, pos_label=0)
     roc_auc = roc_auc_score((y_test_nat == 0).astype(int), proba_test)
 
@@ -342,8 +348,12 @@ def train_and_log(
         mlflow.log_param("data_first_review", dataset_fingerprint["data_first_review"])
         mlflow.log_param("data_last_review", dataset_fingerprint["data_last_review"])
         mlflow.set_tag("data_sha256", dataset_fingerprint["data_sha256"])
+        # Cette étiquette relie le modèle à la version du code source.
+        mlflow.set_tag("code_commit", os.getenv("REVIEWPULSE_COMMIT", "inconnu"))
 
         mlflow.log_metric("f1_macro", f1_macro)
+        mlflow.log_metric("f1_macro_train", f1_macro_train)
+        mlflow.log_metric("ecart_train_test", ecart_train_test)
         mlflow.log_metric("recall_negative", recall_negative)
         mlflow.log_metric("precision_negative", precision_negative)
         mlflow.log_metric("roc_auc", roc_auc)
@@ -408,6 +418,8 @@ def train_and_log(
         "decision_threshold": decision_threshold,
         "n_boost": n_boost,
         "f1_macro": f1_macro,
+        "f1_macro_train": f1_macro_train,
+        "ecart_train_test": ecart_train_test,
         "recall_negative": recall_negative,
         "precision_negative": precision_negative,
         "roc_auc": roc_auc,

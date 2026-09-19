@@ -1,5 +1,9 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback pipeline-gele
+
+# Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
+REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
+export REVIEWPULSE_COMMIT
 
 help:
 	@echo "Cibles du Makefile :"
@@ -65,6 +69,18 @@ train:
 ## Calcul des scores avec le modèle champion
 score:
 	python -m reviewpulse.score
+
+## Retour arrière du modèle en service
+rollback:
+	python -m reviewpulse.rollback $(if $(VERSION),--vers $(VERSION),)
+
+## Cette cible rejoue la chaîne sans ingérer de nouvelles données, pour une démonstration reproductible
+pipeline-gele:
+	python -m reviewpulse.spark_silver
+	python -m reviewpulse.expectations
+	python -m reviewpulse.score
+	python -m reviewpulse.drift
+	python -m reviewpulse.gold
 
 ## Mesure de la dérive des entrées et des prédictions
 drift:

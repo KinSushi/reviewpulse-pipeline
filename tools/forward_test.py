@@ -40,6 +40,7 @@ from typing import List, Tuple
 
 import pandas as pd
 import requests
+import duckdb
 
 from reviewpulse import config, quality
 from reviewpulse.decision import LABEL_NEGATIVE
@@ -291,6 +292,53 @@ def F6(data_dir: Path, champion_version: str) -> ControlResult:
 # --------------------------------------------------------------------------- #
 # Génération du rapport
 # --------------------------------------------------------------------------- #
+@_handle
+def F9(data_dir: Path) -> ControlResult:
+    """La base DuckDB de la zone gold existe et la table main.mart_sentiment_daily contient au moins une ligne."""
+    if not config.GOLD_DB.is_file():
+        raise FileNotFoundError(f"{config.GOLD_DB} absent")
+    con = duckdb.connect(str(config.GOLD_DB), read_only=True)
+    try:
+        result = con.execute(
+            "SELECT COUNT(*) FROM main.mart_sentiment_daily"
+        ).fetchone()
+        count = result[0] if result else 0
+        if count < 1:
+            raise AssertionError(
+                f"Table main.mart_sentiment_daily vide (0 lignes)"
+            )
+    finally:
+        con.close()
+    return ("F9", "PASS", f"{count} lignes")
+
+
+@_handle
+def F10(data_dir: Path) -> ControlResult:
+    """Le nombre de lignes de main.fct_review_predictions doit être égal au nombre de lignes natural du parquet scored."""
+    # Comptage des lignes natural dans le parquet
+    scored_path = data_dir / "scored" / "reviews_scored.parquet"
+    df = pd.read_parquet(scored_path)
+    natural_rows = df[df["sample_source"] == config.SAMPLE_NATURAL].shape[0]
+
+    # Comptage des lignes dans la table DuckDB
+    if not config.GOLD_DB.is_file():
+        raise FileNotFoundError(f"{config.GOLD_DB} absent")
+    con = duckdb.connect(str(config.GOLD_DB), read_only=True)
+    try:
+        result = con.execute(
+            "SELECT COUNT(*) FROM main.fct_review_predictions"
+        ).fetchone()
+        duck_rows = result[0] if result else 0
+    finally:
+        con.close()
+
+    if duck_rows != natural_rows:
+        raise AssertionError(
+            f"Différence de lignes : duckdb={duck_rows} parquet={natural_rows}"
+        )
+    return ("F10", "PASS", f"{duck_rows} lignes")
+
+
 def _git_commit_short() -> str:
     """Retourne le hash court du commit Git, ou la variable d'env REVIEWPULSE_COMMIT,
     ou 'inconnu' en cas d'échec."""
@@ -449,6 +497,8 @@ def main() -> int:
         F6(data_dir, model_version or ""),
         F7(data_dir),
         F8(data_dir),
+        F9(data_dir),
+        F10(data_dir),
     ]
 
     # Génération du rapport

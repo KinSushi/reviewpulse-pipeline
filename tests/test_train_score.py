@@ -125,3 +125,21 @@ def test_summarize_returns_one_row_per_app_language_date(
     assert len(summary) == unique_combinations
     # chaque ligne doit contenir la même version que le modèle utilisé
     assert (summary["model_version"] == version).all()
+
+
+def test_ecart_train_test_raisonnable(data_env, labelled_frame):
+    """L'écart entre les scores d'entraînement et de test doit rester raisonnable."""
+    result = train.train_and_log(
+        labelled_frame,
+        tracking_uri=config.MLFLOW_TRACKING_URI,
+        register=True,
+    )
+    f1_train = result.get("f1_macro_train")
+    f1_test = result.get("f1_macro")
+    ecart = result.get("ecart_train_test")
+    # vérification de la présence des métriques
+    assert f1_train is not None, f"f1_macro_train manquant : {f1_train}"
+    assert f1_test is not None, f"f1_macro manquant : {f1_test}"
+    assert ecart is not None, f"ecart_train_test manquant : {ecart}"
+    # l'écart doit être compris entre -0,05 et 0,35
+    assert -0.05 <= ecart < 0.35, f"Écart inattendu (train={f1_train:.3f}, test={f1_test:.3f}) = {ecart:.3f}"

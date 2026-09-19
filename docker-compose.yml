@@ -5,6 +5,8 @@
 # et la transformation s'arrête avant d'écrire la moindre donnée (vérifié le 16/09/2026).
 x-secrets: &secrets
   REVIEWPULSE_SALT: ${REVIEWPULSE_SALT:-}
+  # Cette variable rend les rapports traçables jusqu'au commit.
+  REVIEWPULSE_COMMIT: ${REVIEWPULSE_COMMIT:-inconnu}
 
 # Convention : le lac de données est monté sous /data dans TOUS les conteneurs.
 # Pourquoi : le catalogue Iceberg enregistre des chemins absolus ; une table créée sous /data
@@ -128,6 +130,7 @@ services:
     environment:
       <<: *secrets
       REVIEWPULSE_DATA_DIR: /data
+      REVIEWPULSE_COMMIT: ${REVIEWPULSE_COMMIT:-inconnu}
       MLFLOW_TRACKING_URI: http://mlflow:5000
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
