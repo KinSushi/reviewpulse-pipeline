@@ -95,6 +95,31 @@ vérifiés isolément seulement.
 `KG-2026-09-19-b` selon le résultat.
 
 
+## Incident 2026-09-19-d — la batterie n'a pas tourné, et le script l'a caché
+
+**Constat** : le journal de la campagne de 20 h 34 passe de « compilation, code 0 en 32 s »
+directement à « tests inverses », sans aucune ligne pour la batterie.
+
+**Cause, trouvée dans le conteneur** : `JOURNAL` était un chemin **relatif**
+(`docs/evidence/…`). La batterie tourne dans une copie temporaire du dépôt, où `docs/`
+n'existe pas — vérifié : `ls /tmp/campagne.zX4NrU` ne contient que `src`, `tests`,
+`dashboard`, `dags`, `dbt` et `pyproject.toml`. Le `tee` écrivait donc vers un répertoire
+absent, le tuyau se rompait, et la phase mourait en silence, **y compris son propre message
+d'erreur**, qui passait par le même tuyau.
+
+**Ironie à retenir** : ce script avait été écrit le matin même pour empêcher qu'une campagne
+meure sans rien montrer. Il a reproduit le défaut sous une autre forme. Un mécanisme de
+surveillance doit être éprouvé comme le reste — le voir produire une ligne ne prouve pas
+qu'il en produira toutes les lignes.
+
+**Correction** : le chemin du journal est rendu absolu dès l'en-tête, par
+`JOURNAL_DIR=$(cd "${JOURNAL_DIR}" && pwd)`.
+
+**Conséquence sur les preuves** : aucune batterie n'a tourné sur l'arbre courant. L'état
+reste celui de `KG-2026-09-19-a`. Les tests inverses, eux, tournent depuis 20 h 46 et
+journalisent correctement, car cette phase s'exécute depuis `/app`.
+
+
 ## Comment se servir de ce fichier
 
 1. Après une compaction, un changement de modèle ou une interruption : lire **ce fichier

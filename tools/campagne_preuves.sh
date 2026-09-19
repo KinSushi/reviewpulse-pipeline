@@ -14,9 +14,13 @@
 set -u
 
 JOURNAL_DIR="${1:-docs/evidence}"
+mkdir -p "${JOURNAL_DIR}"
+# Chemin ABSOLU, sans quoi le journal suit le repertoire courant : la batterie tourne
+# dans une copie temporaire, ou "docs/evidence" n'existe pas. Le tee echouait alors,
+# le tuyau se rompait, et la phase mourait en silence (constate le 19/09/2026).
+JOURNAL_DIR=$(cd "${JOURNAL_DIR}" && pwd)
 HORODATAGE=$(date -u +%Y%m%d-%H%M%S)
 JOURNAL="${JOURNAL_DIR}/campagne_${HORODATAGE}.log"
-mkdir -p "${JOURNAL_DIR}"
 
 # Budgets en secondes. Généreux mais finis : un dépassement est un signal, pas un drame.
 BUDGET_COMPILE=${BUDGET_COMPILE:-300}
