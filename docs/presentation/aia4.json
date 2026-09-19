@@ -62,7 +62,7 @@
       "10": "Seules les colonnes du modèle peuvent lever une alerte (ADR 0015 révisée)",
       "11": "Veille : AI Act, dérive, explicabilité linéaire exacte plutôt que SHAP — ADR 0015, 0019, 0020",
       "12": "Ce qui reste ouvert",
-      "13": "Canal d'alerte externe, Kafka, stockage objet, déploiement public"
+      "13": "Canal d'alerte externe, essai de charge, Kafka, stockage objet, déploiement public — cible Kubernetes documentée (ADR 0012, 0013)"
     },
     "18": {
       "0": "Questions ?"

@@ -16,7 +16,7 @@ Selon la fiche AIA (relevé du 16/09) et le dossier maître (réponse Jedha du 2
 |---|---|---|---|
 | **AIA 4** — industrialisation et déploiement | **Final Project de la Lead** | **Support déclaré** | Tout le dépôt. Livrables à produire en plus du Demo Day : fiche modèle, stratégie de déploiement (alias MLflow `champion` / `challenger`, bascule progressive), plan de monitoring (dérive des données et des prédictions), note de veille, **capture vidéo en production**, **CI/CD** |
 | AIA 3 — pipelines de données | Automatic Fraud Detection | Brique | Structure du DAG Airflow, tests de qualité bloquants, ingestion idempotente, traçabilité (manifeste, `model_version` dans chaque prédiction), workflow GitHub Actions |
-| AIA 2 — infrastructure données et calcul | Stripe (From SQL to NoSQL) | Brique | Conventions de diagramme, `docker-compose`, zonage brut / propre du lac, pseudonymisation et gestion des secrets |
+| AIA 2 — infrastructure données et calcul | Stripe (From SQL to NoSQL) | Brique | Conventions de diagramme, `docker-compose`, zonage brut / propre du lac, pseudonymisation et gestion des secrets. **Point de départ Kubernetes** : le chemin est déjà tranché par écrit — une image par rôle et `KubernetesPodOperator` (ADR 0013), Compose assumé pour la démonstration (ADR 0012). C'est le bloc où auto-scaling, failover et IaC sont exigés, donc **le seul où un orchestrateur apporte une capacité, et non un décor**. Registre R17, R32, R34 |
 | AIA 1 — gouvernance | Spotify | Brique | Tableau des données personnelles de la charte, analyse RGPD et AI Act, modèle de RACI |
 
 ⚠ Le courriel de Jedha du 11/09 ouvre les **blocs 2, 3 et 4** de l'AIA. Le **bloc 1** n'y figure pas, alors que le contrat porte BC01 à BC04. Écart à trancher par Jedha.
@@ -48,6 +48,23 @@ Relevé le 16/09/2026 sur les disques et sur le compte GitHub public `KinSushi`.
 | `bloc1_data_gouv`, `bloc2_data_archi`, `bloc3_workflow_orchestration`, `fitconnect-data-architecture`, `coaching-aia-bloc3`, `bloc4_mlops`, `mlops_masterclass`, `full-deployment-project`, `train-repo` | GitHub `KinSushi` | **forks** | — | Modèles de format pour **AIA 1, 2, 3, 4** (livrables, diagrammes drawio, DAG, CI, Evidently) |
 | `dbt-jaffle-shop` | GitHub `KinSushi` | fork (cours) | — | Point de départ d'une couche **dbt** si ReviewPulse passe de pandas à dbt |
 | Dix schémas ReviewPulse | `docs/diagrams/` | propre (généré le 16/09) | — | Réemployables tels quels ou adaptés : 02 et 07 → **AIA 1** ; 01, 06, 08 → **AIA 2**, **CDSD 1** ; 03, 05 → **AIA 3** ; 04, 05, 10 → **AIA 4**, **CDSD 5** ; 09 → toutes les soutenances |
+
+## Ce qui vaut la peine d'être construit une fois, pour servir plusieurs blocs
+
+Une brique ne se construit que si un bloc l'exige **et** qu'elle sert ailleurs. Ce tableau
+dit, pour chaque chantier ouvert, ce qui le réclame et ce qu'il rendrait.
+
+| Chantier | Exigé par | Ce qu'il rend ailleurs | Avant le Demo Day ? |
+|---|---|---|---|
+| **Essai de charge** de l'API | AIA 4 — « conteneurs et orchestration sous charge » | Un chiffre de latence et de débit, réutilisable dans la veille AIA 4 et le dossier AIA 2 | **Oui** : quelques dizaines de lignes, une mesure défendable. Registre R42 |
+| **Kubernetes** (cluster local, manifestes) | Personne par son nom. Sert les indicateurs auto-scaling, failover, PaaS/IaaS/serverless de l'AIA 2 | Transformerait quatre lignes « absente » du tableau des briques en « présente » | **Non.** Aucune capacité nouvelle pour la démonstration, et six jours devant. Après le 25/09, avec Terraform. Registre R17 |
+| **Kafka, Avro, DLQ** | AIA 3 — le pipeline temps réel est le cœur du bloc | Le producteur et le consommateur servent aussi la démonstration de résilience (R39) | Non. Registre R17 |
+| **Stockage objet S3 ou MinIO** | CDSD 1, AIA 2 | Le lac change de socle sans changer de code : les chemins sont déjà uniformes | Non. Registre R17 |
+| **Déploiement public** | CDSD 5 — une URL en direct le jour J | Le projet bancaire a déjà un workflow Hugging Face qui marche : à reprendre, pas à écrire | À cadrer. Registre R17 |
+
+**Règle de décision** : avant le 25/09, on ne construit que ce qui est exigé **et** mesurable
+en une demi-journée. Le reste est nommé comme perspective sur la dernière diapositive, où il
+est annoncé comme tel — un jury pardonne un manque annoncé, jamais un manque déguisé.
 
 ## Les trois questions à poser à Jedha, par écrit
 

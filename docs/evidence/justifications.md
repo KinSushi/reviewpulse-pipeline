@@ -1,7 +1,7 @@
 # Justifications des décisions d'architecture
 
-*Date UTC* : 2026-09-19T20:26:21Z
-*Commit* : f3e06ce
+*Date UTC* : 2026-09-19T20:46:19Z
+*Commit* : 7077e49
 
 | ADR | titre | code | questions | diapositives |
 |-----|-------|------|-----------|--------------|
@@ -16,8 +16,8 @@
 | 0009 | Convention de décision centralisée | 5 | 2 | 1 |
 | 0010 | Emplacement des artefacts et des écritures | 4 | 2 | 1 |
 | 0011 | Airflow et GitHub Actions | 6 | 3 | 1 |
-| 0012 | Déploiement Docker Compose | 4 | 2 | 1 |
-| 0013 | Pile du programme Lead et environnements séparés | 12 | 4 | 3 |
+| 0012 | Déploiement Docker Compose | 4 | 2 | 3 |
+| 0013 | Pile du programme Lead et environnements séparés | 12 | 4 | 5 |
 | 0014 | Zone silver en PySpark et Iceberg, pandas comme référence | 7 | 1 | 3 |
 | 0015 | Surveillance de la dérive | 4 | 1 | 3 |
 | 0016 | Déploiement progressif champion / challenger | 5 | 2 | 2 |
@@ -30,4 +30,4 @@
 
 * Citations dans le code : 118
 * Citations dans les questions‑réponses : 51
-* Citations dans les diapositives : 40
+* Citations dans les diapositives : 44
