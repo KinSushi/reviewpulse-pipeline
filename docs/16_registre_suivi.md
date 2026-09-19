@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026, 16 h 20.
+Mise à jour : 19/09/2026, 18 h 45.
 
 ## Sujets ouverts
 
@@ -36,6 +36,14 @@ Mise à jour : 19/09/2026, 16 h 20.
 | R28 | Le banc de tests inverses ne recopiait pas `dbt/` | témoin, 19/09 | P1 | 🔄 | `tests/test_gold.py` s'exécute dans la copie temporaire | `_copy_project` corrigé : `dbt` ajouté à la liste | Vérifier au prochain lancement des mutations |
 | R29 | Base de documents (NoSQL) : **exigée par le bloc AIA 2** | `08_exigences_par_bloc.md`, cas Stripe | P2 | ⬜ | Le modèle NoSQL et les requêtes NoSQL du dossier Stripe sont produits ; décidé si ReviewPulse en fait la démonstration | Le cas Stripe demande une architecture OLTP + OLAP + **NoSQL**, avec « modèle NoSQL » et « requêtes SQL et NoSQL » parmi les livrables ; un travail de référence du parcours employait DocumentDB | Cadrer avec Enzo : livrable sur papier pour Stripe, ou démonstration réelle sur la zone brute de ReviewPulse |
 | R30 | Justifier l'architecture et les décisions dans les diapositives, le code et les questions du jury | Enzo, 19/09 | P1 | ✅ | Chaque ADR cité dans le code **et** dans les questions-réponses ; contrôle mécanique qui échoue sinon | `make justifications` : **20 ADR sur 20** cités des deux côtés. Mesure de départ : 6 sur 16 orphelins. Quatre ADR écrits (0017 à 0020), section « Architecture, choix et décisions » de 2 035 mots, renvois ajoutés aux trois jeux de diapositives | — |
+| R31 | Déploiement progressif : A/B ou canari | AIA 4, `18_briques_exigees.md` | P2 | ⬜ | Une part de trafic configurable, ou la décision écrite de s'en tenir à la bascule par alias | ADR 0016 est une proposition, aucune implémentation | Trancher avec Enzo : implémenter ou assumer par écrit |
+| R32 | Secrets et chiffrement : coffre, chiffrement en transit | AIA 2 et AIA 3, `18_briques_exigees.md` | P2 | ⬜ | Coffre en place ou décision écrite ; chiffrement en transit entre services | sel obligatoire hors du dépôt, mais aucun coffre ; seule l'API Steam est en HTTPS | Cadrer avec R17 |
+| R33 | Garde-fous : biais et injections | AIA 4, `18_briques_exigees.md` | P2 | ⬜ | Contrôle de biais mesuré, ou décision écrite | rien dans le code ; les correspondances trouvées étaient « injection de dépendance » | À cadrer |
+| R34 | FinOps, GreenOps, dimensionnement CPU/GPU | AIA 2 et AIA 4, `18_briques_exigees.md` | P2 | ⬜ | Une mesure de coût et une d'empreinte, si modestes soient-elles | aucune mesure | À cadrer |
+| R35 | Modélisation OLAP en étoile avec **SCD2** | AIA 2, `18_briques_exigees.md` | P2 | ⬜ | Dimensions à historisation lente modélisées dans le dossier Stripe | `dim_game` et `dim_date` sont sans historisation | Cadrer avec R29 : livrable papier ou démonstration |
+| R36 | Backlog conduit en sprints | Bloc 3, `18_briques_exigees.md` | P3 | ⬜ | Un découpage en sprints daté, ou la décision écrite de s'en passer | `10_backlog.md` et le registre existent, aucun sprint | Trancher avec Enzo |
+| R37 | Tracing de l'explicabilité | AIA 4, `18_briques_exigees.md` | P3 | ⬜ | Traces d'explication conservées, ou décision écrite | contribution linéaire exacte servie par `/explain`, rien n'est tracé | Après R11 |
+| R39 | Démonstration de résilience : consommateur arrêté puis relancé | AIA 3, `18_briques_exigees.md` | P2 | ⬜ | Une coupure provoquée puis rattrapée, mesurée | dépend de la brique Kafka, absente | Dépend de R17 |
 
 ## Sujets fermés (avec leur preuve)
 
@@ -64,6 +72,8 @@ Mise à jour : 19/09/2026, 16 h 20.
 | F21 | Le workflow planifié `pipeline.yml` exécutait la chaîne d'avant Spark | corrigé : ingest, spark_silver, expectations, train, score, drift, gold, avec Java 17 ; les deux workflows relus par un analyseur YAML | 19/09 |
 | F22 | Les huit PDF du cas Spotify, lus | extraits dans un conteneur `python:3.11-slim` avec `pypdf`, rien installé sur la machine ; 8 documents, 56 pages. Le critère de sélection du vrai PDF est l'en-tête `%PDF-`, **pas la taille** — la note antérieure était fausse | 19/09 |
 | F23 | `confluent-kafka`, déclaré et jamais importé | vérifié sur tout le dépôt : une seule occurrence, dans `requirements.txt`. Retiré, la ligne exacte conservée en commentaire pour le jour où la brique Kafka sera construite (R17) | 19/09 |
+| F24 | Toute exigence en gras de `08_exigences_par_bloc.md` est classée et suivie | `docs/18_briques_exigees.md` : **73 briques techniques** — 27 présentes, 16 partielles, 30 absentes — et 38 termes non techniques ; chaque brique non présente porte un sujet vivant du registre. `make briques` rend 0. Né de l'erreur du 19/09 : j'avais nié une exigence qui dormait dans le dépôt | 19/09 |
+| F25 | Le contrôle des briques a trouvé quatre exigences que mon classement manuel avait ratées | `SCD2`, `médaillon batch et streaming` (AIA 2), `notification e-mail`, `démonstration de résilience` (AIA 3) ; sujets R35, R39 ouverts, R11 et R17 complétés | 19/09 |
 
 ## Comment se servir de ce registre
 

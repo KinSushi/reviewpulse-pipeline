@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -32,6 +32,7 @@ help:
 	@echo "  diagrams  - Rend les schemas Mermaid en SVG et PNG, echoue si l'un est invalide"
 	@echo "  sauvegarde-mlflow / restaure-mlflow - Registre MLflow hors du volume Docker"
 	@echo "  justifications - Verifie que chaque ADR est cite dans le code et dans les questions du jury"
+	@echo "  briques   - Verifie que chaque exigence est classee et suivie"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -84,6 +85,13 @@ rollback:
 ## une citation ou si un renvoi pointe vers un ADR inexistant.
 justifications:
 	python tools/verifier_justifications.py
+
+## Verifie que toute exigence en gras de 08_exigences_par_bloc.md est classee dans
+## 18_briques_exigees.md, et que toute brique non presente porte un sujet vivant du
+## registre. Ne : le 19/09/2026 une exigence dormait dans le depot sans etre vue.
+briques:
+	python tools/verifier_briques.py
+
 
 ## ADR 0018 — Sauvegarde du registre MLflow HORS du volume Docker.
 ## Pourquoi : le 16/09/2026, la suppression du volume `mlflow_data` a detruit le
@@ -178,6 +186,8 @@ forward:
 
 ## Chaîne de preuves : exécute test, reverse puis forward
 evidence:
+	$(MAKE) justifications
+	$(MAKE) briques
 	$(MAKE) test
 	$(MAKE) reverse
 	$(MAKE) forward
