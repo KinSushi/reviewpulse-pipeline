@@ -89,6 +89,25 @@ services:
       timeout: 5s
       retries: 3
 
+  # SQLite ne supporte pas les accès concurrents ; le scheduler mourait lorsqu'il y avait plusieurs accès.
+  airflow-db:
+    image: postgres:16
+    profiles:
+      - airflow
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db:/var/lib/postgresql/data
+    # La première initialisation de la base dépasse le délai par défaut
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 10
+
   airflow:
     build:
       context: .
@@ -111,9 +130,14 @@ services:
       REVIEWPULSE_DATA_DIR: /data
       MLFLOW_TRACKING_URI: http://mlflow:5000
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
     depends_on:
       mlflow:
+        condition: service_healthy
+      airflow-db:
         condition: service_healthy
 
 volumes:
   mlflow_data:   # stockage persistant des artefacts et de la base SQLite de MLflow
+  airflow_db:    # volume persistant pour la base PostgreSQL d'Airflow

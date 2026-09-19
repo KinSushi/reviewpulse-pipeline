@@ -175,6 +175,9 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | **Un test avait été écrit pour épouser ce défaut** (`test_global_terms_n_et_signes` exigeait des coefficients négatifs). Il est corrigé et vérifie maintenant un effet réel : coefficients strictement positifs des deux côtés, et listes disjointes | [X] |
 | Quatre tests ajoutés pour `/explain` (contributions présentes dans le texte soumis, tri par valeur absolue, dix termes globaux de chaque côté, texte vide refusé en 422). **25 tests verts** sur le périmètre touché | [X] |
 | Récidive du marqueur tronqué par le banc, sur `AVANT` cette fois, avec en prime une ancre abrégée par des points de suspension. Artefact conservé intact (`phase1.jsonl`) et signalé à la session local-llm-docker. Remède employé : fournir moi-même l'ancre exacte et un gabarit littéral dans la consigne | [X] |
+| 19/09, 08:26 : **DAG à six tâches, 6 sur 6**, `drift` exécutée pour la première fois dans Airflow. Le scheduler a survécu à une interrogation par minute pendant toute l'exécution — c'est le test du correctif, puisque c'est cet usage qui le tuait | [X] |
+| **Airflow migré de SQLite vers PostgreSQL** (service `airflow-db`, `LocalExecutor`). Trois défauts successifs trouvés par l'exécution : test de santé sans délai de grâce (la première initialisation dépasse 50 s) ; pilote `psycopg2` absent de l'image slim ; et surtout un correctif du banc qui avait **supprimé la ligne `USER airflow`**, installant le pilote pour `root` — le conteneur a bouclé toute la nuit sur la même erreur | [X] |
+| Leçon d'outillage : `nexus_appliquer.py` affiche « RETIRE : le bloc supprime N ligne(s) de l'AVANT absente(s) de l'APRES ». J'ai traité ce message comme du bruit ; c'est un **signal d'alerte** disant que le remplacement perd des lignes. Il doit interrompre, pas informer | [X] |
 
 ### Questions ouvertes (à Jedha)
 

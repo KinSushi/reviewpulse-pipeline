@@ -21,6 +21,9 @@ RUN apt-get update \
 
 USER airflow
 
+# L'image slim ne contient pas le pilote PostgreSQL (psycopg2). Le scheduler d'Airflow en a besoin pour se connecter à la base de données.
+RUN pip install --no-cache-dir "psycopg2-binary==2.9.10"
+
 # Le projet s'installe UNIQUEMENT dans /opt/rp-venv. La ligne « -e . » de requirements.txt
 # vise la racine du dépôt : on la retire, les dépendances d'abord, le paquet ensuite.
 # Ordre des couches : la couche des dépendances (environ 3 Go) ne doit pas dépendre du code,
