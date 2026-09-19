@@ -114,7 +114,11 @@ services:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 5s
       timeout: 5s
-      start_period: 60s
+      # Mesure du 19/09/2026 : apres un arret brutal de Docker, PostgreSQL a passe
+      # 580 s en « syncing data directory (fsync) » avant d'accepter des connexions.
+      # Un start_period de 60 s declarait le service malade bien avant qu'il ne puisse
+      # repondre, et `compose up` abandonnait sur « dependency failed to start ».
+      start_period: 600s
       retries: 10
 
   airflow:
