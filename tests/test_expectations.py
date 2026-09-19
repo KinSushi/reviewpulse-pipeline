@@ -86,3 +86,30 @@ def test_build_data_docs(labelled_frame, data_env, tmp_path):
     index_path = expectations.build_data_docs(labelled_frame, project_dir=project_dir)
     assert index_path.is_file(), "Le fichier index.html n'existe pas"
     assert index_path.name == "index.html", "Le fichier attendu doit s'appeler index.html"
+
+
+def test_main_rend_zero_sur_une_zone_propre_conforme(labelled_frame, data_env):
+    """Le main doit rendre 0 quand la zone propre est conforme."""
+    from reviewpulse import config
+    # S'assurer que le répertoire parent existe
+    config.CLEAN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Écriture du DataFrame de référence
+    labelled_frame.to_parquet(config.CLEAN_FILE)
+    # Exécution du point d'entrée
+    result = expectations.main()
+    assert result == 0, f"Le code de sortie attendu était 0, obtenu {result}"
+
+
+def test_main_rend_un_sur_une_zone_propre_non_conforme(labelled_frame, data_env):
+    """Le main doit rendre 1 quand la zone propre ne satisfait pas les attentes."""
+    from reviewpulse import config
+    # Copie et corruption du DataFrame
+    df_invalid = labelled_frame.copy()
+    df_invalid.at[0, "author_pseudo"] = "a" * 10  # longueur invalide
+    # S'assurer que le répertoire parent existe
+    config.CLEAN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Écriture du DataFrame corrompu
+    df_invalid.to_parquet(config.CLEAN_FILE)
+    # Exécution du point d'entrée
+    result = expectations.main()
+    assert result == 1, f"Le code de sortie attendu était 1, obtenu {result}"

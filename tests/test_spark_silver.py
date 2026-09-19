@@ -300,5 +300,6 @@ def test_lakehouse_restore_snapshot(data_env):
     #    avec un instantane reel ne soit possible.
     historique_complet = lakehouse.table_history(identifier)
     snapshot_inexistant = max(h["snapshot_id"] for h in historique_complet) + 1
-    with pytest.raises(ValueError):
+    # Le type seul ne suffit pas car pyiceberg lève aussi ValueError pour d'autres raisons.
+    with pytest.raises(ValueError, match=r"Snapshot .* inconnu pour la table .*"):
         lakehouse.restore_snapshot(identifier, snapshot_inexistant)
