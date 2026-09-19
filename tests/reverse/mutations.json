@@ -240,5 +240,27 @@
     "tests": [
       "tests/test_spark_silver.py"
     ]
+  },
+  {
+    "id": "M23",
+    "fichier": "src/reviewpulse/expectations_lake.py",
+    "avant": "            column=\"share_pred_negative\", min_value=0, max_value=1",
+    "apres": "            column=\"share_pred_negative\", min_value=0, max_value=2",
+    "defaut_simule": "La part de négatifs prédits peut dépasser 1 sans être refusée",
+    "pourquoi_grave": "Une part supérieure à 1 est arithmétiquement impossible : la laisser passer signifie que la zone gold peut servir des chiffres faux au tableau de bord",
+    "tests": [
+      "tests/test_expectations_lake.py"
+    ]
+  },
+  {
+    "id": "M24",
+    "fichier": "src/reviewpulse/expectations_lake.py",
+    "avant": "            column=\"author_pseudo\", regex=r\"^[0-9a-f]{64}$\"",
+    "apres": "            column=\"author_pseudo\", regex=r\"^.*$\"",
+    "defaut_simule": "Le format du pseudonyme d'auteur n'est plus vérifié dans la zone silver",
+    "pourquoi_grave": "Un identifiant en clair passerait la porte de qualité : c'est la pseudonymisation elle-même qui cesserait d'être contrôlée",
+    "tests": [
+      "tests/test_expectations_lake.py"
+    ]
   }
 ]
