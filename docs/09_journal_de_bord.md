@@ -199,3 +199,40 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 1. Supprimer le dépôt GitHub `KinSushi/reviewpulse` (il contient les commits avec la mention d'outil), puis me le dire pour que je le recrée depuis l'historique propre.
 2. Valider le seuil de promotion de 0,75.
 3. Autoriser la création du secret `REVIEWPULSE_SALT` dans le dépôt (sinon le workflow planifié échouera chaque jour).
+
+---
+
+## 19/09/2026 — après-midi
+
+### Cinq défauts réels, tous trouvés par un outil
+
+| Heure | Fait | Source |
+|---|---|---|
+| 15 h | **`import os` absent de `train.py`** : 6 échecs et 5 erreurs dans la batterie. Trouvé par le **témoin** des tests inverses. J'avais pris le premier signal, la veille, pour une intermittence — c'était faux. Corrigé, batterie **84 verte** en 45 min | [X] |
+| 15 h | Le contrôle **F10** encodait une attente contredite par le contrat dbt documenté (`fct_review_predictions` garde les deux flux). Contrôle corrigé, pas la donnée. Test de stack **16 sur 16** | [X] |
+| 15 h | Le banc de tests inverses ne recopiait pas `dbt/`, donc `test_gold.py` — le seul qui détecte M18 — ne pouvait pas tourner dans la copie temporaire | [X] |
+| 16 h | **La dérive mesurait notre plan de collecte, pas la population.** Fenêtre ancienne à 85 % francophone, récente à 91 % anglophone : PSI 3,10 sur la langue, sans qu'aucun avis n'ait changé de nature. Mesure désormais sur le flux naturel seul, et seules les colonnes de `COLONNES_ALERTE` peuvent alerter. ADR 0015 révisée | [X] |
+| 16 h | `pipeline.yml` exécutait encore `ingest → transform → train → score`, la chaîne d'avant Spark, Iceberg et dbt. Aligné sur le DAG quotidien | [D] |
+
+### Ce qui a été outillé et prouvé
+
+| Heure | Fait | Source |
+|---|---|---|
+| 14 h | **Retour arrière réel** : champion 2 → 1, vérifié, puis 1 → 2, vérifié | [X] |
+| 15 h | **Restauration d'un instantané Iceberg** : `lakehouse.read_table_at` et `restore_snapshot`, `make snapshots`, test avec témoin (la lecture d'instantané ne modifie pas la table). 19 instantanés réels sur `silver.reviews` | [X] |
+| 16 h | **Alerte de dérive hors du journal Airflow** : fichier daté portant motifs, horodatage UTC et commit. Réentraînement déclenché par `ShortCircuitOperator` puis `TriggerDagRunOperator`, **en dérivation** pour que la zone gold ne soit jamais sautée | [X] |
+| 16 h | **Sauvegarde du registre MLflow hors du volume Docker** : archive de 15 Mo (277 Mo d'artefacts), restaurée dans un volume d'essai, versions 1 à 4 et alias champion retrouvés | [X] |
+| 16 h | **Les dix schémas** refaits et rendus. `make diagrams` échoue si un schéma est invalide : c'est ce qui a trouvé trois erreurs de syntaxe. Trois contresens corrigés, une affirmation non tenue retirée (RACI avec DPO) | [X] |
+| 16 h | **Images de base épinglées par empreinte**. Confirmation indépendante : le `docker pull` de `python:3.11-slim` a rendu exactement l'empreinte épinglée | [X] |
+| 17 h | **Les huit PDF du cas Spotify, lus** dans un conteneur avec `pypdf`, rien installé sur la machine. 56 pages. Correction d'une note antérieure : le critère de sélection du vrai PDF est l'**en-tête `%PDF-`**, pas la taille | [D] |
+| 17 h | `docs/17_gouvernance.md` écrit sur les six tâches du cas ; chaque manque nommé | [D] |
+| 17 h | **Great Expectations sur silver et gold** : 4 suites, 28 attentes, toutes vertes sur les données réelles ; témoin : deux valeurs faussées donnent `success=False`. Tâche `gx_lake` après `gold`, DAG à **9 tâches** | [X] |
+| 17 h | Constructeur de diapositives piloté par **spécification JSON**, une par soutenance ; refonte prouvée non régressive (deck reproduit **au bit près**) ; il refuse désormais un indice de run inexistant. Présentation **AIA 4** produite | [X] |
+
+### Reste à faire, dans l'ordre
+
+1. Batterie sur l'arbre courant, puis **24 mutations** seules (le premier lancement a expiré, la machine portant déjà la batterie).
+2. Reconstruire les trois images, bases épinglées.
+3. Déclencher `reviewpulse_daily` en réel : 9 tâches attendues.
+4. Rafraîchir les chiffres partout : `docs/evidence/`, README, `05_conformite_demo_day.md`, le deck du Demo Day (9 054 → 9 271 lignes brutes ; 9 → 19 instantanés ; 14 → 16 contrôles ; 6 → 9 tâches ; 73 → 84 tests ; 16 → 24 mutations) et `script_10_minutes.md`.
+5. Quatre présentations sur six restent à produire : CDSD, AIA 1, AIA 2, AIA 3.
