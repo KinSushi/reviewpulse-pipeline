@@ -1,13 +1,13 @@
 # Vérification des briques techniques
 
-*Date UTC* : 2026-09-19T20:26:22Z
-*Commit* : f3e06ce
+*Date UTC* : 2026-09-19T20:32:30Z
+*Commit* : 3e80fff
 
 ## Répartition par état
 
 * Presente : 27
 * Partielle : 16
-* Absente : 30
+* Absente : 31
 
 ## Termes exigés non classés
 
@@ -48,6 +48,7 @@ Aucun problème.
 | auto-scaling | absente | R17 |
 | catalogue | absente | R08 |
 | coffre à secrets | absente | R32 |
+| conteneurs et orchestration sous charge | absente | aucun essai de charge ; R42 |
 | démonstration de résilience | absente | R39 |
 | déploiement progressif (A/B, Canary) | absente | R31 |
 | failover | absente | R17 |

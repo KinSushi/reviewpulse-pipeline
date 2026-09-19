@@ -11,6 +11,12 @@ doit porter un sujet ouvert du registre `16_registre_suivi.md`.
 
 États : `présente` · `partielle` · `absente`.
 
+**Limite connue du détecteur** : `verifier_briques.py` ne lit que les termes **en gras** de
+`08_exigences_par_bloc.md`. Une exigence rédigée sans gras lui échappe — c'est ainsi que
+« conteneurs et orchestration sous charge » avait été manquée, jusqu'à ce qu'Enzo pose la
+question de Kubernetes le 19/09/2026. Les briques peuvent donc être ajoutées à la main :
+le contrôle vérifie que tout terme en gras est classé, jamais l'inverse. Sujet R43.
+
 ## Briques techniques
 
 | Brique | Exigée par | État | Preuve ou sujet |
@@ -88,6 +94,7 @@ doit porter un sujet ouvert du registre `16_registre_suivi.md`.
 | médaillon batch et streaming | AIA 2 — travaux de référence | partielle | médaillon en place, aucun flux ; R17 |
 | notification e-mail | AIA 3 — travaux de référence | absente | R11 |
 | démonstration de résilience | AIA 3 — travaux de référence | absente | R39 |
+| conteneurs et orchestration sous charge | Bloc 4 — indicateur non mis en gras | absente | aucun essai de charge ; R42 |
 
 ## Termes non techniques
 

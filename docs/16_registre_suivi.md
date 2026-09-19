@@ -46,6 +46,8 @@ Mise à jour : 19/09/2026, 21 h. **Sept sujets P1 attendent le retour de Docker 
 | R39 | Démonstration de résilience : consommateur arrêté puis relancé | AIA 3, `18_briques_exigees.md` | P2 | ⬜ | Une coupure provoquée puis rattrapée, mesurée | dépend de la brique Kafka, absente | Dépend de R17 |
 | R40 | Docker Desktop ne démarre plus : `docker daemon did not become ready` | 19/09, 20 h | P1 | ⛔ Enzo | `docker version` rend une version de serveur | processus présents, démon absent ; survenu après un redémarrage pour un réglage IPv4/IPv6 | Enzo relance Docker Desktop ; ensuite `make campagne` |
 | R41 | Garde de temps **par test** dans la batterie | incident du 19/09 | P2 | ⬜ | Un test bloqué échoue seul, sans emporter la campagne | `pytest-timeout` absent de l'image ; la garde actuelle est par phase, pas par test | Ajouter `pytest-timeout` à `requirements-dev.txt` et reconstruire l'image de développement |
+| R42 | « Conteneurs et orchestration **sous charge** » : aucun essai de charge | AIA 4, indicateur du référentiel | P1 | ⬜ | Une mesure réelle : débit, latence et taux d'erreur de l'API sous requêtes concurrentes, avec le chiffre écrit | rien aujourd'hui ; le mot « charge » du code désigne le chargement du modèle | Essai de charge sur `/predict`, avant le Demo Day |
+| R43 | Le détecteur d'exigences ne lit que le gras | Enzo, 19/09 | P2 | ⬜ | Les exigences non mises en gras sont détectées aussi | `verifier_briques.py` extrait les termes entre doubles astérisques ; « orchestration sous charge » lui a échappé | Découper aussi les listes d'indicateurs sur le point-virgule |
 
 ## Sujets fermés (avec leur preuve)
 
