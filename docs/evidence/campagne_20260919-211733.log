@@ -6,3 +6,44 @@ Commit : c462ea8
 pytest-timeout absent de l'image : garde par phase seulement (R41)
 
 === batterie — début 21:17:49 UTC, budget 5400s ===
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-8.3.4, pluggy-1.6.0 -- /usr/local/bin/python
+rootdir: /tmp/campagne.zZwdxC
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1
+collecting ... collected 97 items / 3 errors
+
+==================================== ERRORS ====================================
+_________________ ERROR collecting tests/test_essai_charge.py __________________
+ImportError while importing test module '/tmp/campagne.zZwdxC/tests/test_essai_charge.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_essai_charge.py:15: in <module>
+    import essai_charge as ec
+E   ModuleNotFoundError: No module named 'essai_charge'
+_______________ ERROR collecting tests/test_verifier_briques.py ________________
+ImportError while importing test module '/tmp/campagne.zZwdxC/tests/test_verifier_briques.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_verifier_briques.py:13: in <module>
+    import verifier_briques as vb
+E   ModuleNotFoundError: No module named 'verifier_briques'
+____________ ERROR collecting tests/test_verifier_justifications.py ____________
+ImportError while importing test module '/tmp/campagne.zZwdxC/tests/test_verifier_justifications.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_verifier_justifications.py:15: in <module>
+    import verifier_justifications as vj
+E   ModuleNotFoundError: No module named 'verifier_justifications'
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+======================== 3 errors in 329.76s (0:05:29) =========================
+=== batterie — code 0 en 494s ===
+
+=== tests inverses — début 21:26:04 UTC, budget 10800s ===

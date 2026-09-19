@@ -37,8 +37,13 @@ phase() {
     printf '\n=== %s — début %s UTC, budget %ss ===\n' "$nom" "$(date -u +%H:%M:%S)" "$budget" | tee -a "${JOURNAL}"
     # stdbuf force l'écriture au fil de l'eau : sans lui la progression reste dans
     # le tampon, et le journal est vide tant que la phase n'est pas terminée.
-    timeout --signal=TERM --kill-after=60 "$budget" stdbuf -oL -eL "$@" 2>&1 | tee -a "${JOURNAL}"
-    code=$?
+    # Le code de sortie est ecrit dans un fichier PUIS relu : apres un tuyau, "$?"
+    # rend le statut de tee, jamais celui de la commande. Une batterie rouge etait
+    # donc rapportee « code 0 » (constate le 19/09/2026). dash n'a pas pipefail.
+    fichier_code=$(mktemp)
+    { timeout --signal=TERM --kill-after=60 "$budget" stdbuf -oL -eL "$@" 2>&1; echo $? > "${fichier_code}"; } | tee -a "${JOURNAL}"
+    code=$(cat "${fichier_code}")
+    rm -f "${fichier_code}"
     duree=$(( $(date +%s) - debut ))
     if [ "$code" -eq 124 ]; then
         printf '=== %s — DÉPASSEMENT DU BUDGET après %ss ===\n' "$nom" "$duree" | tee -a "${JOURNAL}"
@@ -57,7 +62,9 @@ phase "compilation" "${BUDGET_COMPILE}" python -m compileall -q src tools dags t
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.
 COPIE=$(mktemp -d /tmp/campagne.XXXXXX)
-cp -r /app/src /app/tests /app/dashboard /app/dags /app/dbt "${COPIE}/"
+# tools/ est recopie aussi : trois fichiers de tests importent les outils qui y vivent,
+# et leur absence faisait echouer la collecte de pytest (97 tests, 3 erreurs, 19/09/2026).
+cp -r /app/src /app/tests /app/dashboard /app/dags /app/dbt /app/tools "${COPIE}/"
 cp /app/pyproject.toml "${COPIE}/"
 cd "${COPIE}" || exit 1
 
