@@ -13,15 +13,15 @@ Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose 
 | Avis naturels collectés | 6 000 (3 jeux × anglais et français) ; **0 nouvel avis** au passage suivant (idempotence) |
 | Avis négatifs complémentaires (entraînement seulement) | 2 797 bruts → 2 254 après dédoublonnage |
 | Part d'avis négatifs (distribution naturelle) | 9 % |
-| **F1 macro, test 100 % naturel tenu à l'écart** | **0,807** (barrière de promotion 0,75) |
+| **F1 macro, test 100 % naturel tenu à l'écart** | **0,807** au 16/09 ; **0,797** au 19/09 sur un jeu élargi par l'ingestion (barrière de promotion 0,75) |
 | F1 macro hors-plis (validation croisée 5 plis) | 0,802 |
 | AUC classe négative | 0,948 |
 | Rappel / précision des négatifs | 0,639 / 0,657 |
 | Seuil de décision (choisi par validation croisée) | 0,75 |
 | Cohérence métier : part négative prédite ÷ réelle, par jeu et langue | 0,79 à 1,21 |
-| Tests automatisés | 48 réussis, lint propre |
-| **Tests inverses** (défauts injectés) | **13 / 13 détectés**, chacun par un test nommé ; mesure témoin réussie → [`docs/evidence/reverse_tests.md`](docs/evidence/reverse_tests.md) |
-| **Test de la stack déployée** | **12 / 12 contrôles** (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
+| Tests automatisés | 48 au 16/09 ; **73 au 19/09**, lint propre |
+| **Tests inverses** (défauts injectés) | 13 / 13 au 16/09 ; **16 / 16 au 18/09**, dont trois mutations Spark et Iceberg, chacun par un test nommé ; mesure témoin réussie → [`docs/evidence/reverse_tests.md`](docs/evidence/reverse_tests.md) |
+| **Test de la stack déployée** | 12 / 12 au 16/09 ; **14 / 14 au 18/09** (contrôles Iceberg F7 et F8 ajoutés) (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
 | Essais manuels en conditions réelles | tableau de bord piloté dans un navigateur ; DAG Airflow quotidien (3 exécutions) et hebdomadaire (1) réussis |
 
 *Depuis cette mesure : 62 tests verts au 17/09/2026 (54, plus 4 Spark et 4 dbt) ; deux contrôles F7 et F8 (tables Iceberg) et trois mutations M14 à M16 (Spark, Iceberg) ont été ajoutés le 18/09 et **n'ont pas encore été exécutés**.*

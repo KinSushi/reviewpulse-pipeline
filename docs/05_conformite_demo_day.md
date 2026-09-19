@@ -2,6 +2,8 @@
 
 Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé sur Julie le 16/09 (`00_sources/2026-09-16_sources_primaires.md`).
 
+**Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09 : batterie 73 tests, tests inverses 16 mutations, test de stack 14 contrôles, DAG à six tâches 6/6. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
+
 **Légende.** ✅ vérifié par exécution le 16/09 · 🟡 écrit, pas encore exécuté dans son environnement cible · ⬜ à faire · ⚠ écart ou risque.
 
 ## Les cinq exigences non négociables
@@ -13,7 +15,7 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 | 2b | Dépôt **idempotent** (exigence J1) | Manifeste des identifiants, écriture atomique | Second passage réel : **0 nouvel avis**, 6 000 identifiants uniques pour 6 000 lignes ; tests `test_fresh_dirs` | ✅ |
 | 3 | Transformation en jeu propre avec dbt, PySpark **ou pandas** | pandas : dédoublonnage, BBCode, types, pseudonymisation | Exécution réelle : 5 974 lignes propres ; types contrôlés | ✅ |
 | 3b | **Au moins un test de qualité** | 9 contrôles **bloquants** avant écriture de la zone propre | `quality.py`, tests dédiés | ✅ |
-| 4 | Étape d'IA qui consomme la sortie, **ML suivi avec MLflow** | Régression logistique sur n-grammes de caractères, serveur MLflow, alias `champion` / `challenger`, barrière de promotion | Stack déployée : F1 macro **0,807** sur test naturel, AUC 0,948 ; promotion et non-promotion vérifiées (versions 1 à 5) | ✅ |
+| 4 | Étape d'IA qui consomme la sortie, **ML suivi avec MLflow** | Régression logistique sur n-grammes de caractères, serveur MLflow, alias `champion` / `challenger`, barrière de promotion | Au 16/09 : F1 macro **0,807**, AUC 0,948, promotion et non-promotion vérifiées (versions 1 à 5). Ce registre a été **détruit avec le volume Docker le 16/09 au soir** ; il a été reconstitué le 18/09 — F1 macro **0,797**, promotion de la version 1 puis **non-promotion** d'une version à métriques égales, vérifiée à nouveau | ✅ reprouvé le 19/09 |
 | 5 | Une partie de la chaîne **s'exécute seule** | DAG Airflow quotidien et hebdomadaire + workflow GitHub Actions planifié | Airflow réel : 3 exécutions quotidiennes et 1 hebdomadaire réussies ; `pipeline.yml` écrit | ✅ Airflow · 🟡 GitHub Actions (dépôt à publier) |
 
 ## Les livrables par jour
@@ -26,7 +28,7 @@ Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé s
 | J1 | Ingestion qui remplit la zone brute depuis la source vivante | ✅ |
 | J2 | Une exécution de bout en bout, source → sortie IA | ✅ ingestion → propre → modèle → score → API, dans deux conteneurs distincts |
 | J2 | **Un chiffre de qualité défendable** | ✅ F1 macro 0,807 sur test 100 % naturel tenu à l'écart, 0,802 en validation croisée, variantes comparées (ADR 0006 et 0007) |
-| J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ `docker compose` complet (MLflow, API, tableau de bord, Airflow), services sains ; tableau de bord piloté dans un navigateur ; test automatisé de la stack : 12 / 12 |
+| J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ `docker compose` complet (MLflow, API, tableau de bord, Airflow **sur PostgreSQL**), services sains ; tableau de bord ouvert et parcouru le 19/09 ; test automatisé de la stack : 12 / 12 au 16/09, **14 / 14 au 18/09** |
 | J3 | Démo en direct 10 min + 5 min de questions, dépôt, diagramme, présentation | ⬜ slides sur le gabarit Jedha, répétition, vidéo de secours |
 
 ## Les attendus implicites, relevés dans l'énoncé

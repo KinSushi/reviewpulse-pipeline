@@ -26,6 +26,7 @@
 ## 4. Modèle
 - **Représentation du texte** : TF-IDF caractères (`analyzer="char_wb"`, n-grammes 2-5, `min_df=2`, `max_features=100 000`, `sublinear_tf=True`).
 - **Algorithme** : régression logistique (`C=4.0`, `class_weight="balanced"`, `max_iter=2000`).
+- **Fonction de coût** : entropie croisée binaire (perte logistique), minimisée par L-BFGS. Les classes sont repondérées par `class_weight="balanced"` : chaque classe pèse en raison inverse de son effectif, ce qui compense les 9 % d'avis négatifs sans modifier les données. La régularisation est de type L2, d'intensité `C=4.0`.
 - **Seuil de décision** : 0,75. Choisi par validation croisée à 5 plis sur les données d’entraînement naturelles (ADR 0007). Le seuil est stocké dans l’attribut `decision_threshold_` du modèle.
 
 ## 5. Évaluation
