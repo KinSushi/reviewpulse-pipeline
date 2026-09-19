@@ -1,4 +1,8 @@
 -r requirements.txt
 pytest==8.3.4
+# Garde de temps par test. Ajoute le 19/09/2026 : un test bloque sur une ecriture
+# disque a fait tourner une campagne 3 h 09 a 0,13 % de CPU sans echouer. Avec cette
+# dependance, la batterie s'invoque avec --timeout et le test fautif echoue seul.
+pytest-timeout==2.3.1
 httpx==0.27.2
 ruff==0.8.1
