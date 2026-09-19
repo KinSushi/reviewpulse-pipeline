@@ -79,6 +79,7 @@ Mise à jour : 19/09/2026, 21 h. **Sept sujets P1 attendent le retour de Docker 
 | F24 | Toute exigence en gras de `08_exigences_par_bloc.md` est classée et suivie | `docs/18_briques_exigees.md` : **73 briques techniques** — 27 présentes, 16 partielles, 30 absentes — et 38 termes non techniques ; chaque brique non présente porte un sujet vivant du registre. `make briques` rend 0. Né de l'erreur du 19/09 : j'avais nié une exigence qui dormait dans le dépôt | 19/09 |
 | F25 | Le contrôle des briques a trouvé quatre exigences que mon classement manuel avait ratées | `SCD2`, `médaillon batch et streaming` (AIA 2), `notification e-mail`, `démonstration de résilience` (AIA 3) ; sujets R35, R39 ouverts, R11 et R17 complétés | 19/09 |
 | F26 | Une campagne ne peut plus tourner des heures sans rien montrer | `tools/campagne_preuves.sh` : journal daté écrit au fil de l'eau (`stdbuf`), une garde `timeout` par phase, dépassement signalé et code de sortie non nul. `make campagne`, syntaxe shell vérifiée | 19/09 |
+| F27 | Les campagnes longues se bloquaient sur le journal du disque virtuel | diagnostic à la source : état `Dl`, attente `jbd2_log_wait_commit`, CPU à 0,2 %. Remède : `--tmpfs /tmp:size=3g`. Mesuré : compilation 32 s → **10 s**, copie du dépôt ~12 min → quelques secondes | 19/09 |
 
 ## Comment se servir de ce registre
 

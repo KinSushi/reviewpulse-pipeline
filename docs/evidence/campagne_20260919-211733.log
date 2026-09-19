@@ -1,0 +1,8 @@
+Campagne de preuves ReviewPulse — 2026-09-19T21:17:33Z UTC
+Commit : c462ea8
+
+=== compilation — début 21:17:34 UTC, budget 300s ===
+=== compilation — code 0 en 10s ===
+pytest-timeout absent de l'image : garde par phase seulement (R41)
+
+=== batterie — début 21:17:49 UTC, budget 5400s ===

@@ -120,6 +120,34 @@ reste celui de `KG-2026-09-19-a`. Les tests inverses, eux, tournent depuis 20 h 
 journalisent correctement, car cette phase s'exécute depuis `/app`.
 
 
+## Incident 2026-09-19-e — le disque virtuel était le goulot, pas le code
+
+**Signature** : un processus pytest en état `Dl` — sommeil **non interruptible** — attendant
+`jbd2_log_wait_commit`, c'est-à-dire la validation du journal ext4 du disque virtuel. CPU du
+conteneur à 0,2 % sur trois échantillons consécutifs. Même classe que le blocage de
+l'après-midi, qui attendait `submit_bio_wait`.
+
+**Cause** : les tests inverses recopient le dépôt **une fois par mutation**, soit 26 fois,
+dans la couche d'écriture du conteneur — donc dans le `.vhdx` de WSL2. Le journal du système
+de fichiers devient le goulot, et le travail utile tombe à zéro.
+
+**Remède, dans notre périmètre** : monter `/tmp` en mémoire, `--tmpfs /tmp:size=3g`. La
+machine a 30 Go, la copie du dépôt en pèse quelques dizaines. Le disque virtuel sort du
+chemin critique.
+
+**Mesure avant / après**, même image, même dépôt :
+
+| | Sans tmpfs | Avec tmpfs |
+|---|---|---|
+| Phase de compilation | 32 s | **10 s** |
+| Copie du dépôt avant la batterie | ~12 min | quelques secondes |
+| Progression de la campagne | bloquée deux fois | la batterie démarre |
+
+**À retenir** : un blocage qui ressemble à une lenteur du code peut être un blocage du
+système de fichiers. La distinction se fait en une commande — `cat /proc/<pid>/wchan` — pas
+en relisant le code.
+
+
 ## Comment se servir de ce fichier
 
 1. Après une compaction, un changement de modèle ou une interruption : lire **ce fichier
