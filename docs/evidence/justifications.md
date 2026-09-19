@@ -1,7 +1,7 @@
 # Justifications des décisions d'architecture
 
-*Date UTC* : 2026-09-19T17:55:29Z
-*Commit* : inconnu
+*Date UTC* : 2026-09-19T20:26:21Z
+*Commit* : f3e06ce
 
 | ADR | titre | code | questions | diapositives |
 |-----|-------|------|-----------|--------------|
