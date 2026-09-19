@@ -56,8 +56,23 @@ COPIE=$(mktemp -d /tmp/campagne.XXXXXX)
 cp -r /app/src /app/tests /app/dashboard /app/dags /app/dbt "${COPIE}/"
 cp /app/pyproject.toml "${COPIE}/"
 cd "${COPIE}" || exit 1
+
+# Garde de temps PAR TEST si pytest-timeout est present dans l'image : un test bloque
+# echoue alors seul, au lieu d'emporter toute la campagne. Sans la dependance, la garde
+# par phase reste le seul filet (registre R41).
+OPTIONS_DELAI=""
+if python -c "import pytest_timeout" >/dev/null 2>&1; then
+    OPTIONS_DELAI="--timeout=900 --timeout-method=thread"
+    printf 'Garde par test active : %s
+' "${OPTIONS_DELAI}" | tee -a "${JOURNAL}"
+else
+    printf 'pytest-timeout absent de l image : garde par phase seulement (R41)
+' | tee -a "${JOURNAL}"
+fi
+
+# shellcheck disable=SC2086
 PYTHONPATH="${COPIE}/src" phase "batterie" "${BUDGET_BATTERIE}" \
-    python -m pytest -p no:warnings -p no:cacheprovider -rf --durations=10 -v
+    python -m pytest -p no:warnings -p no:cacheprovider -rf --durations=10 -v ${OPTIONS_DELAI}
 cd /app || exit 1
 
 phase "tests inverses" "${BUDGET_INVERSES}" python tools/reverse_tests.py --timeout 2400
