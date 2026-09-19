@@ -262,5 +262,27 @@
     "tests": [
       "tests/test_expectations_lake.py"
     ]
+  },
+  {
+    "id": "M25",
+    "fichier": "src/reviewpulse/rollback.py",
+    "avant": "        raise ValueError(f\"La version {version} n'existe pas pour le modèle {config.MODEL_NAME}\") from exc",
+    "apres": "        pass",
+    "defaut_simule": "Un retour arrière vers une version inexistante n'est plus refusé",
+    "pourquoi_grave": "Le retour arrière est le dernier recours quand le modèle en service se dégrade : s'il échoue en silence, on croit avoir rebasculé alors que le mauvais modèle sert toujours",
+    "tests": [
+      "tests/test_rollback.py"
+    ]
+  },
+  {
+    "id": "M26",
+    "fichier": "src/reviewpulse/rollback.py",
+    "avant": "    ancienne = champion_actuel(tracking_uri)\n\n    # Déplacement de l'alias",
+    "apres": "    ancienne = version\n\n    # Déplacement de l'alias",
+    "defaut_simule": "Le rapport de bascule affirme que l'ancienne version était déjà la nouvelle",
+    "pourquoi_grave": "Toute trace du retour arrière devient fausse : le journal et la sortie de commande diraient qu'il ne s'est rien passé",
+    "tests": [
+      "tests/test_rollback.py"
+    ]
   }
 ]
