@@ -31,6 +31,8 @@ Tests associés
     - `test_decision.py`
     - `test_artifacts_location.py`
     - `test_fresh_dirs.py`
+
+Décision appliquée ici : ADR 0018 — reproductibilité : empreinte du jeu de données et étiquette `code_commit` dans chaque run.
 """
 
 import logging

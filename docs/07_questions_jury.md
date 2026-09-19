@@ -1,6 +1,6 @@
 # Questions probables du jury — réponses et preuves
 
-Chaque réponse renvoie à une preuve consultable. Les chiffres sont ceux du 16/09/2026.
+Chaque réponse renvoie à une preuve consultable. **Les chiffres des sections métier sont ceux du 16/09/2026** ; ceux de la section « Architecture, choix et décisions » sont ceux du jour de chaque décision. Les mesures courantes sont dans `docs/evidence/`.
 
 ---
 
@@ -103,6 +103,76 @@ Oui, et ils sont documentés : modèle introuvable (artefacts relatifs au dossie
 
 **Comment prouvez-vous que tout marche ailleurs que sur votre poste ?**
 `make up && make jobs && make evidence` : tests unitaires, tests inverses et test de la stack déployée, avec rapports datés et numéro de commit. → `evidence/`.
+
+## Architecture, choix et décisions
+
+Chaque décision structurante a son ADR. Les renvois `→ ADR NNNN` pointent vers le registre [`adr/README.md`](adr/README.md), qui compte **vingt décisions** au 19/09/2026.
+
+**Les chiffres cités ci-dessous sont ceux du jour de la décision**, pas ceux d'aujourd'hui : c'est ce qui les rend vérifiables. Les mesures courantes vivent dans `docs/evidence/`. Quand une décision a été révisée, la réponse le dit.
+
+`tools/verifier_justifications.py` vérifie mécaniquement que chaque ADR est cité dans le code **et** ici, et signale tout renvoi vers un ADR qui n'existe pas.
+
+**Pourquoi avez‑vous choisi d’utiliser l’API publique de Steam et ces trois jeux pour le cas métier ?**  
+Nous aidons l’équipe community & live‑ops à prioriser les avis négatifs en récupérant les avis via l’API publique `store.steampowered.com/appreviews/<appid>?json=1` pour les jeux 1903340, 1086940 et 2622380, en anglais et français. L’API ne nécessite aucune clé et fournit entre 23 172 et 504 467 avis par jeu et langue, assurant un flux réel et idempotent. Les jeux de données statiques (Kaggle, Hugging Face) ont été écartés car figés, le scraping a été rejeté pour ses conditions d’utilisation restrictives, les données synthétiques du Demo Day ne correspondaient pas à l’exigence d’authenticité, et les actualités RSS avec LLM manquaient d’étiquette fiable. → ADR 0001.
+
+**Comment garantissez‑vous l’idempotence de l’ingestion et pourquoi ne pas simplement dédoublonner en aval ?**  
+Nous stockons chaque avis brut tel que reçu en ligne JSONL, partitionné par `app_id`, `language` et `date`, et nous utilisons un manifeste listant les identifiants déjà écrits ; seuls les nouveaux avis sont écrits puis le manifeste est remplacé atomiquement. La pagination s’arrête dès qu’une page ne contient aucun nouvel avis, est vide, ou que le curseur se répète. Un test du 16/09/2026 a montré 6 000 avis au premier passage et 0 au second, prouvant l’absence de doublons. Le dédoublonnage en aval a été rejeté car la zone brute aurait grossi indéfiniment, l’ajout de métadonnées aurait violé le critère « inchangé », et une base de données pour le manifeste était jugée surdimensionnée. → ADR 0002.
+
+**Pourquoi avez‑vous retenu pandas pour la transformation alors que PySpark ou dbt étaient possibles ?**  
+Le volume réel est d’environ 10 000 avis (8 797 lignes brutes le 16/09/2026), soit quelques mégaoctets, ce qui rend pandas très rapide (temps de transformation de l’ordre de la seconde) et simple à utiliser en un seul fichier Parquet réécrit atomiquement. PySpark a été écarté car le démarrage d’une JVM pour quelques Mo serait coûteux sans bénéfice, et dbt supposait un entrepôt SQL alors que le nettoyage de texte et le HMAC sont plus lisibles en Python. → ADR 0003.
+
+**Quelle méthode de pseudonymisation avez‑vous adoptée et pourquoi le sel est‑il obligatoire ?**  
+Nous générons `author_pseudo = HMAC‑SHA256(sel, steamid)` puis supprimons `personaname`, `profile_url`, `avatar` et `steamid`. Le sel (`REVIEWPULSE_SALT`) est un secret obligatoire sans valeur par défaut ; l’application refuse de démarrer si le sel est absent ou vide. Un simple SHA‑256 a été rejeté car réversible par dictionnaire, la suppression pure de `steamid` aurait perdu l’analyse par auteur, et le contrôle du sel via Docker Compose a échoué le 16/09/2026 en bloquant `docker compose ps` et `down`. → ADR 0004.
+
+**Comment les contrôles qualité sont‑ils bloquants et quels seuils avez‑vous fixé ?**  
+`quality.check_clean` valide avant l’écriture de la zone propre que les colonnes et types sont exacts, qu’il y a au moins une ligne, que les identifiants sont non nuls et uniques, que l’étiquette appartient à {0, 1}, que la langue est autorisée, que le texte n’est pas vide, qu’aucune colonne interdite n’est présente, que le format du pseudonyme est correct, que le flux est connu, et que la part des négatifs naturels se situe entre 0,5 % et 95 %. Tout échec lève une exception Airflow (code 1) et arrête la tâche, laissant la zone propre précédente intacte. Great Expectations seul a été repoussé à plus tard, et les contrôles non bloquants ont été écartés car ils laisseraient passer des données corrompues jusqu’au modèle. → ADR 0005.
+
+**Pourquoi avez‑vous choisi un modèle basé sur des n‑grammes de caractères plutôt que des mots ou un LLM ?**  
+Le modèle utilise `TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100 000, sublinear_tf=True)` suivi d’une `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000)`. Sur 5 974 avis naturels (test stratifié de 1 195 avis), cette configuration a atteint un rappel des négatifs de 0,639 et un F1 macro de 0,759, le meilleur parmi les variantes testées. Les LLM ont été rejetés pour leur coût et latence inutiles, et les réseaux profonds ont été réservés au bloc 4 du CDSD. → ADR 0006.
+
+**Comment avez‑vous traité le déséquilibre des avis négatifs et pourquoi ne pas simplement ajuster le seuil sur le jeu de test ?**  
+Nous avons ajouté un second flux qui collecte les avis négatifs (`review_type=negative`) stockés sous `sample=negative_boost` et les utilisons uniquement pour l’entraînement. Le seuil de décision est appris par validation croisée à 5 plis sur les avis naturels d’entraînement, avec une grille de 0,30 à 0,80, le meilleur étant 0,75, ce qui donne un F1 macro hors‑plis de 0,802 et un F1 macro final de 0,807. Le test reste composé à 100 % d’avis naturels pour refléter la production. Baisser la barrière de promotion, choisir le seuil sur le test, mélanger les flux dans le test et le suréchantillonnage SMOTE ont été écartés pour leurs risques de fuite d’information ou d’inadéquation. → ADR 0007.
+
+**Quel critère utilisez‑vous pour promouvoir un nouveau modèle et pourquoi l’alias « champion » n’est‑il pas mis à jour automatiquement à chaque version ?**  
+Chaque entraînement crée une version `challenger` dans MLflow ; l’alias `champion` n’est déplacé que si le F1 macro est ≥ 0,75 **et** strictement supérieur à celui du champion actuel. Le seuil de 0,75 a été fixé après mesure le 16/09 (quatre variantes plafonnaient entre 0,756 et 0,766). Promouvoir chaque version a été rejeté car cela ne protège pas contre les régressions, la promotion manuelle seule contredit l’automatisation demandée, et la condition « ≥ » a été écartée pour éviter des remplacements inutiles. → ADR 0008.
+
+**Comment avez‑vous résolu les inversions de convention d’étiquetage rencontrées lors du développement ?**  
+Nous avons centralisé la convention dans le module `reviewpulse/decision.py` qui définit `LABEL_NEGATIVE`, `LABEL_POSITIVE`, expose `negative_proba` en lisant `model.classes_`, et fournit `model_threshold`, `predict_labels` et `label_name`. Aucun composant (entraînement, scoring, API, tableau de bord) n’effectue de comparaison au seuil en dehors de ce module. Réétiqueter les données ou corriger chaque point séparément a été rejeté car cela avait déjà conduit aux deux inversions observées. → ADR 0009.
+
+**Où stockez‑vous les artefacts MLflow et comment évitez‑vous les échecs d’écriture rencontrés précédemment ?**  
+Nous utilisons un emplacement absolu `DATA_DIR/mlartifacts` pour la base SQLite ou le serveur HTTP, et nous loggons les artefacts JSON via `mlflow.log_dict` sans créer de fichiers locaux. Toutes les écritures créent d’abord le répertoire parent, écrivent dans un fichier temporaire puis le remplacent atomiquement avec `os.replace`. L’image Docker attribue l’utilisateur `app` la propriété de `/app` pour garantir les permissions. Le comportement par défaut qui créait un dossier `./mlruns` vide et perdait le modèle a été rejeté, tout comme l’écriture dans le répertoire courant qui échouait en conteneur. → ADR 0010.
+
+Chaque décision structurante possède son ADR, les renvois pointent vers le registre `adr/README.md`.
+
+**Pourquoi avez‑vous combiné Airflow et GitHub Actions au lieu d’utiliser uniquement cron ou Airflow seul ?**  
+Nous exécutons les DAG `reviewpulse_daily` et `reviewpulse_weekly_train` avec Airflow et utilisons GitHub Actions pour le lint, les tests et un pipeline planifié à 6 h 30 UTC, afin d’obtenir visibilité sur les échecs et un filet de secours. Le conteneur Airflow tourne avec l’uid 1000 et le groupe 0 pour aligner les permissions. L’alternative « cron seul » a été rejetée faute de suivi des échecs, et « Airflow seul » a été rejetée car dépend d’une machine allumée. → ADR 0011.
+
+**Pourquoi avez‑vous choisi Docker Compose avec Python 3.11 plutôt qu’un environnement virtuel local ou Kubernetes ?**  
+Toutes les images utilisent Python 3.11 figé dans `requirements.txt` et sont orchestrées par Docker Compose, garantissant une reproduction identique sur chaque poste et lors de la démo. Les services sont non‑root, disposent de contrôles de santé propres et les secrets sont lus depuis `.env`. Un environnement virtuel local a été écarté car non reproductible chez le jury, et Kubernetes a été jugé surdimensionné pour la démo. → ADR 0012.
+
+**Pourquoi avez‑vous maintenu une seule pile Python avec deux environnements séparés dans l’image Airflow ?**  
+Nous figons la pile (MLflow 3.16, Streamlit 1.60, FastAPI 0.141.1, etc.) dans `requirements.txt` et créons un environnement `/opt/rp-venv` dédié au projet, tandis que l’environnement d’Airflow reste intact (`slim‑2.10.3`). Les tâches s’exécutent via `ExternalPythonOperator` pour éviter le conflit SQLAlchemy 2.0 imposé par le projet. Installer le projet dans l’environnement d’Airflow a été rejeté car cela casse Airflow, et une image par rôle a été écartée pour des raisons de sécurité et de complexité. → ADR 0013.
+
+**Pourquoi avez‑vous retenu PySpark comme moteur de production pour la zone silver alors que pandas est plus rapide sur le jeu de données actuel ?**  
+PySpark produit la zone silver dans Iceberg et est orchestré par le DAG quotidien, tandis que pandas sert de référence et les deux moteurs doivent donner exactement le même résultat. Bien que Spark prenne 7,8 s contre 1,7 s pour 8 231 lignes (mesure du 16/09/2026), il se justifie par le passage à l’échelle (seuil d’environ 10 M d’avis) et l’alignement avec le programme Lead. L’alternative « Spark seul, sans référence pandas » a été rejetée car aucune preuve de justesse du nettoyage distribué. → ADR 0014.
+
+**Comment surveillez‑vous la dérive du modèle et pourquoi avez‑vous choisi le PSI plutôt que d’autres tests statistiques ?**  
+Nous calculons le PSI sur les colonnes d’intérêt de la zone propre, avec des seuils < 0,1 stable, 0,1‑0,2 à surveiller, ≥ 0,2 dérive, et déclenchons un réentraînement via un `ShortCircuitOperator` si une alerte est levée. Le PSI gère les zéros grâce à un epsilon, ce qui le rend plus adapté que le test de Kolmogorov‑Smirnov ou la divergence KL, rejetées pour incompatibilité avec les variables catégorielles ou complexité. L’alerte est écrite dans un fichier JSON, ce qui limite le canal mais suffit pour l’audit. → ADR 0015.
+
+**Pourquoi introduire un déploiement progressif champion/challenger alors que le basculement binaire était déjà fonctionnel ?**  
+Nous lisons la proportion de trafic à servir par le challenger dans `REVIEWPULSE_CHALLENGER_TRAFFIC` et routons chaque requête de façon déterministe via un hash, afin de comparer les performances en production avant toute bascule définitive. Le champ `served_by` indique le modèle utilisé. L’alternative « bascule binaire » a été rejetée car elle contrevient à l’exigence de déploiement progressif, et le routage par passerelle externe a été écarté pour complexité inutile. → ADR 0016.
+
+**Pourquoi avez‑vous migré la base d’Airflow de SQLite vers PostgreSQL ?**  
+Le planificateur mourait avec SQLite dès qu’une requête concurrente était exécutée (observation 18/09/2026). En passant à PostgreSQL 16 avec `LocalExecutor` et un `start_period` de 60 s, le planificateur survit aux accès concurrents (mesure 19/09/2026). Garder SQLite a été rejeté pour son incapacité à gérer la concurrence, et le `CeleryExecutor` a été écarté car il nécessite un courtier de messages superflu. → ADR 0017.
+
+**Comment assurez‑vous la reproductibilité des runs MLflow et pourquoi avez‑vous choisi les empreintes SHA‑256 plutôt que des étiquettes ?**  
+Chaque run enregistre une empreinte SHA‑256 du jeu de données, le nombre de lignes, les bornes de dates et les comptes par flux, ainsi que le tag `code_commit`. Les images de base sont épinglées par empreinte, et le registre MLflow est sauvegardé hors du volume Docker avec `make sauvegarde-mlflow`. Utiliser uniquement des étiquettes a été rejeté car elles peuvent changer de contenu, alors que l’empreinte reste stable. → ADR 0018.
+
+**Pourquoi avez‑vous implémenté une explicabilité linéaire exacte plutôt que d’utiliser SHAP ou LIME ?**  
+Le modèle est un TF‑IDF suivi d’une régression logistique, donc chaque terme contribue exactement par son poids TF‑IDF multiplié par le coefficient. Nous exposons ces contributions via `/explain` et les affichons dans le tableau de bord, garantissant une explication exacte et instantanée. SHAP et LIME ont été écartés car ils sont approximatifs, plus lourds et redondants pour un modèle linéaire. → ADR 0019.
+
+**Pourquoi avez‑vous étendu la porte de qualité aux zones silver et gold au lieu de simplement renforcer les tests dbt ?**  
+Nous avons créé `expectations_lake.py` avec 28 attentes couvrant `silver.reviews`, `silver.predictions`, les faits gold et le mart quotidien, et ajouté la tâche `gx_lake` bloquante dans le DAG quotidien, portant le DAG à neuf tâches. Étendre `expectations.py` a été rejeté pour le risque de perturber une porte déjà stable à quelques jours de la soutenance, et se contenter des tests dbt a été écarté car ils ne bloquent pas la chaîne. → ADR 0020.
 
 ## Ce que vous feriez ensuite
 

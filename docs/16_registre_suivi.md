@@ -35,6 +35,7 @@ Mise à jour : 19/09/2026, 16 h 20.
 | R27 | `import os` absent de `train.py` : 6 échecs et 5 erreurs dans la batterie | témoin des tests inverses, 19/09 | P1 | 🔄 | Batterie verte, reproduite depuis une copie neuve | défaut reproduit puis corrigé ; `NameError: name 'os' is not defined` à `train.py:352` | Attendre la batterie de contrôle |
 | R28 | Le banc de tests inverses ne recopiait pas `dbt/` | témoin, 19/09 | P1 | 🔄 | `tests/test_gold.py` s'exécute dans la copie temporaire | `_copy_project` corrigé : `dbt` ajouté à la liste | Vérifier au prochain lancement des mutations |
 | R29 | Base de documents (MongoDB) : candidate de réemploi, pas de besoin établi | Enzo, 19/09 | P3 | ⛔ | Un bloc visé l'exige, preuve à l'appui, ou l'option est écartée par écrit | argumentaire OLAP / document ajouté à `07_questions_jury.md` ; aucun énoncé lu ne l'exige | Dépend de R09 (lecture des énoncés sur Julie) |
+| R30 | Justifier l'architecture et les décisions dans les diapositives, le code et les questions du jury | Enzo, 19/09 | P1 | ✅ | Chaque ADR cité dans le code **et** dans les questions-réponses ; contrôle mécanique qui échoue sinon | `make justifications` : **20 ADR sur 20** cités des deux côtés. Mesure de départ : 6 sur 16 orphelins. Quatre ADR écrits (0017 à 0020), section « Architecture, choix et décisions » de 2 035 mots, renvois ajoutés aux trois jeux de diapositives | — |
 
 ## Sujets fermés (avec leur preuve)
 

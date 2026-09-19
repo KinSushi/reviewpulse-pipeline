@@ -18,5 +18,9 @@ Chaque décision structurante du projet est écrite ici, **avec la mesure ou le 
 | [0012](0012-deploiement-conteneurs.md) | Déploiement Docker Compose | Acceptée |
 | [0013](0013-pile-du-programme-et-environnements.md) | Pile du programme Lead, MLflow 3, environnements séparés dans Airflow | Acceptée |
 | [0014](0014-spark-iceberg-silver.md) | Zone silver en PySpark et Iceberg, pandas comme référence | Acceptée |
-| [0015](0015-surveillance-de-la-derive.md) | Surveillance de la dérive : indice de stabilité de population et écart de parts prédites | Proposée |
+| [0015](0015-surveillance-de-la-derive.md) | Surveillance de la dérive : indice de stabilité de population et écart de parts prédites | Acceptée, révisée le 19/09 |
 | [0016](0016-deploiement-progressif.md) | Déploiement progressif champion / challenger | Proposée |
+| [0017](0017-airflow-postgresql.md) | Airflow sur PostgreSQL : le planificateur survit à l'accès concurrent | Acceptée |
+| [0018](0018-reproductibilite-empreintes.md) | Reproductibilité : empreintes d'images et de jeu de données, traçabilité, sauvegarde du registre | Acceptée |
+| [0019](0019-explicabilite-lineaire.md) | Explicabilité par contribution linéaire exacte, plutôt que SHAP ou LIME | Acceptée |
+| [0020](0020-qualite-silver-gold.md) | Porte de qualité étendue aux zones silver et gold | Acceptée |

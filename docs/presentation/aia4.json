@@ -21,7 +21,7 @@
       "4": "Zone silver : ",
       "5": "PySpark 4 et Iceberg, chaque écriture crée un instantané restaurable",
       "6": "Zone gold : ",
-      "7": "dbt sur DuckDB — aucun service externe, donc aucune dépendance le jour J (ADR 0013)"
+      "7": "Zone gold : dbt sur DuckDB — aucun service externe, donc aucune dépendance le jour J. ADR 0013, 0014, 0017."
     },
     "15": {
       "0": "Le déploiement",
@@ -44,7 +44,7 @@
       "18": "Données : ",
       "19": "instantanés Iceberg",
       "20": " listés et restaurables par `make snapshots`.",
-      "21": "Le 16/09, la suppression d'un volume a détruit le registre. Le lac, lui, était sur le disque : il a survécu. D'où la sauvegarde.",
+      "21": "Le 16/09, la suppression d'un volume a détruit le registre. Le lac, lui, était sur le disque : il a survécu. D'où la sauvegarde. ADR 0008, 0016, 0018.",
       "22": "D",
       "23": "éploiement et retour ",
       "24": "arrière"
@@ -60,7 +60,7 @@
       "8": "La dérive mesurait notre plan de collecte, pas la population",
       "9": "Fenêtre ancienne 85 % francophone contre récente 91 % anglophone : PSI 3,10 sur la langue, écarté",
       "10": "Seules les colonnes du modèle peuvent lever une alerte (ADR 0015 révisée)",
-      "11": "Veille : AI Act, dérive, explicabilité linéaire exacte plutôt que SHAP",
+      "11": "Veille : AI Act, dérive, explicabilité linéaire exacte plutôt que SHAP — ADR 0015, 0019, 0020",
       "12": "Ce qui reste ouvert",
       "13": "Canal d'alerte externe, Kafka, stockage objet, déploiement public"
     },

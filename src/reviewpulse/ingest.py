@@ -53,6 +53,8 @@ Tests associés
   y compris les scénarios de pagination, de retry et d’écriture atomique.
 * ``test_fresh_dirs.py`` et ``test_boost.py`` vérifient la séparation des flux
   et la compatibilité ascendante.
+
+Décision appliquée ici : ADR 0001 — le cas métier et la source, l'API publique des avis Steam.
 """
 
 import os

@@ -37,6 +37,8 @@ Preuves
 Tests associés
     Pas de test unitaire : Airflow n’est pas installé dans l’environnement du projet (ADR 0013).
     La preuve est l’exécution réelle dans le conteneur Airflow, consignée dans ``docs/evidence``.
+
+Décision appliquée ici : ADR 0017 — Airflow sur PostgreSQL, pour que le planificateur survive à l'accès concurrent.
 """
 
 import json

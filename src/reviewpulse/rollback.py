@@ -41,6 +41,7 @@ Fonctionnement
 Le module suit le même style que :pymod:`reviewpulse.score` : typage strict,
 journalisation via le module ``logging`` et utilisation du même client MLflow.
 
+Décision appliquée ici : ADR 0016 — le déploiement progressif passe par l'alias `champion`, et le retour arrière aussi.
 """
 
 from __future__ import annotations

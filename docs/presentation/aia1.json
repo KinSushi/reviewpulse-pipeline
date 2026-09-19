@@ -85,7 +85,7 @@
       "9": "Ce que la politique ne couvre pas encore",
       "10": "Aucun catalogue de données, aucun contrôle d'accès par rôle",
       "11": "Aucun journal des accès, aucune procédure de révision formelle",
-      "12": "Aucune mesure d'accessibilité",
+      "12": "Aucune mesure d'accessibilité — ADR 0004, 0005, 0020 pour ce qui est tenu",
       "13": ""
     },
     "15": {
@@ -142,7 +142,7 @@
       "3": "Pseudonymisation HMAC-SHA256 salée ; sel obligatoire, sans valeur par défaut",
       "4": "steamid, personaname, profile_url et avatar supprimés dès la zone propre",
       "5": "Tableau de bord sans aucune information d'auteur, textes tronqués",
-      "6": "Base légale écrite : intérêt légitime, RGPD 6.1.f. AI Act : risque minimal",
+      "6": "Base légale écrite : intérêt légitime, RGPD 6.1.f. AI Act : risque minimal. ADR 0004.",
       "7": "Ce que ce dossier ne démontre pas",
       "8": "Aucun registre des traitements, aucun calendrier d'audits",
       "9": "Aucune procédure d'incident écrite, aucun journal des accès",

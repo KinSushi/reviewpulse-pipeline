@@ -1,4 +1,4 @@
-# ADR 0015 — surveillance de la dérive
+# ADR 0015 — Surveillance de la dérive
 
 **Date** : 18/09/2026, **révisée le 19/09/2026** · **Statut** : acceptée
 

@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -31,6 +31,7 @@ help:
 	@echo "  snapshots - Historique Iceberg (TABLE=...) ou restauration (SNAPSHOT=<id>)"
 	@echo "  diagrams  - Rend les schemas Mermaid en SVG et PNG, echoue si l'un est invalide"
 	@echo "  sauvegarde-mlflow / restaure-mlflow - Registre MLflow hors du volume Docker"
+	@echo "  justifications - Verifie que chaque ADR est cite dans le code et dans les questions du jury"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -74,10 +75,17 @@ score:
 	python -m reviewpulse.score
 
 ## Retour arrière du modèle en service
+## ADR 0016 : le deploiement progressif passe par l'alias, et le retour arriere aussi.
 rollback:
 	python -m reviewpulse.rollback $(if $(VERSION),--vers $(VERSION),)
 
-## Sauvegarde du registre MLflow HORS du volume Docker.
+## Verifie que chaque decision d'architecture est justifiee la ou le jury la cherchera :
+## dans le code, dans les questions-reponses, et sur les diapositives. Echoue s'il manque
+## une citation ou si un renvoi pointe vers un ADR inexistant.
+justifications:
+	python tools/verifier_justifications.py
+
+## ADR 0018 — Sauvegarde du registre MLflow HORS du volume Docker.
 ## Pourquoi : le 16/09/2026, la suppression du volume `mlflow_data` a detruit le
 ## registre et ses artefacts ; le lac, lui, etait sur le disque et a survecu.
 ## SAUVEGARDE_DIR designe un repertoire de l'hote ; par defaut le lac du projet.

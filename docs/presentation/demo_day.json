@@ -81,7 +81,7 @@
       "4": "Zone silver : ",
       "5": "PySpark et Iceberg",
       "6": "Zone gold : ",
-      "7": "dbt et DuckDB, 43 tests verts"
+      "7": "dbt et DuckDB, 43 tests verts — ADR 0013, 0014"
     },
     "14": {
       "0": "4. Le modèle",
@@ -95,7 +95,7 @@
       "9": "Pourquoi les n-grammes de caractères ?",
       "10": "Robustes aux fautes et aux variantes d'écriture",
       "11": "Entraînement en quelques secondes, explicable terme par terme",
-      "12": "Seuil de décision appris, et non fixé à 0,5",
+      "12": "Seuil de décision appris, et non fixé à 0,5 — ADR 0006, 0007",
       "13": ""
     },
     "15": {
@@ -119,7 +119,7 @@
       "18": "Deux entraînements successifs donnent ",
       "19": "le même F1",
       "20": " à la seizième décimale.",
-      "21": "Un modèle à métriques égales n'est pas promu : la barrière l'a refusé en conditions réelles.",
+      "21": "Un modèle à métriques égales n'est pas promu : la barrière l'a refusé en conditions réelles. ADR 0008.",
       "22": "R",
       "23": "ésultats et p",
       "24": "reuves "
@@ -137,7 +137,7 @@
       "10": "Kafka pour le temps réel, stockage objet compatible S3",
       "11": "Publication du dépôt et chaîne d'intégration verte",
       "12": "Ce que le projet sert au-delà",
-      "13": "Socle réemployable pour les blocs AIA et CDSD"
+      "13": "Socle réemployable pour les blocs AIA et CDSD — 20 décisions écrites, ADR 0001 à 0020"
     },
     "18": {
       "0": "Questions ?"

@@ -8,7 +8,7 @@
 #
 # Pourquoi « slim » : l'image complète embarque des fournisseurs (Google, Snowflake, Azure…)
 # inutiles au projet et source de conflits supplémentaires.
-# Empreinte relevee le 19/09/2026 ; voir docker/Dockerfile pour la raison.
+# ADR 0018 : empreinte relevee le 19/09/2026 ; voir docker/Dockerfile pour la raison.
 FROM apache/airflow:slim-2.10.3-python3.11@sha256:18eaa3e186eb833925d534f55c67f7e4ba488dcc9d8098495de5485c778fb400
 
 # Java 17 : minimum exigé par PySpark 4 ; la base est Debian 12, sans Java 21 (vérifié le 16/09/2026).

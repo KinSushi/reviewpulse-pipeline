@@ -36,6 +36,7 @@ Fonctionnement
 Ce module ne modifie en aucun cas :pymod:`reviewpulse.expectations` ; il s’en
 inspire pour garantir la même forme de sortie.
 
+Décision appliquée ici : ADR 0020 — porte de qualité étendue aux zones silver et gold.
 """
 
 from __future__ import annotations

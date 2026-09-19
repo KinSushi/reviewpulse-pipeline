@@ -21,6 +21,8 @@ Les fonctions lèvent :class:`ValueError` si ces exigences ne sont pas respecté
 
 Aucune lecture/écriture disque, journalisation ou appel à MLflow n’est
 effectué ici.
+
+Décision appliquée ici : ADR 0019 — explicabilité par contribution linéaire exacte, plutôt que SHAP ou LIME.
 """
 
 from __future__ import annotations

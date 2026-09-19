@@ -1,4 +1,6 @@
 # docker-compose.yml – configuration des services ReviewPulse
+# Décisions appliquées ici : ADR 0012 (déploiement par Docker Compose),
+# ADR 0017 (base PostgreSQL pour Airflow), ADR 0018 (images épinglées par empreinte).
 # Le sel de pseudonymisation vient du fichier .env (facultatif) OU de l'environnement du shell.
 # Pourquoi pas de contrôle ici : un contrôle Compose bloquerait aussi `docker compose ps` et `down`.
 # Le contrôle est fait par l'application : reviewpulse.config.salt() refuse un sel absent ou vide,

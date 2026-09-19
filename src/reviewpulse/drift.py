@@ -22,6 +22,8 @@ Fonctions principales
 Ce module ne réalise aucun appel réseau, aucune écriture hors du répertoire
 défini dans :pymod:`reviewpulse.config` et ne dépend que de la bibliothèque
 standard, de *pandas* et de *numpy*.
+
+Décision appliquée ici : ADR 0015 — surveillance de la dérive, révisée le 19/09/2026 (flux naturel seul, colonnes surveillées restreintes).
 """
 
 from __future__ import annotations
