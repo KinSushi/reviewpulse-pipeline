@@ -233,6 +233,72 @@ def test_lakehouse_schema_mismatch(data_env):
 
 def test_workers_use_current_interpreter(spark):
     """
-    c'est l'interpréteur réellement utilisé par les workers Python (lu dans PYSPARK_PYTHON) ; dans Airflow il doit être celui du projet, sinon « No module named 'pandas' » (constaté les 16 et 17/09/2026)
+    c'est l'interpréteur réellement utilisé par les workers Python (lu dans PYSPARK_PYTHON) ; dans Airflow il doit être celui du projet, sinon « No module nommé 'pandas' » (constaté les 16 et 17/09/2026)
     """
     assert spark.sparkContext.pythonExec == sys.executable
+
+
+def test_lakehouse_restore_snapshot(data_env):
+    """
+    Vérifie la restauration d'un instantané Iceberg.
+    """
+    # 1. Première version de la table
+    df = pd.DataFrame(
+        {
+            "text": pd.Series(["a", "b", "c"], dtype="string"),
+            "value": pd.Series([1, 2, 3], dtype="int64"),
+            "ts": pd.to_datetime(
+                [
+                    "2023-01-01T00:00:00Z",
+                    "2023-01-02T00:00:00Z",
+                    "2023-01-03T00:00:00Z",
+                ],
+                utc=True,
+            ),
+        }
+    )
+    table = pa.Table.from_pandas(df, preserve_index=False)
+
+    identifier = "silver.restauration"
+
+    lakehouse.write_table(identifier, table)
+
+    # 2. Historique → premier instantané
+    history = lakehouse.table_history(identifier)
+    first_snapshot = history[0]["snapshot_id"]
+
+    # 3. Seconde version (value * 10)
+    df_mod = df.copy()
+    df_mod["value"] = df_mod["value"] * 10
+    table_mod = pa.Table.from_pandas(df_mod, preserve_index=False)
+    lakehouse.write_table(identifier, table_mod)
+
+    # 4. Vérifier l'état courant (seconde version)
+    latest = lakehouse.read_table(identifier).to_pandas()
+    assert latest.astype(object).values.tolist() == df_mod.astype(object).values.tolist()
+
+    # 5. Lecture du premier instantané sans modifier la table
+    snapshot_df = lakehouse.read_table_at(identifier, first_snapshot).to_pandas()
+    assert snapshot_df.astype(object).values.tolist() == df.astype(object).values.tolist()
+
+    # 6. La table courante reste la seconde version
+    still_latest = lakehouse.read_table(identifier).to_pandas()
+    assert still_latest.astype(object).values.tolist() == df_mod.astype(object).values.tolist()
+
+    # 7. Restauration du premier instantané
+    restore_info = lakehouse.restore_snapshot(identifier, first_snapshot)
+    assert restore_info["ancien_snapshot_id"] != restore_info["nouveau_snapshot_id"]
+    assert restore_info["nouveau_snapshot_id"] == first_snapshot
+    assert restore_info["lignes"] == 3
+
+    # 8. Après restauration, la première version est de nouveau visible
+    after_restore = lakehouse.read_table(identifier).to_pandas()
+    assert after_restore.astype(object).values.tolist() == df.astype(object).values.tolist()
+
+    # 9. Snapshot inconnu -> ValueError. L'identifiant est calcule a partir de
+    #    l'historique complet relu apres restauration, pour qu'aucune collision
+    #    avec un instantane reel ne soit possible.
+    historique_complet = lakehouse.table_history(identifier)
+    snapshot_inexistant = max(h["snapshot_id"] for h in historique_complet) + 1
+    with pytest.raises(ValueError):
+        lakehouse.restore_snapshot(identifier, snapshot_inexistant)

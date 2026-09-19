@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback pipeline-gele
+.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -28,6 +28,7 @@ help:
 	@echo "  down      - Arrête les services Docker (profils jobs et airflow)"
 	@echo "  reverse   - Exécute les tests inverses et génère le rapport docs/evidence/reverse_tests.md"
 	@echo "  forward   - Vérifie la stack déployée et génère le rapport docs/evidence/forward_test.md"
+	@echo "  snapshots - Historique Iceberg (TABLE=...) ou restauration (SNAPSHOT=<id>)"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
 
 ## Installation des dépendances de développement
@@ -73,6 +74,11 @@ score:
 ## Retour arrière du modèle en service
 rollback:
 	python -m reviewpulse.rollback $(if $(VERSION),--vers $(VERSION),)
+
+## Historique et restauration d'un instantane Iceberg : make snapshots TABLE=silver.reviews [SNAPSHOT=<id>]
+TABLE ?= silver.reviews
+snapshots:
+	python -m reviewpulse.lakehouse --table $(TABLE) $(if $(SNAPSHOT),--restaurer $(SNAPSHOT),--historique)
 
 ## Cette cible rejoue la chaîne sans ingérer de nouvelles données, pour une démonstration reproductible
 pipeline-gele:

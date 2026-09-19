@@ -26,8 +26,10 @@ standard, de *pandas* et de *numpy*.
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -37,6 +39,134 @@ import pandas as pd
 from reviewpulse import config
 
 logger = logging.getLogger(__name__)
+
+# Seuils d'alerte. 0,2 est le seuil usuel du PSI, celui qu'emploie deja
+# `interpretation` pour parler de derive ; la part hors bornes est le
+# garde-fou cote predictions.
+SEUIL_PSI_ALERTE = 0.2
+SEUIL_PART_HORS_BORNES = 0.1
+
+# Colonnes dont le PSI peut lever une alerte. `language` et `app_id` en sont
+# exclus : leur composition est imposée par notre propre plan de collecte
+# (`config.APP_IDS` × `config.LANGUAGES`), pas observée sur une population.
+# Mesure du 19/09/2026, flux naturel seul : la fenêtre ancienne est à 85 %
+# francophone, la récente à 91 % anglophone, ce qui porte le PSI de `language`
+# à 3,10 sans qu'aucun avis n'ait changé de nature. Ces colonnes restent dans
+# le rapport, à titre informatif. `sample_source` est constant après filtrage.
+COLONNES_ALERTE = ("text_len",)
+
+
+def evaluer_alerte(rapport: dict, colonnes: tuple[str, ...] | None = None) -> dict:
+    """
+    Évalue si une alerte de dérive doit être levée.
+
+    Paramètres
+    ----------
+    rapport : dict
+        Rapport tel que construit par :func:`main`, contenant les clés
+        ``entrees`` et ``predictions``.
+
+    Retour
+    ------
+    dict
+        {
+            "alerte": bool,
+            "motifs": list[str],
+            "psi_max": float,
+            "colonne_psi_max": str | None,
+            "part_hors_bornes": float,
+        }
+    """
+    # Valeurs par défaut
+    resultat = {
+        "alerte": False,
+        "motifs": [],
+        "psi_max": 0.0,
+        "colonne_psi_max": None,
+        "part_hors_bornes": 0.0,
+    }
+
+    surveillees = COLONNES_ALERTE if colonnes is None else tuple(colonnes)
+    resultat["colonnes_surveillees"] = list(surveillees)
+
+    entrees = {
+        col: info
+        for col, info in rapport.get("entrees", {}).items()
+        if col in surveillees
+    }
+    predictions = rapport.get("predictions", [])
+
+    # PSI maximal
+    if entrees:
+        psi_vals = {col: info.get("psi", 0.0) for col, info in entrees.items()}
+        colonne_max = max(psi_vals, key=psi_vals.get)
+        psi_max = psi_vals[colonne_max]
+        resultat["psi_max"] = psi_max
+        resultat["colonne_psi_max"] = colonne_max
+        if psi_max >= SEUIL_PSI_ALERTE:
+            resultat["alerte"] = True
+            resultat["motifs"].append(
+                f"Le PSI maximal {psi_max:.3f} dépasse le seuil d'alerte {SEUIL_PSI_ALERTE:.3f}."
+            )
+
+    # Part d'éléments hors bornes
+    if predictions:
+        total = len(predictions)
+        hors = sum(1 for p in predictions if p.get("hors_bornes"))
+        part = hors / total if total > 0 else 0.0
+        resultat["part_hors_bornes"] = part
+        if part > SEUIL_PART_HORS_BORNES:
+            resultat["alerte"] = True
+            resultat["motifs"].append(
+                f"La proportion d'éléments hors bornes {part:.2%} dépasse le seuil {SEUIL_PART_HORS_BORNES:.2%}."
+            )
+
+    return resultat
+
+
+def ecrire_alerte(verdict: dict, repertoire: Path) -> Path | None:
+    """
+    Écrit une alerte de dérive sous forme de fichier JSON.
+
+    Si ``verdict["alerte"]`` est ``False``, aucune écriture n'est effectuée et
+    ``None`` est retourné.
+
+    Paramètres
+    ----------
+    verdict : dict
+        Résultat de :func:`evaluer_alerte`.
+    repertoire : pathlib.Path
+        Répertoire racine où créer le sous‑dossier ``alertes``.
+
+    Retour
+    ------
+    pathlib.Path | None
+        Chemin du fichier d'alerte écrit, ou ``None`` si aucune alerte.
+    """
+    if not verdict.get("alerte"):
+        return None
+
+    alerts_dir = repertoire / "alertes"
+    try:
+        alerts_dir.mkdir(parents=True, exist_ok=True)
+        maintenant = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = maintenant.strftime("%Y%m%d-%H%M%S")
+        filename = f"derive_{timestamp}.json"
+        chemin = alerts_dir / filename
+
+        payload = dict(verdict)  # copie
+        payload["horodatage_utc"] = maintenant.isoformat()
+        payload["code_commit"] = os.getenv("REVIEWPULSE_COMMIT", "inconnu")
+
+        with chemin.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+        motifs = verdict.get("motifs", [])
+        logger.info("Alerte de dérive écrite dans %s : %s", chemin, "; ".join(motifs))
+        return chemin
+    except Exception as exc:
+        logger.error("Échec de l'écriture de l'alerte de dérive : %s", exc)
+        return None
 
 # --------------------------------------------------------------------------- #
 # Indice de stabilité de population (PSI)                                    #
@@ -284,6 +414,8 @@ def main() -> int:
     - Charge le résumé quotidien ``config.SUMMARY_FILE`` et analyse les
       prédictions via :func:`derive_predictions`.
     - Génère un rapport JSON dans ``config.SCORED_DIR / "drift_report.json"``.
+    - Ajoute une éventuelle alerte de dérive hors journal et déclenche le
+      ré‑entraînement si nécessaire.
     - Retourne ``0`` en cas de succès, ``1`` sinon (fichier manquant ou erreur).
 
     Tous les messages d’erreur sont journalisés avec le logger du module.
@@ -301,6 +433,25 @@ def main() -> int:
     except Exception as exc:
         logger.error("Impossible de lire le fichier propre %s : %s", config.CLEAN_FILE, exc)
         return 1
+
+    # Seul le flux naturel est surveillé. Le flux `negative_boost` est une
+    # collecte ponctuelle destinée à l'entraînement : il n'arrive jamais en
+    # production, et sa présence dans la seule fenêtre ancienne faisait mesurer
+    # la méthode de collecte au lieu de la population (mesure du 19/09/2026 :
+    # PSI 2,07 sur `language`, la fenêtre ancienne étant à 79 % francophone et
+    # à 45 % de flux boost, la récente à 86 % anglophone et à 93 % naturelle).
+    # La zone gold applique déjà ce même filtre (`mart_sentiment_daily`).
+    if "sample_source" in df_clean.columns:
+        avant = len(df_clean)
+        df_clean = df_clean[df_clean["sample_source"] == config.SAMPLE_NATURAL]
+        logger.info(
+            "Dérive mesurée sur le flux naturel seul : %d lignes sur %d",
+            len(df_clean),
+            avant,
+        )
+        if df_clean.empty:
+            logger.error("Aucune ligne du flux naturel dans la zone propre.")
+            return 1
 
     # Choix de la colonne date
     date_col = "created_at" if "created_at" in df_clean.columns else "updated_at"
@@ -335,6 +486,10 @@ def main() -> int:
         "predictions": drift_predictions,
     }
 
+    # Évaluation de l'alerte
+    verdict = evaluer_alerte(report)
+    report["alerte"] = verdict
+
     report_path: Path = config.SCORED_DIR / "drift_report.json"
     try:
         report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -344,6 +499,13 @@ def main() -> int:
     except Exception as exc:
         logger.error("Échec de l'écriture du rapport de dérive : %s", exc)
         return 1
+
+    # Écriture de l'alerte éventuelle
+    if verdict.get("alerte"):
+        chemin_alerte = ecrire_alerte(verdict, config.SCORED_DIR)
+        if chemin_alerte is None:
+            logger.error("Échec de l'écriture de l'alerte de dérive.")
+            return 1
 
     return 0
 

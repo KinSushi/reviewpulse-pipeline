@@ -314,29 +314,41 @@ def F9(data_dir: Path) -> ControlResult:
 
 @_handle
 def F10(data_dir: Path) -> ControlResult:
-    """Le nombre de lignes de main.fct_review_predictions doit être égal au nombre de lignes natural du parquet scored."""
-    # Comptage des lignes natural dans le parquet
+    """Le nombre total de lignes de main.fct_review_predictions doit correspondre au nombre total de lignes du parquet scored,
+    et le nombre de lignes naturelles (sample_source = SAMPLE_NATURAL) doit correspondre entre les deux sources."""
+    # Chemins
     scored_path = data_dir / "scored" / "reviews_scored.parquet"
-    df = pd.read_parquet(scored_path)
-    natural_rows = df[df["sample_source"] == config.SAMPLE_NATURAL].shape[0]
 
-    # Comptage des lignes dans la table DuckDB
+    # Chargement du parquet scored
+    df_parquet = pd.read_parquet(scored_path)
+    parquet_total = len(df_parquet)
+    parquet_natural = df_parquet[df_parquet["sample_source"] == config.SAMPLE_NATURAL].shape[0]
+
+    # Comptage dans la table DuckDB
     if not config.GOLD_DB.is_file():
         raise FileNotFoundError(f"{config.GOLD_DB} absent")
     con = duckdb.connect(str(config.GOLD_DB), read_only=True)
     try:
-        result = con.execute(
+        result_total = con.execute(
             "SELECT COUNT(*) FROM main.fct_review_predictions"
         ).fetchone()
-        duck_rows = result[0] if result else 0
+        duck_total = result_total[0] if result_total else 0
+
+        result_natural = con.execute(
+            f"SELECT COUNT(*) FROM main.fct_review_predictions WHERE sample_source = '{config.SAMPLE_NATURAL}'"
+        ).fetchone()
+        duck_natural = result_natural[0] if result_natural else 0
     finally:
         con.close()
 
-    if duck_rows != natural_rows:
+    # Vérifications
+    if duck_total != parquet_total or duck_natural != parquet_natural:
         raise AssertionError(
-            f"Différence de lignes : duckdb={duck_rows} parquet={natural_rows}"
+            f"Différence de lignes : total duckdb={duck_total} parquet={parquet_total} ; "
+            f"naturelles duckdb={duck_natural} parquet={parquet_natural}"
         )
-    return ("F10", "PASS", f"{duck_rows} lignes")
+
+    return ("F10", "PASS", f"{duck_total} lignes au total, dont {duck_natural} naturelles")
 
 
 def _git_commit_short() -> str:

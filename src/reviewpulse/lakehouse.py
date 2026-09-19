@@ -223,15 +223,165 @@ def table_history(identifier: str) -> list[dict]:
     ]
 
 
-def main() -> int:
-    """Entrée de script minimale.
+def read_table_at(identifier: str, snapshot_id: int) -> pa.Table:
+    """Lit une table Iceberg à un instantané donné.
 
-    Le module n’a pas de logique autonome ; la fonction renvoie 0 pour indiquer
-    le succès lorsqu’il est exécuté directement.
+    Parameters
+    ----------
+    identifier : str
+        Identifiant complet de la table (ex. ``"silver.reviews"``).
+    snapshot_id : int
+        Identifiant de l'instantané à lire.
+
+    Returns
+    -------
+    pyarrow.Table
+        Le tableau correspondant à l'instantané demandé. La table source n'est
+        pas modifiée.
     """
+    catalog = get_catalog()
+    table = catalog.load_table(identifier)
+    return table.scan(snapshot_id=snapshot_id).to_arrow()
+
+
+def restore_snapshot(identifier: str, snapshot_id: int) -> dict:
+    """Restaure une table Iceberg à l'instantané indiqué.
+
+    La fonction vérifie que ``snapshot_id`` figure dans l'historique, effectue
+    le rollback puis confirme que le nouveau snapshot est bien celui attendu.
+
+    Parameters
+    ----------
+    identifier : str
+        Identifiant complet de la table.
+    snapshot_id : int
+        Identifiant de l'instantané cible.
+
+    Returns
+    -------
+    dict
+        ``{"identifier": ..., "ancien_snapshot_id": ..., "nouveau_snapshot_id": ..., "lignes": ...}``
+
+    Raises
+    ------
+    ValueError
+        Si ``snapshot_id`` n'est pas présent dans l'historique.
+    RuntimeError
+        Si la restauration n'a pas abouti.
+    """
+    catalog = get_catalog()
+    table = catalog.load_table(identifier)
+
+    # Vérification de la présence du snapshot dans l'historique
+    known_ids = [entry.snapshot_id for entry in table.history()]
+    if snapshot_id not in known_ids:
+        raise ValueError(
+            f"Snapshot {snapshot_id} inconnu pour la table {identifier}. "
+            f"Instantanés disponibles : {known_ids}"
+        )
+
+    # Snapshot courant avant le rollback
+    current = table.current_snapshot()
+    ancien_id = current.snapshot_id if current is not None else None
+
+    # Rollback
+    table.manage_snapshots().rollback_to_snapshot(snapshot_id).commit()
+
+    # Rechargement et vérification
+    table = catalog.load_table(identifier)
+    new_snapshot = table.current_snapshot()
+    if new_snapshot is None or new_snapshot.snapshot_id != snapshot_id:
+        raise RuntimeError(
+            f"Échec du rollback de {identifier} vers le snapshot {snapshot_id}"
+        )
+
+    # Nombre de lignes après restauration
+    rows = table.scan().to_arrow().num_rows
+
+    log.info(
+        "Restauration de %s : ancien snapshot %s → nouveau snapshot %s",
+        identifier,
+        ancien_id,
+        snapshot_id,
+    )
+    return {
+        "identifier": identifier,
+        "ancien_snapshot_id": ancien_id,
+        "nouveau_snapshot_id": snapshot_id,
+        "lignes": rows,
+    }
+
+
+def main() -> int:
+    """Interface en ligne de commande pour la gestion des instantanés Iceberg.
+
+    Options
+    -------
+    --table IDENTIFIER
+        Identifiant complet de la table (obligatoire).
+    --historique
+        Affiche l'historique des instantanés, une ligne par instantané avec
+        horodatage UTC lisible. L'instantané courant est marqué.
+    --restaurer SNAPSHOT_ID
+        Restaure la table à l'instantané indiqué.
+    """
+    import argparse  # import local
+    from datetime import datetime, timezone  # import local
+
+    parser = argparse.ArgumentParser(description="Gestion des instantanés Iceberg")
+    parser.add_argument(
+        "--table",
+        required=True,
+        help='Identifiant complet de la table, ex. "silver.reviews"',
+    )
+    parser.add_argument(
+        "--historique",
+        action="store_true",
+        help="Affiche l'historique des instantanés",
+    )
+    parser.add_argument(
+        "--restaurer",
+        type=int,
+        metavar="SNAPSHOT_ID",
+        help="Restaure la table à l'instantané indiqué",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO)
-    log.info("Lakehouse module chargé – aucune action exécutée.")
-    return 0
+
+    if args.restaurer is not None:
+        try:
+            result = restore_snapshot(args.table, args.restaurer)
+            print(
+                f"Ancien snapshot : {result['ancien_snapshot_id']}, "
+                f"nouveau snapshot : {result['nouveau_snapshot_id']}, "
+                f"lignes : {result['lignes']}"
+            )
+            return 0
+        except (ValueError, RuntimeError) as exc:
+            log.error(str(exc))
+            return 1
+
+    # Action par défaut : affichage de l'historique
+    try:
+        hist = table_history(args.table)
+        catalog = get_catalog()
+        table = catalog.load_table(args.table)
+        current_snapshot = table.current_snapshot()
+        current_id = current_snapshot.snapshot_id if current_snapshot else None
+
+        for entry in hist:
+            ts_str = datetime.fromtimestamp(
+                entry["timestamp_ms"] / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S")
+            line = f"{entry['snapshot_id']} {ts_str}"
+            if entry["snapshot_id"] == current_id:
+                line += " (courant)"
+            print(line)
+        return 0
+    except Exception as exc:  # pragma: no cover
+        log.error(str(exc))
+        return 1
 
 
 if __name__ == "__main__":

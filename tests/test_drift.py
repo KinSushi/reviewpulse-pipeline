@@ -1,6 +1,7 @@
 # tests/test_drift.py
 from __future__ import annotations
 
+import json
 import pathlib
 
 import numpy as np
@@ -120,3 +121,125 @@ def test_main_retourne_1_si_fichiers_d_entree_inexistants(monkeypatch, tmp_path)
     exit_code = drift.main()
 
     assert exit_code == 1, f"main() doit renvoyer 1 en cas d’erreur, obtenu {exit_code}"
+
+
+def test_evaluer_alerte_sous_les_seuils_ne_leve_rien() -> None:
+    """Aucun seuil franchi, aucune alerte levée."""
+    rapport = {
+        "entrees": {
+            "col_a": {"psi": 0.1},
+            "col_b": {"psi": 0.15},
+        },
+        "predictions": [
+            {"hors_bornes": False},
+            {"hors_bornes": False},
+        ],
+    }
+    resultat = drift.evaluer_alerte(rapport, colonnes=("col_a", "col_b"))
+
+    assert resultat["alerte"] is False, f"alerte attendue False, obtenu {resultat['alerte']}"
+    assert not resultat["motifs"], f"motifs attendus vides, obtenus {resultat['motifs']}"
+    assert resultat["psi_max"] == 0.15, f"psi_max attendu 0.15, obtenu {resultat['psi_max']}"
+    assert resultat["colonne_psi_max"] == "col_b", f"colonne_psi_max attendu 'col_b', obtenu {resultat['colonne_psi_max']}"
+
+
+def test_evaluer_alerte_psi_au_dessus_du_seuil() -> None:
+    """PSI supérieur au seuil déclenche l'alerte avec motif approprié."""
+    psi_val = drift.SEUIL_PSI_ALERTE + 0.05
+    rapport = {
+        "entrees": {
+            "col_c": {"psi": psi_val},
+        },
+        "predictions": [],
+    }
+    resultat = drift.evaluer_alerte(rapport, colonnes=("col_c",))
+
+    assert resultat["alerte"] is True, f"alerte attendue True, obtenu {resultat['alerte']}"
+    assert resultat["colonne_psi_max"] == "col_c", f"colonne_psi_max attendu 'col_c', obtenu {resultat['colonne_psi_max']}"
+    assert resultat["psi_max"] == psi_val, f"psi_max attendu {psi_val}, obtenu {resultat['psi_max']}"
+    assert resultat["motifs"], "motifs attendu non vide"
+    assert f"{psi_val:.3f}" in resultat["motifs"][0], f"le motif doit contenir la valeur PSI formatée, obtenu {resultat['motifs'][0]}"
+
+
+def test_evaluer_alerte_part_hors_bornes() -> None:
+    """Proportion hors bornes supérieure au seuil déclenche l'alerte même si les PSI sont bas."""
+    predictions = [
+        {"hors_bornes": True},
+        {"hors_bornes": True},
+        {"hors_bornes": False},
+        {"hors_bornes": False},
+        {"hors_bornes": False},
+    ]  # 2/5 = 0.4 > SEUIL_PART_HORS_BORNES (0.1)
+    rapport = {
+        "entrees": {
+            "col_d": {"psi": 0.05},
+        },
+        "predictions": predictions,
+    }
+    resultat = drift.evaluer_alerte(rapport, colonnes=("col_d",))
+
+    assert resultat["alerte"] is True, f"alerte attendue True, obtenu {resultat['alerte']}"
+    assert abs(resultat["part_hors_bornes"] - 0.4) < 1e-6, f"part_hors_bornes attendu 0.4, obtenu {resultat['part_hors_bornes']}"
+    assert resultat["motifs"], "motifs attendu non vide"
+    assert "40.00%" in resultat["motifs"][-1] or "40.0%" in resultat["motifs"][-1], f"le dernier motif doit mentionner la proportion, obtenu {resultat['motifs'][-1]}"
+
+
+def test_ecrire_alerte_ecrit_un_fichier_date_et_rien_sans_alerte(tmp_path, monkeypatch) -> None:
+    """Sans alerte aucun fichier n’est créé ; avec alerte un fichier JSON contenant les métadonnées est écrit."""
+    # Aucun alerte
+    verdict_sans = {
+        "alerte": False,
+        "motifs": [],
+        "psi_max": 0.0,
+        "colonne_psi_max": None,
+        "part_hors_bornes": 0.0,
+    }
+    chemin_none = drift.ecrire_alerte(verdict_sans, tmp_path)
+    assert chemin_none is None, f"chemin attendu None quand pas d'alerte, obtenu {chemin_none}"
+    assert not (tmp_path / "alertes").exists(), "le répertoire 'alertes' ne doit pas être créé lorsqu'il n'y a pas d'alerte"
+
+    # Avec alerte
+    monkeypatch.setenv("REVIEWPULSE_COMMIT", "abc1234")
+    verdict_avec = {
+        "alerte": True,
+        "motifs": ["test motif"],
+        "psi_max": 0.3,
+        "colonne_psi_max": "col_test",
+        "part_hors_bornes": 0.2,
+    }
+    chemin = drift.ecrire_alerte(verdict_avec, tmp_path)
+    assert isinstance(chemin, pathlib.Path), f"chemin attendu de type Path, obtenu {type(chemin)}"
+    assert chemin.name.startswith("derive_") and chemin.name.endswith(".json"), f"nom de fichier inattendu {chemin.name}"
+    assert chemin.parent.name == "alertes", f"le fichier doit être dans le sous‑dossier 'alertes', trouvé {chemin.parent}"
+    # Vérifier le contenu JSON
+    with chemin.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["code_commit"] == "abc1234", f"code_commit attendu 'abc1234', obtenu {data.get('code_commit')}"
+    assert data["horodatage_utc"], "horodatage_utc doit être présent et non vide"
+    assert data["motifs"] == ["test motif"], f"motifs attendus ['test motif'], obtenus {data.get('motifs')}"
+
+
+def test_evaluer_alerte_ignore_les_colonnes_de_collecte() -> None:
+    """Un PSI énorme sur `language` ne lève rien : sa composition vient de notre plan de collecte, pas de la population."""
+    rapport = {
+        "entrees": {
+            "text_len": {"psi": 0.03},
+            "language": {"psi": 3.10},
+            "app_id": {"psi": 0.33},
+        },
+        "predictions": [{"hors_bornes": False}],
+    }
+    resultat = drift.evaluer_alerte(rapport)
+
+    assert resultat["alerte"] is False, (
+        f"aucune alerte attendue sur les colonnes de collecte, obtenu {resultat['motifs']}"
+    )
+    assert resultat["colonne_psi_max"] == "text_len", (
+        f"seule une colonne surveillée peut porter le maximum, obtenu {resultat['colonne_psi_max']}"
+    )
+    assert resultat["colonnes_surveillees"] == list(drift.COLONNES_ALERTE)
+
+    # Témoin : la même dérive sur une colonne surveillée lève bien l'alerte.
+    rapport_surveille = dict(rapport)
+    rapport_surveille["entrees"] = {"text_len": {"psi": 3.10}}
+    assert drift.evaluer_alerte(rapport_surveille)["alerte"] is True

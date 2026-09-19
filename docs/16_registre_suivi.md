@@ -6,7 +6,7 @@ Registre **persistant** du projet. Il survit aux changements de session, de mod�
 
 **États** : ✅ terminé · 🔄 en cours · ⛔ bloqué · 🔍 à vérifier · ⬜ non traité · ✖ abandonné.
 
-Mise à jour : 19/09/2026.
+Mise à jour : 19/09/2026, 15 h.
 
 ## Sujets ouverts
 
@@ -17,27 +17,27 @@ Mise à jour : 19/09/2026.
 | R03 | Vidéo de la solution en production | livrable AIA 4, jalon 23/09 | P1 | ⛔ Enzo | Vidéo enregistrée et archivée | — | Enregistrer après répétition |
 | R04 | Six présentations calibrées (Demo Day 10 min ; CDSD 7-8 diapositives ; AIA 1 15 min ; AIA 2, 3 et 4 5 min) | référentiels | P1 | 🔄 | Un jeu par soutenance, avec script parlé, minuté | **Demo Day faite** : `docs/presentation/ReviewPulse_DemoDay.pptx`, 9 diapositives sur le gabarit Jedha, logo conservé | Contrôle visuel par Enzo, puis les cinq autres jeux |
 | R05 | Script de démonstration vérifié **contre l'écran réel** | 19/09 | P1 | 🔄 | Script minute par minute rejoué sans surprise, chronomètre en main | `docs/presentation/script_10_minutes.md`, écrit d'après l'écran parcouru le 19/09 | Répétition chronométrée par Enzo |
-| R06 | Rafraîchir les preuves : batterie, **18 mutations**, test de stack **16 contrôles** | 19/09 | P1 | 🔄 | Rapports régénérés dans `docs/evidence/` | batterie 73/73 (18/09), mutations 16/16 (18/09), stack 14/14 (18/09) | Exécuter après les ajouts du 19/09 |
+| R06 | Rafraîchir les preuves : batterie, **18 mutations**, test de stack **16 contrôles** | 19/09 | P1 | 🔄 | Les trois rapports régénérés dans `docs/evidence/` après la correction de R27 | stack **16/16** le 19/09 (`docs/evidence/forward_test.md`) ; batterie et mutations relancées | Attendre la batterie, puis relancer les tests inverses |
 | R07 | Aligner README et `05_conformite_demo_day.md` sur les chiffres du jour | 18/09 | P1 | ✅ | Plus aucun chiffre périmé | commit `e2af00a` : chiffres datés 16/09 contre 18-19/09, avertissement sur les preuves détruites puis reconstituées | À revoir après R06 (18 mutations, 16 contrôles) |
 | R08 | Dossier de gouvernance (AIA 1, pilote Spotify) | `08_exigences_par_bloc.md` | P1 | ⛔ | Dossier écrit à partir du cas réel | 8 PDF repérés sur D: | Lire les PDF dans un conteneur |
 | R09 | Lire les sources Julie : énoncés Kayak, Tinder, Steam, AT&T, Getaround ; modules `lead-data-v2` | 18/09 | P1 | ⛔ | Exigences relevées, non supposées | — | Enzo ouvre une session dans le navigateur intégré |
 | R10 | Great Expectations sur silver et gold | S3-1 | P1 | ⬜ | Suites écrites, porte bloquante dans le DAG, exécutées | GE couvre la zone propre seulement | Phase 2 du plan |
-| R11 | Alerte de dérive hors journal Airflow et réentraînement déclenché par la dérive | AIA 4 C4.4 | P1 | ⬜ | Alerte émise hors journal ; réentraînement déclenché sur seuil | `drift.py` branché au DAG | Après R06 |
-| R12 | Restaurer un instantané Iceberg (outillé et prouvé) | AIA 4 « versioning avec restauration » | P1 | ⬜ | Commande de restauration + contrôle qui la prouve | `table_history` lit l'historique | Écrire `lakehouse.restore_snapshot` |
+| R11 | Alerte de dérive hors journal Airflow et réentraînement déclenché par la dérive | AIA 4 C4.4 | P1 | 🔍 | Une exécution réelle du DAG montre les huit tâches, dont le déclenchement | mécanisme en place et mesuré hors Airflow (voir F17) ; DAG chargé, 8 tâches listées, aucune erreur d'import | Déclencher `reviewpulse_daily` après la batterie |
 | R13 | Épingler les images de base par empreinte | reproductibilité | P2 | ⬜ | `FROM` avec `@sha256:` dans les trois Dockerfiles | — | Relever les empreintes |
 | R14 | Sauvegarder le registre MLflow hors du volume Docker | incident du 16/09 | P1 | ⬜ | Sauvegarde automatisée et restauration essayée | — | Décider du support |
 | R15 | Mettre à niveau les schémas (8 sur 10 ignorent Spark, Iceberg, dbt) | audit du 18/09 | P1 | ⬜ | Schémas conformes au code | `docs/diagrams/src/*.mmd` | Avant la soutenance |
 | R16 | Trancher la stratégie de branches (`main` et `plateforme-v3` sans ancêtre commun) | audit du 19/09 | P1 | ⛔ Enzo | Une seule ligne principale | 2 commits contre 24, histoires disjointes | Décision d'Enzo à la publication |
 | R17 | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public | `03_matrice_reemploi_blocs.md` | P2 | ⬜ | Chaque bloc visé peut réemployer la brique | Terraform absent de la machine | Cadrer avec Enzo |
 | R18 | Droits sur D: : huit dossiers portent encore une interdiction de l'ancien compte | 18/09 | P2 | ⛔ Enzo | Plus aucune entrée orpheline | `icacls` interrompu volontairement | Passe ciblée (22 500 fichiers) |
-| R19 | Exécuter les mutations M17 et M18 (porte de qualité, entrepôt) | 19/09 | P1 | 🔍 | 18 mutations sur 18 détectées | écrites, ancres vérifiées | Lancer les tests inverses |
-| R20 | Exécuter les contrôles F9 et F10 (zone gold) | 19/09 | P1 | 🔍 | 16 contrôles sur 16 | écrits | Lancer le test de stack |
-| R21 | Vérifier la mesure de sur- et sous-apprentissage | critère transverse CDSD | P1 | 🔍 | Test vert dans la batterie | écrit | Batterie en cours |
-| R22 | Vérifier `rollback.py` en réel | 19/09 | P1 | 🔍 | Bascule d'alias effectuée puis annulée | défaut d'horodatage corrigé | Rejouer après reconstruction |
+| R19 | Exécuter les mutations M17 et M18 (porte de qualité, entrepôt) | 19/09 | P1 | 🔄 | 18 mutations sur 18 détectées | premier lancement interrompu par le témoin : il a trouvé R27, défaut réel | Relancer après la batterie verte |
+| R21 | Vérifier la mesure de sur- et sous-apprentissage | critère transverse CDSD | P1 | 🔍 | Test vert dans la batterie | `test_ecart_train_test_raisonnable` **en échec** le 19/09 par le défaut R27 | Relire le résultat après la batterie |
 | R23 | Trancher `confluent-kafka`, déclaré mais jamais importé | audit du 18/09 | P3 | ⬜ | Retiré, ou assumé par écrit | poids inutile dans chaque image | Décider avec R17 |
-| R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | 🔍 | Cinq tests verts, dont un témoin | `tests/test_rollback.py` écrit, faux client MLflow | Exécuter dans la batterie |
+| R24 | Tests unitaires de `rollback.py` | 19/09 | P1 | 🔍 | Cinq tests verts, dont un témoin | `tests/test_rollback.py`, faux client MLflow ; le résultat du 19/09 matin appartient à une batterie non reproductible | Relire le résultat après la batterie |
 | R25 | Mutations pour `explain.py` et `drift.py` | audit du 18/09 | P2 | ⬜ | Chaque module branché a sa mutation | non couverts | Après R19 |
 | R26 | Fonction de coût du modèle écrite noir sur blanc | critère CDSD bloc 4 | P2 | ✅ | Mentionnée dans la Model Card | `docs/12_model_card.md` : entropie croisée, `class_weight="balanced"`, régularisation L2 `C=4.0`, vérifié dans `train.py` | — |
+| R27 | `import os` absent de `train.py` : 6 échecs et 5 erreurs dans la batterie | témoin des tests inverses, 19/09 | P1 | 🔄 | Batterie verte, reproduite depuis une copie neuve | défaut reproduit puis corrigé ; `NameError: name 'os' is not defined` à `train.py:352` | Attendre la batterie de contrôle |
+| R28 | Le banc de tests inverses ne recopiait pas `dbt/` | témoin, 19/09 | P1 | 🔄 | `tests/test_gold.py` s'exécute dans la copie temporaire | `_copy_project` corrigé : `dbt` ajouté à la liste | Vérifier au prochain lancement des mutations |
+| R29 | Base de documents (MongoDB) : candidate de réemploi, pas de besoin établi | Enzo, 19/09 | P3 | ⛔ | Un bloc visé l'exige, preuve à l'appui, ou l'option est écartée par écrit | argumentaire OLAP / document ajouté à `07_questions_jury.md` ; aucun énoncé lu ne l'exige | Dépend de R09 (lecture des énoncés sur Julie) |
 
 ## Sujets fermés (avec leur preuve)
 
@@ -56,6 +56,11 @@ Mise à jour : 19/09/2026.
 | F11 | Retour arrière outillé sur le modèle en service | `rollback.py`, `make rollback VERSION=n` | 19/09 |
 | F12 | Point de retour marqué | étiquette `preuves-2026-09-19` | 19/09 |
 | F13 | Matrice de réversibilité | `docs/15_reversibilite.md` | 19/09 |
+| F14 | Test de la stack déployée, zone gold comprise | **16 contrôles sur 16**, F9 et F10 compris ; F10 corrigé pour suivre le contrat dbt (deux flux) | 19/09 |
+| F15 | Retour arrière **réellement exécuté** sur le modèle en service | champion 2 → 1, vérifié, puis 1 → 2, vérifié, via `python -m reviewpulse.rollback --vers N` | 19/09 |
+| F16 | Restauration d'un instantané Iceberg, outillée et prouvée | `lakehouse.read_table_at` et `restore_snapshot`, interface `python -m reviewpulse.lakehouse --table T [--restaurer ID]`, cible `make snapshots` ; `test_lakehouse_restore_snapshot` vert (témoin : la lecture d'instantané ne modifie pas la table) ; historique réel listé, 19 instantanés sur `silver.reviews` | 19/09 |
+| F17 | Alerte de dérive hors du journal Airflow | `drift.evaluer_alerte` et `ecrire_alerte` ; fichier daté `scored/alertes/derive_20260919-153751.json` portant motifs, horodatage UTC et `code_commit` ; 11 tests verts dans `tests/test_drift.py` | 19/09 |
+| F18 | La dérive mesurait la collecte, pas la population | corrigé : mesure sur le flux naturel seul, et seules les colonnes de `COLONNES_ALERTE` (`text_len`) peuvent alerter. Mesuré : fenêtre ancienne 85 % francophone contre récente 91 % anglophone, PSI `language` 3,098 écarté ; `text_len` 0,036 stable. ADR 0015 révisée, témoin dans `test_evaluer_alerte_ignore_les_colonnes_de_collecte` | 19/09 |
 
 ## Comment se servir de ce registre
 

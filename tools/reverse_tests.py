@@ -59,9 +59,9 @@ def _load_mutations(path: Path) -> List[Mutation]:
 
 
 def _copy_project(temp_dir: Path) -> None:
-    """Copie ``src/``, ``tests/``, ``dashboard/``, ``dags/`` et ``pyproject.toml``."""
+    """Copie ``src/``, ``tests/``, ``dashboard/``, ``dags/``, ``dbt/`` et ``pyproject.toml``."""
     root = _repo_root()
-    for name in ("src", "tests", "dashboard", "dags"):
+    for name in ("src", "tests", "dashboard", "dags", "dbt"):
         src = root / name
         if src.is_dir():
             dst = temp_dir / name

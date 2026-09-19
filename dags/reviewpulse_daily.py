@@ -39,12 +39,15 @@ Tests associés
     La preuve est l’exécution réelle dans le conteneur Airflow, consignée dans ``docs/evidence``.
 """
 
+import json
 import logging
 import os
+from pathlib import Path
 
 import pendulum
 from airflow import DAG
-from airflow.operators.python import ExternalPythonOperator
+from airflow.operators.python import ExternalPythonOperator, ShortCircuitOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +124,27 @@ default_args_daily = {
     "sla": pendulum.duration(hours=1),
 }
 
+def _derive_exige_reentrainement() -> bool:
+    """Lit le rapport de drift et renvoie True si une alerte est levée.
+
+    La lecture utilise uniquement la bibliothèque standard car l’interpréteur
+    Airflow ne possède pas les dépendances du projet (voir ADR 0013).
+    """
+    data_dir = os.environ.get("REVIEWPULSE_DATA_DIR", "/data")
+    report_file = Path(data_dir) / "scored" / "drift_report.json"
+    try:
+        with report_file.open("r") as f:
+            rapport = json.load(f)
+        alerte = rapport.get("alerte", {}).get("alerte", False)
+        if alerte:
+            motifs = rapport.get("alerte", {}).get("motifs", [])
+            logger.info("Drift alerte levée: %s", motifs)
+        return bool(alerte)
+    except Exception as exc:
+        logger.warning("Impossible de lire le rapport de drift %s: %s", report_file, exc)
+        return False
+
+
 with DAG(
     dag_id="reviewpulse_daily",
     schedule="0 6 * * *",
@@ -179,7 +203,21 @@ with DAG(
         expect_airflow=False,
     )
 
+    # Le court-circuit est place en derivation : la zone gold n'est jamais sautee.
+    derive_gate = ShortCircuitOperator(
+        task_id="derive_exige_reentrainement",
+        python_callable=_derive_exige_reentrainement,
+    )
+
+    trigger_train = TriggerDagRunOperator(
+        task_id="declencher_reentrainement",
+        trigger_dag_id="reviewpulse_weekly_train",
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
     ingest_task >> spark_silver_task >> gx_validate_task >> score_task >> drift_task >> gold_task
+    drift_task >> derive_gate >> trigger_train
 
 # ---------------------------------------------------------------------------
 # DAG hebdomadaire : entraînement → scoring → gold (dbt)
