@@ -22,7 +22,11 @@ dependencies = [
     "duckdb==1.5.5",
     "dbt-core==1.12.5",
     "dbt-duckdb==1.11.0",
-    "confluent-kafka[avro,schemaregistry]==2.15.1",
+    # confluent-kafka retire le 19/09/2026, en meme temps que dans requirements.txt :
+    # declare, jamais importe sur tout le depot. Laisse ici, il faisait echouer le
+    # « pip check » de l'image Airflow, qui exigeait une dependance que rien n'installe.
+    # A remettre le jour ou la brique Kafka sera construite (registre R17) ; la ligne
+    # exacte etait : "confluent-kafka[avro,schemaregistry]==2.15.1"
 ]
 
 [project.optional-dependencies]
