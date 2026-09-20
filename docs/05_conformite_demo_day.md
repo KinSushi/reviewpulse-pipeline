@@ -37,6 +37,31 @@ script, qui nomment les manques un par un.
 **Écart assumé** : v2 prévoit des **équipes de deux ou trois**. Le projet est porté par une
 seule personne. Ce n'est pas un manque à combler, c'est un fait à dire si la question vient.
 
+### Réponse directe : le projet sert-il les deux versions ?
+
+**Oui pour tout ce qui dépend du code, vérifié par commande le 20/09/2026 :**
+
+| Exigence v2 | Contrôle passé | Résultat |
+|---|---|---|
+| 1 — données réelles trouvées | `config.STEAM_URL` | `https://store.steampowered.com/appreviews/{app_id}` |
+| 2 — zone brute inchangée, idempotente | comptage de la zone brute et du manifeste | **69 fichiers, 9 410 lignes**, 12 manifestes d'état |
+| 3 — transformation + test de qualité | présence des quatre modules | `spark_silver.py`, `dbt_project.yml`, `expectations.py`, `expectations_lake.py` |
+| 4 — étape d'IA suivie par MLflow | occurrences dans `train.py` | 33 |
+| 5 — une partie s'exécute seule | DAG et workflows | 2 DAG, 2 workflows GitHub Actions |
+
+**Non pour trois livrables, et ce sont les mêmes pour les deux versions.** Ils ne dépendent pas
+du code :
+
+| | Exigé par | Qui |
+|---|---|---|
+| Le **dépôt publié** — v2 le liste parmi les livrables du jour 3, v1 l'exige nommément | v1 **et** v2 | Enzo (R01) |
+| La **vidéo** de la solution en production | v1 | Enzo (R03) |
+| La **démonstration en direct**, répétée et chronométrée | v1 **et** v2 | Enzo (R05) |
+
+**La chaîne d'intégration est prête** : `ci.yml` se déclenche sur `push:` toutes branches — le
+défaut ancien, « ne se déclenche que sur `main` », est corrigé. Elle tournera sur
+`plateforme-v3` dès la publication, sans autre intervention.
+
 **Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09, et le 19/09 au soir l'ensemble a été rejoué **le même jour sur le même arbre** : batterie **131 tests** (20/09), tests inverses **26 mutations sur 26**, test de stack **16 contrôles sur 16**, DAG quotidien à **9 tâches**, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
 
 **Légende.** ✅ vérifié par exécution le 16/09 · 🟡 écrit, pas encore exécuté dans son environnement cible · ⬜ à faire · ⚠ écart ou risque.
