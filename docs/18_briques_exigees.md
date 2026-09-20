@@ -179,6 +179,7 @@ espaces fines insécables qu'une recopie approximative fait échouer.
 - `3`
 - `4`
 - `5`
+- `5 min`
 - `6`
 - `7 à 8 slides`
 - `AIA`

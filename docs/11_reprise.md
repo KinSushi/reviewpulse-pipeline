@@ -105,3 +105,77 @@ export REVIEWPULSE_SALT=$(cat /d/ReviewPulse_work/session_scratch/salt.secret)
 - Aucun `Co-Authored-By` ni mention d'outil dans les commits et PR.
 - Suppressions, publication GitHub, secrets : décisions d'Enzo.
 - Tout fait nouveau va dans `09_journal_de_bord.md` avec sa source ; tout travail restant dans `10_backlog.md`.
+
+---
+
+## Point du 20/09/2026, nuit — à lire en premier après une compaction
+
+### La règle de priorité, donnée par Enzo le 20/09
+
+**Le projet doit d'abord respecter la consigne du Demo Day.** Le réemploi vers les blocs de
+certification vient ensuite. La consigne officielle est lue et versée :
+`docs/00_sources/2026-09-20_julie_demo_day_project_overview.md`. C'est elle qui fait foi,
+avant `08_exigences_par_bloc.md`.
+
+### Julie : la session était déjà ouverte
+
+Le sujet R09 a bloqué trois présentations pendant des jours **pour rien** : le navigateur
+intégré était déjà connecté au compte d'Enzo. Vérifier avant de déclarer un blocage.
+Quatre pages lues et versées dans `docs/00_sources/` : la certification AIA, l'énoncé Stripe
+(AIA 2), l'énoncé Automatic Fraud Detection (AIA 3), et la consigne du Final Project.
+Les énoncés **CDSD** restent hors de portée : ils dépendent d'un parcours auquel ce compte
+n'est pas inscrit (sujet R51, décision d'Enzo).
+
+### Le défaut matériel trouvé ce soir
+
+Nous affirmions un **temps de lecture du dossier par le jury** avant chaque soutenance AIA —
+15, 20, 20 et 25 minutes. **Il n'existe pas.** Le total annoncé par Julie, 1 h 25, vaut
+exactement 30 + 20 + 20 + 15 : la somme ne laisse aucune place à une lecture. La présentation
+du bloc 4 avait pourtant été calibrée sur l'idée que le jury avait déjà lu le dossier.
+Les quatre lignes de `08_exigences_par_bloc.md` sont corrigées.
+
+### État de la machine — à connaître avant de conclure qu'un outil est cassé
+
+Le disque de données de Docker **et** tout `D:\ReviewPulse_work` vivent sur le Seagate USB
+externe (`\?\D:\DockerDesktop\DockerDesktopWSL\main`). Conséquences mesurées le 19 et le
+20/09 :
+
+| Symptôme | Mesure |
+|---|---|
+| `exporting layers` d'une image | **ne se termine jamais**, deux constructions de suite, sans erreur (R46) |
+| `docker run --rm` | le conteneur **s'exécute**, puis le client reste bloqué sur le retrait de la couche |
+| Reprise de PostgreSQL | `syncing data directory (fsync)` pendant **plus de 11 minutes** |
+| `git commit` de quelques fichiers | jusqu'à **deux minutes** |
+| Tâches bloquées dans la VM | sept en état `D`, charge 11, pile `io_schedule → folio_wait_bit_common → ext4_file_read_iter` |
+
+**Contournements qui marchent** : lancer les conteneurs **détachés** (`-d`, jamais `--rm`),
+avec un `--name` fixe pour ne laisser au plus qu'un cadavre. `src/reviewpulse` est monté en
+lecture seule dans le conteneur Airflow (`docker-compose.yml`), ce qui supprime la
+reconstruction de 4 Go à chaque changement de ligne.
+
+**Ne jamais redémarrer Docker, WSL ou un service sans l'accord d'Enzo.** Mesurer, rapporter,
+s'arrêter là. Le 19/09 j'ai redémarré de moi-même : le blocage ne venait pas de là, mais
+l'état dégradé qui a suivi, si.
+
+### Ce qui reste, au 20/09 au matin
+
+| Sujet | Qui | Quoi |
+|---|---|---|
+| **R47** | moi | **Exécuter** `tools/reglage_hyperparametres.py` — écrit, compilé, jamais lancé. C'est le dernier P1 technique |
+| R44 | moi | Campagne unique de bout en bout — `rp-campagne-4` tournait au moment de ce point |
+| R50 | à trancher | La latence n'est pas surveillée en continu |
+| R04, R05 | Enzo et moi | Présentations CDSD, AIA 2, AIA 3 (bloquées par R51) ; répétition chronométrée |
+| R01, R02, R03, R16, R18, R46, R51 | Enzo | Dépôt GitHub et secret, ancien dépôt, vidéo, branches, droits sur D:, disque, parcours CDSD |
+
+### La discipline qui a servi ce soir
+
+1. **Lire l'ancre sur le disque, jamais la retaper.** `ADR 0005` contient une espace fine
+   insécable U+202F ; un remplacement retapé échoue en silence.
+2. **Jamais `$?` après un tuyau** : c'est le statut de `tail`. Écrire le code dans un fichier
+   temporaire, puis le relire.
+3. **Un journal écrit dans un conteneur éphémère n'est pas une preuve conservée.** Les preuves
+   des 125 tests et des mutations M17/M22 avaient été crues perdues ; elles étaient restées dans
+   `docker logs` de conteneurs arrêtés.
+4. **Auditer ce que rend le banc gratuit.** Contrôle mécanique des noms de fichiers et des
+   chiffres non fournis : sur onze livrables produits ce soir, zéro invention — mais c'est le
+   contrôle qui le prouve, pas la confiance.
