@@ -191,6 +191,31 @@ Nous avons créé `expectations_lake.py` avec 29 attentes — 8, 7, 7 et 7, mesu
 - Modèle profond de sentiment et création de données, branchés dans la même chaîne (bloc 4 du CDSD). → schéma 09.
 - Cible cloud : stockage objet chiffré, MLflow et Airflow managés, Terraform. → schéma 06.
 
+## Comment le projet se prouve
+
+Chaque réponse est accompagnée d'une preuve consultable. Les chiffres cités ci-dessous sont ceux du 20/09/2026.
+
+**Pourquoi des tests inverses (mutations), et pas seulement des tests classiques ?**
+Un test classique prouve qu'un chemin autorisé passe, pas qu'un contrôle refuse. Une mutation injecte un défaut volontaire et vérifie qu'un test nomme le détecter. Nous avons injecté 27 défauts graves dans une copie du code ; chaque défaut a été tué par un test nommé, et aucune mutation n'a survécu, en un seul passage en intégration continue le 20/09/2026.
+
+**Qu'est-ce qu'un témoin, et pourquoi y tenez-vous ?**
+Un témoin est le cas qui échouerait si le contrôle ne fonctionnait pas ; sans lui un test peut passer pour la mauvaise raison. La mutation M22 avait survécu parce qu'un test passait pour la mauvaise raison -- pyiceberg levait lui aussi une ValueError -- et le test vérifie désormais le MESSAGE de notre garde, pas seulement le type.
+
+**Que prouve le test de la pile déployée, que la batterie ne prouve pas ?**
+La batterie teste des fonctions ; le test de la pile interroge les services levés -- API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier. Nous avons vérifié que 16 contrôles sur 16 passent sur la pile déployée.
+
+**Pourquoi plusieurs niveaux de validation plutôt qu'une seule suite de tests ?**
+« Le code compile » n'est pas « le code fonctionne », qui n'est pas « les dépendances sont correctes ». Un `import os` manquant a compilé sans bruit et tué un outil après sept minutes de calcul le 20/09/2026 ; `pip check` a refusé une image dont deux fichiers de dépendances se contredisaient ; ruff a trouvé dix défauts dormants le jour où il a été ajouté à la campagne.
+
+**Pourquoi une campagne en intégration continue, si tout tourne déjà sur votre machine ?**
+Une preuve produite sur la machine du développeur ne répond pas à « ça marche chez moi ». Le 20/09/2026, la chaîne entière a tourné sur un runner GitHub vierge en repartant d'une zone brute vide -- 5 798 avis collectés sur l'API Steam en direct, modèle entraîné et promu, f1_macro 0,7982 -- et la campagne inverse complète y a pris six minutes, là où le disque local n'y arrivait plus.
+
+**Comment savez-vous que votre porte de qualité BLOQUE, et ne se contente pas de journaliser ?**
+Par la mutation M17, qui rend la porte non bloquante, et qui est tuée par un test vérifiant que `main()` rend 1 sur une zone propre non conforme. Une porte qui n'a jamais refusé ne prouve rien.
+
+**Que ne prouvent PAS vos tests ?**
+Ils ne prouvent pas la tenue sous un trafic réparti, ni le comportement sur des langues non vues, ni l'absence de biais par langue et par jeu -- cette mesure manque, et c'est écrit dans l'ADR 0021. Un passage vert ne prouve que ce que le test vérifie.
+
 ## Ce que le projet ne fait pas, et pourquoi
 
 Huit décisions assumées par écrit plutôt qu'implémentées. Un jury qui repère un manque pose la
