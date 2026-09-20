@@ -9,7 +9,7 @@
 ## Decision
 
 Création du module `src/reviewpulse/expectations_lake.py`.  
-Quatre suites portent sur `silver.reviews`, `silver.predictions`, les faits gold et le mart quotidien, soit **28 attentes**.  
+Quatre suites portent sur `silver.reviews`, `silver.predictions`, les faits gold et le mart quotidien, soit **29 attentes** — chiffre corrigé le 20/09/2026 : l'exécution réelle du DAG en a évalué 29, 8 + 7 + 7 + 7 (`docs/evidence/dag_execution_reelle.md`), là où cet ADR en annonçait 28.  
 Ajout de la tâche `gx_lake` dans le DAG quotidien, placée après `gold`, bloquante par son code de retour. Le DAG passe à **neuf tâches**.  
 Le module `expectations.py` reste inchangé et continue de protéger la zone propre.  
 `main` accepte une liste d’arguments, car un module lancé par Airflow ne peut pas lire `sys.argv`.  

@@ -1,7 +1,7 @@
 # Justifications des décisions d'architecture
 
-*Date UTC* : 2026-09-20T04:52:56Z
-*Commit* : 3c791c1
+*Date UTC* : 2026-09-20T05:11:45Z
+*Commit* : 9bfe593
 
 | ADR | titre | code | questions | diapositives |
 |-----|-------|------|-----------|--------------|
@@ -25,9 +25,17 @@
 | 0018 | Reproductibilite : empreintes, tracabilite, sauvegarde | 7 | 2 | 2 |
 | 0019 | Explicabilite par contribution lineaire exacte | 4 | 1 | 2 |
 | 0020 | Porte de qualite etendue aux zones silver et gold | 4 | 2 | 3 |
+| 0021 | Garde-fous : biais et injections | 0 | 1 | 0 |
+| 0022 | Gestion des secrets, chiffrement en transit et audit | 0 | 1 | 0 |
+| 0023 | FinOps et GreenOps | 0 | 1 | 0 |
+| 0024 | Base de documents NoSQL | 0 | 1 | 0 |
+| 0025 | Modélisation étoile et SCD2 | 0 | 1 | 0 |
+| 0026 | Tracing des explications | 0 | 2 | 0 |
+| 0027 | Briques de réemploi | 0 | 2 | 0 |
+| 0028 | Gestion du backlog sans sprints | 0 | 1 | 0 |
 
 ## Totaux
 
 * Citations dans le code : 118
-* Citations dans les questions‑réponses : 51
+* Citations dans les questions‑réponses : 61
 * Citations dans les diapositives : 44

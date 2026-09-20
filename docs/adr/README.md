@@ -1,6 +1,6 @@
 # Registre des décisions d'architecture (ADR)
 
-Chaque décision structurante du projet est écrite ici, **avec la mesure ou le constat qui l'a motivée**. Format : contexte, décision, alternatives écartées, conséquences, preuves. Les dates sont celles de la décision.
+Chaque décision structurante du projet est écrite ici, **avec la mesure ou le constat qui l'a motivée**. Format : contexte, décision, alternatives écartées, conséquences, preuves. Les dates sont celles de la décision. **28 décisions** au 20/09/2026.
 
 | N° | Décision | Statut |
 |---|---|---|
@@ -24,3 +24,11 @@ Chaque décision structurante du projet est écrite ici, **avec la mesure ou le 
 | [0018](0018-reproductibilite-empreintes.md) | Reproductibilité : empreintes d'images et de jeu de données, traçabilité, sauvegarde du registre | Acceptée |
 | [0019](0019-explicabilite-lineaire.md) | Explicabilité par contribution linéaire exacte, plutôt que SHAP ou LIME | Acceptée |
 | [0020](0020-qualite-silver-gold.md) | Porte de qualité étendue aux zones silver et gold | Acceptée |
+| [0021](0021-garde-fous-biais-injections.md) | Garde-fous : injection sans objet sur un classifieur linéaire, mesure de biais assumée absente | Acceptée |
+| [0022](0022-secrets-chiffrement-audit.md) | Secrets, chiffrement en transit et journaux d'audit : ce qui est tenu, ce qui est assumé | Acceptée |
+| [0023](0023-finops-greenops.md) | FinOps et GreenOps : ce qui est mesurable avec l'existant, et ce qui ne l'est pas | Acceptée |
+| [0024](0024-base-de-documents-nosql.md) | Base de documents NoSQL : la zone brute est déjà une collection de documents | Acceptée |
+| [0025](0025-modelisation-etoile-scd2.md) | Modélisation en étoile et SCD2 sur des faits immuables | Acceptée |
+| [0026](0026-tracing-explicabilite.md) | Tracing : tracer les décisions plutôt que les appels | Acceptée |
+| [0027](0027-briques-de-reemploi.md) | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public, arbitrées une par une | Acceptée |
+| [0028](0028-conduite-du-backlog.md) | Conduite du backlog : un registre à critère de fin et à preuve, plutôt que des sprints | Acceptée |
