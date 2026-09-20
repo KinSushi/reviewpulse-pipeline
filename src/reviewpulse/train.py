@@ -15,7 +15,7 @@ Fonctionnement
        L’alias `challenger` pointe sur la version entraînée ; l’alias `champion` est mis à jour **si** `f1_macro >= config.F1_MACRO_MIN` (0,75) **et** supérieur au F1 du champion actuel.
 
 Choix de conception
-    - Pipeline TF‑IDF (char_wb, n‑grammes 2‑5) + `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000, random_state=config.RANDOM_STATE)` (ADR 0006).  
+    - Pipeline TF‑IDF (char_wb, n‑grammes 2‑5) + `LogisticRegression(C=10.0, class_weight="balanced", max_iter=2000, random_state=config.RANDOM_STATE)` (ADR 0006).  
     - Utilisation du flux négatif complémentaire uniquement pour l’entraînement et du seuil appris via CV (ADR 0007).  
     - Barrière de promotion et gestion des alias `challenger` / `champion` (ADR 0008).  
     - Pas d'input_example à l'enregistrement, seulement la signature : avec un input_example, MLflow valide l'exemple par son chemin générique, qui passe un tableau au vectoriseur et échoue (« 'int' object has no attribute 'lower' », constaté le 16/09/2026).  
@@ -105,7 +105,13 @@ def build_pipeline() -> Pipeline:
         lowercase=True,
     )
     clf = LogisticRegression(
-        C=4.0,
+        # C=10.0 remplace C=4.0 le 20/09/2026, sur mesure et non sur intuition :
+        # recherche a 12 points, validation croisee a 5 plis, F1 macro 0,7517 contre
+        # 0,7437, soit 2,7 erreurs types. Tendance monotone en C, et meme ecart retrouve
+        # dans un passage independant. Voir docs/evidence/reglage_hyperparametres.md.
+        # La barriere de promotion (ADR 0008) reste juge : elle refusera ce modele s il
+        # n est pas strictement meilleur que le champion en service.
+        C=10.0,
         class_weight="balanced",
         max_iter=2000,
         random_state=config.RANDOM_STATE,

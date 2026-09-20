@@ -25,8 +25,8 @@
 
 ## 4. Modèle
 - **Représentation du texte** : TF-IDF caractères (`analyzer="char_wb"`, n-grammes 2-5, `min_df=2`, `max_features=100 000`, `sublinear_tf=True`).
-- **Algorithme** : régression logistique (`C=4.0`, `class_weight="balanced"`, `max_iter=2000`).
-- **Fonction de coût** : entropie croisée binaire (perte logistique), minimisée par L-BFGS. Les classes sont repondérées par `class_weight="balanced"` : chaque classe pèse en raison inverse de son effectif, ce qui compense les 9 % d'avis négatifs sans modifier les données. La régularisation est de type L2, d'intensité `C=4.0`.
+- **Algorithme** : régression logistique (`C=10.0`, `class_weight="balanced"`, `max_iter=2000`). `C=10.0` depuis le 20/09/2026, retenu sur mesure : recherche à 12 points, validation croisée à 5 plis, F1 macro 0,7517 contre 0,7437 pour `C=4.0`. La **barrière de promotion a promu** ce modèle (version 5, F1 macro 0,8027) et **refusé** le même jour un modèle réentraîné à `C=4.0` (version 6, 0,7997). Réserve inscrite : l'écart entraînement-test passe de 0,118 à 0,153. Voir `docs/evidence/reglage_hyperparametres.md`.
+- **Fonction de coût** : entropie croisée binaire (perte logistique), minimisée par L-BFGS. Les classes sont repondérées par `class_weight="balanced"` : chaque classe pèse en raison inverse de son effectif, ce qui compense les 9 % d'avis négatifs sans modifier les données. La régularisation est de type L2, d'intensité `C=10.0` (voir ci-dessus).
 - **Seuil de décision** : 0,75. Choisi par validation croisée à 5 plis sur les données d’entraînement naturelles (ADR 0007). Le seuil est stocké dans l’attribut `decision_threshold_` du modèle.
 
 ## 5. Évaluation

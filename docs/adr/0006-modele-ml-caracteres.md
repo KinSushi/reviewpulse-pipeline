@@ -8,7 +8,7 @@ Classer des avis courts, en deux langues, avec une étiquette fournie par la sou
 
 ## Décision
 
-`TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True)` puis `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000)`, suivi dans MLflow.
+`TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True)` puis `LogisticRegression(C=10.0, class_weight="balanced", max_iter=2000)`, suivi dans MLflow.
 
 **ML plutôt que LLM, en une phrase** : la tâche est une classification binaire avec une étiquette déjà fournie, qu'un modèle linéaire résout en quelques secondes, explique terme par terme et sert gratuitement.
 

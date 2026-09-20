@@ -175,7 +175,7 @@ res = vd.run(batch_parameters={"dataframe": df})   # res.success ; res.results[i
 
 ## Modèle — `train.py`
 
-- `build_pipeline() -> sklearn.pipeline.Pipeline` : `TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True, lowercase=True)` puis `LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000, random_state=RANDOM_STATE)`. *Choix mesuré le 16/09 sur données réelles, voir la charte.*
+- `build_pipeline() -> sklearn.pipeline.Pipeline` : `TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=100000, sublinear_tf=True, lowercase=True)` puis `LogisticRegression(C=10.0, class_weight="balanced", max_iter=2000, random_state=RANDOM_STATE)`. *Choix mesuré le 16/09 sur données réelles, voir la charte.*
 - **Emplacement des artefacts.** `config.ARTIFACT_DIR = DATA_DIR / "mlartifacts"`. Si l'URI de suivi commence par `sqlite:` ou `file:`, l'expérience est créée (si elle n'existe pas) avec `artifact_location=Path(config.ARTIFACT_DIR).resolve().as_uri()`, puis sélectionnée par `mlflow.set_experiment`. Avec un serveur `http(s)`, on laisse le serveur gérer les artefacts. *Constat du 16/09 : sans cela, le modèle part dans `./mlruns` du dossier courant et devient introuvable pour l'API.*
 - `roc_auc` se calcule pour la classe négative : `roc_auc_score((y_test == 0).astype(int), proba_negative)`.
 - Enregistrement : `mlflow.sklearn.log_model(..., registered_model_name=MODEL_NAME)` et version lue dans `model_info.registered_model_version`. **Ne jamais utiliser `get_latest_versions`** (obsolète). Pas d'`input_example` (le chemin pyfunc passe un DataFrame au vectoriseur) ; signature seule.
