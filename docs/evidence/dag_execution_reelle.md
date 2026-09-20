@@ -57,3 +57,32 @@ des mutations M23 et M24, tuées par `tests/test_expectations_lake.py`. Et elle 
 plus qu'une alerte de dérive déclenche bien le réentraînement — seulement que l'absence
 d'alerte ne le déclenche pas. Le chemin inverse reste couvert par les tests, pas par cette
 exécution.
+
+---
+
+## Première mesure du point d'accès `/metrics` — 20/09/2026
+
+Relevé sur la pile réelle, quelques minutes après un redémarrage à froid de l'API :
+
+```
+total_requests  : 6        samples_retained : 5        uptime : 307 s
+/health    count=4   p50 =   8 090 ms   p99 = 179 491 ms   max = 184 542 ms
+/predict   count=1                                          max =   2 480 ms
+```
+
+**Ce que ce relevé établit, dès son premier usage.** Un contrôle de santé a mis **184
+secondes**. C'est le sujet R55 enfin chiffré : `/health` déclare `Depends(get_model)`, donc
+il charge le champion depuis MLflow, et sur ce disque le chargement s'étire. Jusqu'à ce
+relevé, nous savions seulement que l'API « semblait bloquée » ; nous avons maintenant une
+durée. C'est précisément ce qu'une surveillance de la latence sert à faire.
+
+**Ce qu'il ne faut pas en conclure.** Ces chiffres sont ceux d'un service **à froid**, et
+`/metrics` mélange les deux régimes. Le même système mesuré à chaud rend `/health` en 5 ms
+et `/predict` en 96 ms, et l'essai de charge donne un p99 à 925 ms sur 300 requêtes. Annoncer
+les 184 secondes sans dire « premier appel après démarrage » serait aussi trompeur
+qu'annoncer les 5 ms sans dire « à chaud ». L'ADR 0029 consacre un paragraphe à ce piège.
+
+**Et un détail qui valide un correctif.** `total_requests` vaut 6 quand `samples_retained`
+vaut 5 : le sixième appel est celui de `/metrics` lui-même, compté mais non retenu, puisque
+le point d'accès d'observation ne s'observe pas. Le compteur réel ajouté à l'audit — là où
+le code produit déduisait le total de files bornées — se lit donc dans le premier relevé.

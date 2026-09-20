@@ -74,6 +74,12 @@ services:
     env_file: *envfile
     volumes:
       - ./data:/data
+      # Meme raison que pour le conteneur Airflow : l'ecriture d'une image ne se termine
+      # jamais sur ce disque (registre R46), donc un changement de code ne doit pas dependre
+      # d'une reconstruction. Le paquet est installe dans l'image sous /app/src/reviewpulse ;
+      # on monte le source du depot par-dessus, en lecture seule. Le Dockerfile continue
+      # d'installer le paquet, et « pip check » le verifie.
+      - ./src/reviewpulse:/app/src/reviewpulse:ro
     # Ce controle remplace celui de l'image, dont le timeout de 5 s est trop court ici.
     # Defaut mesure le 20/09/2026 : /health depend de get_model, donc il CHARGE le champion
     # depuis MLflow. Sur le disque externe, ce chargement depasse 5 s ; chaque controle
