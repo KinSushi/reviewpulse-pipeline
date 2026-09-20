@@ -6,3 +6,23 @@ Commit : 9bfe593
 pytest-timeout absent de l'image : garde par phase seulement (R41)
 
 === batterie — début 04:56:09 UTC, budget 5400s ===
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-8.3.4, pluggy-1.6.0 -- /usr/local/bin/python
+rootdir: /tmp/campagne.pWVkSh
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1
+collecting ... collected 131 items
+
+tests/test_api.py::test_health PASSED                                    [  0%]
+tests/test_api.py::test_predict_success PASSED                           [  1%]
+tests/test_api.py::test_predict_empty_list_422 PASSED                    [  2%]
+tests/test_api.py::test_predict_too_many_texts_422 PASSED                [  3%]
+tests/test_api.py::test_predict_too_long_text_422 PASSED                 [  3%]
+tests/test_api.py::test_insights_not_found_404 PASSED                    [  4%]
+tests/test_api.py::test_insights_success_200 PASSED                      [  5%]
+tests/test_api.py::test_explain_success PASSED                           [  6%]
+tests/test_api.py::test_explain_global_terms_signs PASSED                [  6%]
+tests/test_api.py::test_explain_empty_text_422 PASSED                    [  7%]
+tests/test_api.py::test_explain_n_limit PASSED                           [  8%]
+tests/test_artifacts_location.py::test_artifacts_location_and_model_prediction 
