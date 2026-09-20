@@ -24,7 +24,7 @@ Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose 
 | **Test de la stack déployée** | 12 / 12 au 16/09 ; **14 / 14 au 18/09** (contrôles Iceberg F7 et F8 ajoutés) (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
 | Essais manuels en conditions réelles | tableau de bord piloté dans un navigateur ; DAG Airflow quotidien (3 exécutions) et hebdomadaire (1) réussis |
 
-*Mesures du 19/09/2026, toutes exécutées le même jour sur le même arbre : **125 tests verts** (8 min 07), **26 mutations sur 26 tuées** (témoin vert à 88 tests), **16 contrôles sur 16** au test de la stack déployée, **9 tâches** au DAG quotidien, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le détail vit dans `docs/evidence/` et le point de reprise dans `docs/19_known_good.md`.*
+*Mesures du 20/09/2026, sur le même arbre : **131 tests verts**, **9 tâches** du DAG quotidien exécutées **en réel** (8 vertes, 1 sautée par conception), **4 suites de qualité** sur silver et gold (**29 attentes, 0 échec**), **26 mutations sur 26** tuées en deux passages, **16 contrôles sur 16** au test de la stack, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le champion en service est la **version 5**, F1 macro **0,8027**, retenue après un réglage mesuré des hyperparamètres et **promue par la barrière**, qui a refusé le même jour un modèle à l'ancienne valeur. Le détail vit dans `docs/evidence/` et le point de reprise dans `docs/19_known_good.md`.*
 
 *Avant l'ajout des avis négatifs complémentaires, le même test donnait F1 0,750 et AUC 0,896 ; le détail de la décision est dans la charte et le contrat de code.*
 
@@ -75,6 +75,12 @@ make evidence               # rapports datés dans docs/evidence/
 | [`docs/12_model_card.md`](docs/12_model_card.md) | Model Card : usage prévu, données, modèle, évaluation, limites, données personnelles, traçabilité |
 | [`docs/16_registre_suivi.md`](docs/16_registre_suivi.md) | **Registre de suivi** : ce qui reste dû, avec critère de fin, preuve et prochaine action |
 | [`docs/15_reversibilite.md`](docs/15_reversibilite.md) | Revenir en arrière : ce qui est réversible, par quel moyen, et ce qui ne l'est pas |
+| [`docs/22_runbook_deploiement.md`](docs/22_runbook_deploiement.md) | **Runbook de déploiement** : de zéro à une pile qui répond, durées mesurées et pièges de la machine |
+| [`docs/21_guide_api.md`](docs/21_guide_api.md) | **Guide de l'API** : les quatre points d'accès, leurs entrées, leurs sorties, un exemple `curl` par point |
+| [`docs/20_rapport_donnees.md`](docs/20_rapport_donnees.md) | **Jeu de données et prétraitement** : d'où viennent les avis, ce qui en est retiré, et pourquoi |
+| [`docs/17_gouvernance.md`](docs/17_gouvernance.md) | Dossier de gouvernance : politique, rôles, mise en œuvre, conformité — et ce qu'il ne démontre pas |
+| [`docs/18_briques_exigees.md`](docs/18_briques_exigees.md) | Les briques exigées par les référentiels, classées une par une ; `make briques` refuse qu'une seule manque à l'appel |
+| [`docs/08_exigences_par_bloc.md`](docs/08_exigences_par_bloc.md) | Les exigences, bloc par bloc, telles que les référentiels les écrivent |
 | [`docs/11_reprise.md`](docs/11_reprise.md) | **À lire en premier pour reprendre le travail** : emplacements, état vérifié, blocages, étapes de reprise, règles |
 | [`docs/09_journal_de_bord.md`](docs/09_journal_de_bord.md) · [`docs/10_backlog.md`](docs/10_backlog.md) | Journal daté et sourcé ; travail restant par sprint |
 | [`docs/01_charte.md`](docs/01_charte.md) | Charte d'une page : utilisateur, décision, données personnelles, hors périmètre |

@@ -68,6 +68,12 @@ phase "compilation" "${BUDGET_COMPILE}" python -m compileall -q src tools dags t
 # passait pas. « Le code compile » n'est pas « le code fonctionne ».
 phase "lint" "${BUDGET_COMPILE}" ruff check src tests dags dashboard tools
 
+# Chaque document numerote doit etre cite par le README, et aucun lien ne doit etre mort.
+# Mesure du 20/09/2026 : six documents manquaient a l appel, dont les trois que la consigne
+# du Demo Day exige nommement -- rapport de donnees, guide de l API, runbook. Un jury ouvre
+# le README en premier ; un livrable qui n y figure pas n existe pas pour lui.
+phase "documentation" "${BUDGET_COMPILE}" sh tools/verifier_documentation.sh
+
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.
 COPIE=$(mktemp -d /tmp/campagne.XXXXXX)

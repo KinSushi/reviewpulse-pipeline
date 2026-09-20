@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
+.PHONY: documentation help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -33,6 +33,7 @@ help:
 	@echo "  sauvegarde-mlflow / restaure-mlflow - Registre MLflow hors du volume Docker"
 	@echo "  justifications - Verifie que chaque ADR est cite dans le code et dans les questions du jury"
 	@echo "  briques   - Verifie que chaque exigence est classee et suivie"
+	@echo "  documentation - Chaque document numerote cite par le README, aucun lien mort"
 	@echo "  campagne  - Batterie puis tests inverses, sous garde de temps, journal date"
 	@echo "  charge    - Essai de charge de l'API : debit, latence, taux d'erreur"
 	@echo "  evidence  - Enchaîne test, reverse et forward pour produire les preuves complètes"
@@ -93,6 +94,12 @@ justifications:
 ## registre. Ne : le 19/09/2026 une exigence dormait dans le depot sans etre vue.
 briques:
 	python tools/verifier_briques.py
+
+## Verifie que chaque document numerote est cite par le README et qu aucun lien n est mort.
+## Ne le 20/09/2026 : six documents manquaient a l appel, dont les trois que la consigne du
+## Demo Day exige nommement -- rapport de donnees, guide de l API, runbook de deploiement.
+documentation:
+	sh tools/verifier_documentation.sh
 
 ## Campagne de preuves : compilation, batterie, tests inverses, chacune sous une garde
 ## de temps, journal date dans docs/evidence/. Ne le 19/09/2026 : une campagne a tourne
