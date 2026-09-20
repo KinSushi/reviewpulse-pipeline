@@ -1,0 +1,71 @@
+{
+ "gabarit": "${REVIEWPULSE_GABARIT_DIR}/Template DemoDay Slides - projet Telco.pptx",
+ "sortie": "${REVIEWPULSE_SORTIE_DIR}/ReviewPulse_AIA2.pptx",
+ "slides_gardees": [
+  1,
+  13,
+  15,
+  17,
+  18
+ ],
+ "remplacements": {
+  "1": {
+   "0": "Titre professionnel Architecte en Intelligence Artificielle — bloc AIA 2",
+   "1": "Stripe Business Case (From SQL to NoSQL)",
+   "2": "Conception et déploiement de l'infrastructure de données"
+  },
+  "13": {
+   "0": "Architecture à trois étages : OLTP, OLAP, NoSQL",
+   "2": "OLTP : transactions, remboursements, fraude – PostgreSQL (ERD à concevoir)",
+   "3": "OLAP : analyses revenu, segmentation – DuckDB avec dbt, schéma en étoile",
+   "4": "NoSQL : journaux, sessions, retours clients – documents JSON immuables (moteur à choisir)",
+   "5": "PySpark 4 et Iceberg, chaque écriture crée un instantané restaurable",
+   "6": "Zone gold : dbt sur DuckDB — aucun service externe, donc aucune dépendance le jour J. ADR 0013, 0014, 0017.",
+   "7": "Zone gold : dbt sur DuckDB — aucun service externe, donc aucune dépendance le jour J. ADR 0013, 0014, 0017."
+  },
+  "15": {
+   "0": "Le pipeline d'intégration",
+   "2": "Modèle hybride : lots batch et flux temps réel",
+   "3": "CDC via Change Data Capture, Kafka prévu pour le flux temps réel",
+   "4": "",
+   "5": "Orchestration : Airflow, neuf tâches",
+   "6": "Tâches PySpark vers zone silver",
+   "7": "Tâches dbt vers zone gold",
+   "8": "Validations Great Expectations aux trois zones",
+   "9": "MLflow gère les modèles, alias champion",
+   "10": "Synchronisation des trois systèmes assurée par CDC et Kafka (livrable)",
+   "11": "Conception du moteur NoSQL (livrable)",
+   "12": "Conception du schéma OLTP (livrable)",
+   "13": "Plan de partitionnement et sharding (livrable)",
+   "14": "Plan de conformité PCI‑DSS et RBAC (livrable)",
+   "15": "Diagramme d'architecture complet (livrable)",
+   "16": "Modèle de données NoSQL (livrable)",
+   "17": "Essai de charge du flux temps réel (livrable de conception)",
+   "18": "Données : instantanés Iceberg listés via `make snapshots`",
+   "19": "Flux Kafka persistant, topics par domaine",
+   "20": "CDC capture les changements PostgreSQL vers Kafka",
+   "21": "Airflow déclenche les jobs batch chaque nuit",
+   "22": "Déploiement via Docker",
+   "23": "Déploiement et retour arrière via alias",
+   "24": "Rollback possible avec `make rollback VERSION=n`"
+  },
+  "17": {
+   "0": "Sécurité et conformité",
+   "2": "Chiffrement des données au repos et en transit",
+   "3": "Contrôle d'accès basé sur les rôles (RBAC)",
+   "4": "Journal d’audit des accès et des modifications",
+   "5": "RGPD : pseudonymisation HMAC, secret obligatoire",
+   "6": "PCI‑DSS : exigences de protection des données de paiement",
+   "7": "Surveillance automatisée des violations via alertes",
+   "8": "Ce qui reste à concevoir",
+   "9": "Mise en place d’un canal d’alerte externe (Kafka)",
+   "10": "Essai de charge mesuré sur l'API : 0 % d'erreur, 29,3 req/s, p99 925 ms",
+   "11": "Kubernetes **écarté** pour la démonstration, décrit comme cible cloud : ADR 0012 et 0013",
+   "12": "Gestion des clés et rotation automatisée",
+   "13": "Documentation complète du plan de conformité (livrable)"
+  },
+  "18": {
+   "0": "Questions ?"
+  }
+ }
+}
