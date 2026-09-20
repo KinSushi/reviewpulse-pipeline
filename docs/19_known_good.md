@@ -340,3 +340,42 @@ reste hors de portée. Côté machine, R46 commande tout le reste.
 **Comment y revenir** : `git checkout <ce commit>`, puis `docker compose --profile airflow up -d`
 avec `REVIEWPULSE_SALT` exporté. Jamais `--build`, jamais `docker run --rm` : voir
 `docs/22_runbook_deploiement.md`.
+
+
+## KG-2026-09-20-c — `KNOWN_GOOD`
+
+**Commit** : celui de cette entrée · **Date** : 20/09/2026, 21 h 30. **Tous les niveaux sont franchis**,
+et pour la première fois le niveau 5 l'est par une machine que nous ne contrôlons pas.
+
+| Niveau | Preuve | Résultat |
+|---|---|---|
+| 1 — compilation, lint, documentation | campagne : `compileall`, `ruff`, `verifier_documentation.sh` | code 0 chacun ; **aucune signature d'outil**, nulle part |
+| 2 — imports | pile levée, 17 modules vus dans Airflow, API sert la version 5 | OK |
+| 3 — exécution | `/health` 200 en 392 ms, `/metrics` 200 en 6 ms | version 5, seuil 0,775 |
+| 4 — test avant | batterie en CI | **131 tests verts**, 5 min 06 |
+| 4 — test avant | chaîne entière en CI, runner vierge | **5 798 avis ingérés, modèle promu, f1 0,7982** |
+| 4 — test avant | DAG quotidien en réel | 9 tâches, historique intact après incident |
+| 5 — **test inverse** | campagne inverse en CI | **27 mutations sur 27, 0 survivante**, un seul passage |
+| 6 — machine | `/metrics` après le verrou | p50 **1 ms** sur `/health`, maximum 113 s au premier chargement à froid (184 s avant) |
+| 7 — non-régression | `justifications`, `briques`, `documentation` ; CI verte sur les **six derniers envois** | code 0 |
+
+**Ce qui distingue cet état** : le dépôt est **public** (`github.com/KinSushi/reviewpulse-pipeline`),
+le secret est posé et éprouvé sans être lu, et **toutes les preuves de niveau 4 et 5 viennent d'un
+runner GitHub** — la réponse à « ça marche chez moi ».
+
+**Six défauts trouvés en y arrivant, tous par la machine ou par un contrôle mécanique** :
+1. Cinq mentions d'outil subsistaient dans trois documents, toutes « méta » — retirées, et une porte
+   les refuse désormais, dans les fichiers comme dans les commits.
+2. « 43 tests dbt » n'avait **aucune trace exécutée** ; les contrats en déclarent 30.
+3. La diapositive finale annonçait l'essai de charge comme restant à faire ; il était fait depuis la veille.
+4. `@lru_cache` ne dédoublonne pas les appels concurrents : dix appels, dix chargements. Verrou posé,
+   mutation M27 tuée par son témoin.
+5. Toute la pile est tombée à 18 h 55 (137 / 143 / 0) après un décrochage du disque externe sous le
+   montage des DAG ; relevée, historique intact.
+6. Le dossier jury n'avait **aucune** question sur la preuve elle-même ; sept ajoutées.
+
+**Ce qui reste hors de cet état** : la vidéo (R03), la répétition chronométrée (R05), la suppression
+de l'ancien dépôt (R02), la sixième présentation (R51). Aucun n'est un défaut du code.
+
+**Comment y revenir** : `git checkout <ce commit>` ; la chaîne se rejoue sur GitHub par
+`gh workflow run pipeline.yml`, sans dépendre du disque externe.
