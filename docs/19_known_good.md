@@ -291,3 +291,52 @@ qu'aucun test de sur-apprentissage n'existait — il existe, c'est sa portée qu
 avec `REVIEWPULSE_SALT` exporté, puis `sh tools/campagne_preuves.sh` en conteneur détaché.
 Ne jamais employer `docker run --rm` sur ce disque : le conteneur s'exécute, mais le retrait
 de sa couche ne rend jamais la main.
+
+## KG-2026-09-20-b — `PARTIALLY_VALIDATED`
+
+**Date** : 20/09/2026, 10 h 30. **Pas un `KNOWN_GOOD`**, et la raison est nommée plus bas.
+
+| Niveau | Preuve | Résultat |
+|---|---|---|
+| 1 — compilation | `compileall src tools dags tests` | code 0 |
+| 1 bis — lint | `ruff check src tests dags dashboard tools` | **All checks passed** |
+| 1 ter — documentation | `tools/verifier_documentation.sh` | code 0, aucun lien mort |
+| 2 — imports | `expectations_lake`, `drift`, `lakehouse` dans le conteneur Airflow | 17 modules |
+| 3 — exécution | `/health`, `/predict`, **`/metrics`** sur la pile réelle | 200, version 5, 5 ms et 96 ms |
+| 4 — test avant | `tests/test_api.py`, dont 6 tests neufs | **17 passés** en 6 min 39 |
+| 4 — test avant | DAG quotidien en réel | 9 tâches, 8 vertes, 1 sautée par conception |
+| 5 — **test inverse** | témoin de la batterie non mutée | ⛔ **dépassement de 2 400 s** — voir ci-dessous |
+| 6 — machine | `/metrics` mesure `/health` à **184 542 ms** | le défaut R55 enfin chiffré |
+| 7 — non-régression | `justifications`, `briques`, `documentation` | code 0 tous les trois |
+
+**Pourquoi ce n'est pas un `KNOWN_GOOD`.** Le niveau 5 n'a pas pu être franchi. Le témoin des
+tests inverses — la batterie non mutée, qui doit passer avant toute mutation — a dépassé sa
+garde de 2 400 s. C'est cohérent avec le reste : la batterie complète a mis **4 650 s** le même
+jour, dix fois sa durée habituelle, sur le disque externe. L'outil a refusé de rendre des
+résultats sans témoin valide, et le rapport précédent a été restauré plutôt que laissé écrasé
+par un passage invalide. Tant que R46 tient, ce niveau reste hors de portée ici.
+
+**Ce que ce point apporte de neuf depuis KG-2026-09-20-a** :
+
+1. **Les hyperparamètres sont mesurés**, plus posés : `C=10.0` retenu sur 12 points, **promu par
+   la barrière**, qui a **refusé** le même jour un réentraînement à `C=4.0`. F1 macro 0,8027.
+2. **La latence est surveillée en continu** : `/metrics`, journaux structurés par requête.
+   Première décision du projet prise par **croisement de trois familles de modèles**.
+3. **Le standard de production est transmis aux agents**, mécaniquement, par `tools/deleguer.sh`.
+   Jusqu'ici aucune délégation n'en portait.
+4. **Dix défauts de lint dormants** trouvés et corrigés par la phase ajoutée le matin même.
+
+**Ressources exploitées pour la première fois** : la bibliothèque technique locale — 4,3 Go
+indexés, dont le chapitre « Monitoring Deployed Models » qui fonde l'ADR 0029 — et le croisement
+multi-familles du banc, qui a produit **deux décisions réellement divergentes** avant arbitrage.
+
+**Risques connus, non résolus** : R46, l'écriture d'image impossible sur ce disque, qui bloque
+R13, R41 et R44. R55, `/health` qui charge le modèle, contourné par le contrôle de santé mais
+non corrigé à la racine.
+
+**Prochaine action** : R51 appartient à Enzo — sans les énoncés CDSD, la sixième présentation
+reste hors de portée. Côté machine, R46 commande tout le reste.
+
+**Comment y revenir** : `git checkout <ce commit>`, puis `docker compose --profile airflow up -d`
+avec `REVIEWPULSE_SALT` exporté. Jamais `--build`, jamais `docker run --rm` : voir
+`docs/22_runbook_deploiement.md`.

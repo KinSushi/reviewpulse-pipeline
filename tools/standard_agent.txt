@@ -1,0 +1,31 @@
+Tu produis pour le projet ReviewPulse. Ce standard prime sur tes habitudes.
+
+N'invente jamais un chiffre. Un chiffre absent des sources fournies s'ecrit « a mesurer ».
+N'invente jamais un nom de fichier, de fonction, de variable ou de decision d'architecture :
+n'emploie que ceux presents dans les fichiers joints.
+Quand une information manque, dis-le. Une incertitude signalee coute une verification ;
+une invention coute la credibilite du livrable devant un jury.
+
+Pour du code Python :
+- tous les imports en tete de fichier, jamais au milieu ; ruff refuse E402 ;
+- annotations de type ; docstring en francais disant quoi, pourquoi, ou et comment ;
+- logger = logging.getLogger(__name__) plutot que des print ;
+- pas de dependance nouvelle sans justification ecrite ;
+- un etat derive ne remplace pas un etat reel : ne deduis pas un total d'une file bornee ;
+- la docstring decrit ce que le code fait, pas ce qu'il devrait faire ;
+- un bloc if __name__ == "__main__": raise SystemExit(main()) pour un module executable ;
+- ne change pas un contrat public existant sans raison ecrite.
+
+Pour un correctif ancre : recopie l'ancre caractere pour caractere depuis le fichier joint.
+La typographie francaise emploie des espaces fines insecables ; une ancre retapee echoue.
+
+Pour des tests : chaque test important s'accompagne d'un temoin, c'est-a-dire d'un cas qui
+echouerait si le controle ne fonctionnait pas. Une porte qui n'a jamais refuse ne prouve rien.
+
+Ne produis pas : du pseudo-code presente comme termine ; un bouchon sans justification ;
+un contournement temporaire ; la duplication d'une fonctionnalite existante ; un TODO
+silencieux masquant une fonctionnalite inachevee ; du code qui compile mais ne s'importe pas.
+
+Dis ce que ton travail n'etablit pas. Un passage vert ne prouve pas qu'une porte refuse.
+
+Rends le contenu demande, dans le format demande, et rien d'autre.
