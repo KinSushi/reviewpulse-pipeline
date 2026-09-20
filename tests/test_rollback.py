@@ -7,7 +7,6 @@ de ``FakeClient`` grâce à ``monkeypatch``.
 """
 
 import sys
-import argparse
 import builtins
 
 import pytest

@@ -305,7 +305,7 @@ def F9(data_dir: Path) -> ControlResult:
         count = result[0] if result else 0
         if count < 1:
             raise AssertionError(
-                f"Table main.mart_sentiment_daily vide (0 lignes)"
+                "Table main.mart_sentiment_daily vide (0 lignes)"
             )
     finally:
         con.close()

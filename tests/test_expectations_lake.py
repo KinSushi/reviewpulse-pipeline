@@ -6,7 +6,6 @@ définies dans ``reviewpulse.expectations_lake``.
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from reviewpulse import expectations_lake as el
 from reviewpulse import config

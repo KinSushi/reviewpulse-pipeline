@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import json
 import logging
 import os
 import re
@@ -216,7 +215,7 @@ def rapport_markdown(resultat: Dict, date_utc: str, commit: str) -> str:
     suivies d’un récapitulatif des totaux.
     """
     lignes = []
-    lignes.append(f"# Justifications des décisions d'architecture")
+    lignes.append("# Justifications des décisions d'architecture")
     lignes.append("")
     lignes.append(f"*Date UTC* : {date_utc}")
     lignes.append(f"*Commit* : {commit}")

@@ -6,7 +6,6 @@ import pathlib
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from reviewpulse import config
 from reviewpulse import drift

@@ -1,7 +1,12 @@
+import re
+
 import numpy as np
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 
 from reviewpulse import config
 from reviewpulse import api as api_module
@@ -127,11 +132,6 @@ def test_insights_success_200(client, data_env):
 # Fixture et tests pour l'endpoint /explain avec un vrai pipeline sklearn
 # ---------------------------------------------------------------------------
 
-import re
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
-
 @pytest.fixture
 def client_pipeline():
     """Construit un petit pipeline réel et le fournit via la dépendance get_model."""
@@ -230,3 +230,70 @@ def test_explain_n_limit(client_pipeline):
     data = resp.json()
     # le nombre de termes retournés ne doit pas dépasser n
     assert len(data["terms"]) <= payload["n"]
+
+
+def test_percentile_temoin_sur_serie_connue():
+    """Vérifie les valeurs de référence du calcul de centile sur série 1-100."""
+    serie = list(range(1, 101))
+    assert api_module._percentile(serie, 50.0) == 50.5, "p50 doit valoir 50.5 (interpolation type 7)"
+    assert api_module._percentile(serie, 95.0) == 95.05, "p95 doit valoir 95.05 (interpolation type 7)"
+    assert api_module._percentile(serie, 99.0) == 99.01, "p99 doit valoir 99.01 (interpolation type 7)"
+
+
+def test_percentile_liste_vide_rend_zero():
+    """Une liste vide rend 0.0 sans lever d'exception."""
+    assert api_module._percentile([], 50.0) == 0.0, "liste vide doit rendre 0.0"
+    assert api_module._percentile([], 95.0) == 0.0, "liste vide doit rendre 0.0 pour tout centile"
+
+
+def test_percentile_un_seul_element():
+    """Une série à un élément rend cette valeur pour tous les centiles."""
+    assert api_module._percentile([42.0], 50.0) == 42.0, "p50 sur un élément doit rendre cet élément"
+    assert api_module._percentile([42.0], 95.0) == 42.0, "p95 sur un élément doit rendre cet élément"
+    assert api_module._percentile([42.0], 99.0) == 42.0, "p99 sur un élément doit rendre cet élément"
+
+
+def test_metrics_repond_sans_modele_charge(client):
+    """Le endpoint /metrics répond 200 même sans modèle chargé."""
+    # /metrics n'utilise PAS Depends(get_model), contrairement à /health
+    # On vérifie que l'endpoint est accessible indépendamment du modèle
+    resp = client.get("/metrics")
+    assert resp.status_code == 200, "/metrics doit répondre 200 sans dépendre du modèle"
+
+
+def test_metrics_structure_de_la_reponse(client):
+    """La réponse de /metrics porte les clés attendues avec la structure complète."""
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    data = resp.json()
+    # Clés de premier niveau
+    assert "endpoints" in data, "réponse doit contenir 'endpoints'"
+    assert "total_requests" in data, "réponse doit contenir 'total_requests'"
+    assert "samples_retained" in data, "réponse doit contenir 'samples_retained'"
+    assert "uptime_seconds" in data, "réponse doit contenir 'uptime_seconds'"
+    # Structure de chaque endpoint observé
+    for path, metrics in data["endpoints"].items():
+        assert "count" in metrics, f"endpoint {path} doit avoir 'count'"
+        assert "p50_ms" in metrics, f"endpoint {path} doit avoir 'p50_ms'"
+        assert "p95_ms" in metrics, f"endpoint {path} doit avoir 'p95_ms'"
+        assert "p99_ms" in metrics, f"endpoint {path} doit avoir 'p99_ms'"
+        assert "mean_ms" in metrics, f"endpoint {path} doit avoir 'mean_ms'"
+        assert "max_ms" in metrics, f"endpoint {path} doit avoir 'max_ms'"
+
+
+def test_metrics_compte_les_requetes(client):
+    """Après un appel, total_requests et le count de l'endpoint augmentent."""
+    resp_before = client.get("/metrics")
+    data_before = resp_before.json()
+    total_before = data_before["total_requests"]
+    health_count_before = data_before["endpoints"]["/health"]["count"]
+
+    # Appel à un endpoint observé
+    client.get("/health")
+
+    resp_after = client.get("/metrics")
+    data_after = resp_after.json()
+    # total_requests a augmenté d'au moins 1 (l'appel à /health)
+    assert data_after["total_requests"] > total_before, "total_requests doit augmenter après une requête"
+    # le count de /health a augmenté
+    assert data_after["endpoints"]["/health"]["count"] > health_count_before, "count de /health doit augmenter"

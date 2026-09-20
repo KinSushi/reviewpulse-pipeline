@@ -21,8 +21,12 @@ Tests associés
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 import os
+import time
+import uuid
+from collections import deque
 from pathlib import Path
 from typing import Annotated, List, Tuple
 
@@ -41,6 +45,147 @@ logger = logging.getLogger(__name__)
 
 # Instance FastAPI unique pour l’ensemble du service
 app = FastAPI(title="ReviewPulse API")
+
+# --- Mesure de latence (ADR 0029) ---
+# La consigne du Demo Day exige de suivre « latency, accuracy, and drift » et
+# évalue une surveillance proactive. Le projet mesurait déjà la dérive en continu
+# et la latence une seule fois ; ce bloc ajoute un suivi continu de la latence.
+# Attention : /metrics mélange les requêtes à froid et à chaud. Le premier passage
+# sur un service fraîchement démarré porte le chargement du modèle — on a
+# constaté un p99 à 5 874 ms au premier essai contre 925 ms à chaud. Un centile
+# lu sans cette précision est trompeur.
+
+# Taille maximale du registre par endpoint. 2048 échantillons suffisent pour
+# estimer les centiles sur un service à trafic modéré tout en bornant la mémoire
+# utilisée : un service de longue durée ne doit pas voir sa mémoire croître
+# indéfiniment avec le nombre de requêtes.
+MAX_LATENCY_SAMPLES: int = 2048
+
+# Registre en mémoire des durées, une structure par point d'accès observé.
+LATENCY_REGISTRY: dict[str, deque[float]] = {
+    "/health": deque(maxlen=MAX_LATENCY_SAMPLES),
+    "/predict": deque(maxlen=MAX_LATENCY_SAMPLES),
+    "/explain": deque(maxlen=MAX_LATENCY_SAMPLES),
+    "/insights": deque(maxlen=MAX_LATENCY_SAMPLES),
+}
+
+# Heure de démarrage du service, utilisée pour calculer la durée de fonctionnement.
+_STARTUP_TIME: float = time.perf_counter()
+
+# Compteur REEL des requetes depuis le demarrage. Il ne peut pas etre deduit de
+# LATENCY_REGISTRY : ces files sont bornees a MAX_LATENCY_SAMPLES, donc leur somme
+# plafonne et sous-compte des la 2049e requete. Annoncer « total depuis le
+# demarrage » a partir d'une file bornee serait un chiffre faux.
+_TOTAL_REQUESTS: int = 0
+
+
+def _percentile(valeurs: List[float], centile: float) -> float:
+    """Calcule un centile sur une liste de valeurs déjà triée.
+
+    Convention retenue : **interpolation linéaire** entre les deux valeurs qui
+    encadrent la position réelle — c'est la définition dite « type 7 », celle de
+    NumPy et de R par défaut. Ce n'est PAS un rang le plus proche : sur cinq
+    échantillons, le p99 vaut donc une valeur interpolée, non le maximum.
+    Pour une liste vide, renvoie 0.0 plutôt que de lever : un point d'accès
+    d'observation ne doit jamais échouer faute de données.
+
+    Parameters
+    ----------
+    valeurs : List[float]
+        Liste triée de valeurs numériques.
+    centile : float
+        Centile demandé, entre 0 et 100.
+
+    Returns
+    -------
+    float
+        Le centile calculé, en millisecondes.
+    """
+    if not valeurs:
+        return 0.0
+    n = len(valeurs)
+    if n == 1:
+        return valeurs[0]
+    # Position dans l'index 0-based ; centile exprimé en pourcentage.
+    k = (centile / 100.0) * (n - 1)
+    f = int(k)
+    c = f + 1
+    if c >= n:
+        return valeurs[-1]
+    d = k - f
+    return valeurs[f] * (1.0 - d) + valeurs[c] * d
+
+
+@app.middleware("http")
+async def latency_middleware(request, call_next):
+    """Mesure la durée de chaque requête HTTP et l'enregistre par endpoint."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_s = time.perf_counter() - start
+    duration_ms = round(duration_s * 1000.0, 3)
+
+    global _TOTAL_REQUESTS
+    _TOTAL_REQUESTS += 1
+
+    path = request.url.path
+    if path in LATENCY_REGISTRY:
+        LATENCY_REGISTRY[path].append(duration_ms)
+
+    log_entry = {
+        "request_id": str(uuid.uuid4())[:8],
+        "path": path,
+        "method": request.method,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+    }
+    logger.info(json.dumps(log_entry, ensure_ascii=False))
+
+    return response
+
+
+@app.get("/metrics")
+def metrics():
+    """Rend les métriques de latence observées sur les quatre endpoints.
+
+    Ce point d'accès est indépendant du modèle : il répond même si le champion
+    n'est pas chargé, contrairement à /health.
+    """
+    endpoints: dict[str, dict[str, float]] = {}
+    echantillons_retenus: int = 0
+
+    for path, samples in LATENCY_REGISTRY.items():
+        n = len(samples)
+        echantillons_retenus += n
+        if n == 0:
+            endpoints[path] = {
+                "count": 0.0,
+                "p50_ms": 0.0,
+                "p95_ms": 0.0,
+                "p99_ms": 0.0,
+                "mean_ms": 0.0,
+                "max_ms": 0.0,
+            }
+            continue
+
+        sorted_samples = sorted(samples)
+        total = sum(sorted_samples)
+        endpoints[path] = {
+            "count": float(n),
+            "p50_ms": round(_percentile(sorted_samples, 50.0), 3),
+            "p95_ms": round(_percentile(sorted_samples, 95.0), 3),
+            "p99_ms": round(_percentile(sorted_samples, 99.0), 3),
+            "mean_ms": round(total / n, 3),
+            "max_ms": round(sorted_samples[-1], 3),
+        }
+
+    uptime_s = round(time.perf_counter() - _STARTUP_TIME, 3)
+
+    return {
+        "endpoints": endpoints,
+        "total_requests": _TOTAL_REQUESTS,
+        "samples_retained": echantillons_retenus,
+        "uptime_seconds": uptime_s,
+    }
 
 
 @lru_cache(maxsize=1)
