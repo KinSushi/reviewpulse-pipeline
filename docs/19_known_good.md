@@ -247,3 +247,47 @@ contre la stack levée.
 2. Avant une opération risquée : identifier le dernier `KNOWN_GOOD` et vérifier qu'il est
    réellement restaurable.
 3. Ne jamais écraser une entrée : en ajouter une. L'historique des états sert au diagnostic.
+
+## KG-2026-09-20-a — `KNOWN_GOOD`
+
+**Commit** : celui de cette entrée · **Date** : 20/09/2026, 3 h 30.
+
+| Niveau | Preuve | Résultat |
+|---|---|---|
+| 1 — compilation | `compileall src tools dags tests` | code 0 |
+| 1 bis — **lint** | `ruff check src tests dags dashboard tools`, phase neuve de la campagne | code 0 |
+| 2 — imports | `reviewpulse.expectations_lake`, `drift`, `lakehouse` vus dans le conteneur Airflow | 17 modules |
+| 3 — exécution | `/health` et `/predict` sur le champion en service | 200, **version 5**, 5 ms et 96 ms |
+| 4 — test avant | batterie complète, copie neuve, conteneur | **131 tests verts** (`docs/evidence/campagne_20260920-045514.log`) |
+| 4 — test avant | **DAG quotidien en réel** | **9 tâches**, 8 vertes et 1 sautée par conception (`docs/evidence/dag_execution_reelle.md`) |
+| 4 — test avant | porte de qualité silver et gold | **4 suites, 29 attentes, 0 échec** |
+| 5 — test inverse | mutations | 26 sur 26, en **deux passages** (R44) |
+| 6 — machine | barrière de promotion interrogée deux fois | **promeut** `C=10.0`, **refuse** `C=4.0` |
+| 7 — non-régression | `make justifications`, `make briques` | code 0 tous les deux |
+
+**Ce qui distingue cet état** : c'est le premier où la chaîne quotidienne a tourné **en entier
+en conditions réelles**, et où le modèle servi provient d'un hyperparamètre **mesuré** au lieu
+d'être posé.
+
+**Sept défauts trouvés en y arrivant, tous par la machine** :
+
+1. `pyproject.toml` et `requirements.txt` se contredisaient sur `confluent-kafka` — dit par la
+   porte `pip check`, à la dernière étape d'une construction de 31 minutes.
+2. L'écriture d'une image ne se termine jamais sur ce disque : deux constructions complètes
+   perdues à `exporting layers`. Contourné par un montage du source, pas masqué (R46).
+3. Un `import os` manquant a tué la recherche d'hyperparamètres **après sept minutes de calcul**.
+   `ruff` l'aurait vu ; la campagne ne le passait pas. Phase de lint ajoutée (R52).
+4. Le détecteur d'exigences ne lisait que le gras : **65 exigences jamais classées** (R43).
+5. Nos documents affirmaient un temps de lecture du dossier par le jury qui **n'existe pas**.
+6. Le support ne se reconstruisait que sur une seule machine — chemins absolus Windows (R54).
+7. `/health` charge le modèle, et le contrôle de santé de l'image l'interrogeait toutes les
+   30 s avec un délai de 5 s : l'API se noyait sous ses propres contrôles (R55).
+
+**Deux corrections de mes propres constats** : j'avais écrit que les preuves des 125 tests
+étaient perdues — elles étaient dans `docker logs` de conteneurs arrêtés. Et j'avais écrit
+qu'aucun test de sur-apprentissage n'existait — il existe, c'est sa portée qui manque.
+
+**Comment y revenir** : `git checkout <ce commit>`, `docker compose --profile airflow up -d`
+avec `REVIEWPULSE_SALT` exporté, puis `sh tools/campagne_preuves.sh` en conteneur détaché.
+Ne jamais employer `docker run --rm` sur ce disque : le conteneur s'exécute, mais le retrait
+de sa couche ne rend jamais la main.
