@@ -105,4 +105,59 @@ tests/test_rollback.py::test_basculer_deplace_alias_et_renvoie_anciennes_nouvell
 tests/test_rollback.py::test_basculer_vers_version_inexistante_levre_ValueError PASSED [ 67%]
 tests/test_rollback.py::test_main_sans_argument_ne_fait_pas_de_bascule_et_retourne_0 PASSED [ 68%]
 tests/test_rollback.py::test_main_avec_version_inexistante_retourne_1 PASSED [ 69%]
-tests/test_spark_silver.py::test_spark_vs_pandas 
+tests/test_spark_silver.py::test_spark_vs_pandas PASSED                  [ 70%]
+tests/test_spark_silver.py::test_lakehouse_write_and_history PASSED      [ 70%]
+tests/test_spark_silver.py::test_lakehouse_schema_mismatch PASSED        [ 71%]
+tests/test_spark_silver.py::test_workers_use_current_interpreter PASSED  [ 72%]
+tests/test_spark_silver.py::test_lakehouse_restore_snapshot PASSED       [ 73%]
+tests/test_train_score.py::test_train_and_log_promotes_on_separable_data PASSED [ 74%]
+tests/test_train_score.py::test_second_training_not_promoted_new_version PASSED [ 74%]
+tests/test_train_score.py::test_load_champion_returns_model_and_version PASSED [ 75%]
+tests/test_train_score.py::test_score_adds_columns_and_values PASSED     [ 76%]
+tests/test_train_score.py::test_summarize_returns_one_row_per_app_language_date PASSED [ 77%]
+tests/test_train_score.py::test_ecart_train_test_raisonnable PASSED      [ 77%]
+tests/test_transform_quality.py::test_load_raw_reads_jsonl_and_partitions PASSED [ 78%]
+tests/test_transform_quality.py::test_clean_deduplication_bbcode_and_empty PASSED [ 79%]
+tests/test_transform_quality.py::test_author_pseudo_stable PASSED        [ 80%]
+tests/test_transform_quality.py::test_clean_schema_and_forbidden_columns PASSED [ 80%]
+tests/test_transform_quality.py::test_missing_salt_raises PASSED         [ 81%]
+tests/test_transform_quality.py::test_check_clean_passes_on_labelled_frame PASSED [ 82%]
+tests/test_transform_quality.py::test_assert_quality_raises_on_errors PASSED [ 83%]
+tests/test_verifier_briques.py::test_cas_conforme_ne_signale_rien PASSED [ 83%]
+tests/test_verifier_briques.py::test_terme_non_classe_est_signale PASSED [ 84%]
+tests/test_verifier_briques.py::test_brique_absente_sans_sujet_est_signalee PASSED [ 85%]
+tests/test_verifier_briques.py::test_sujet_inconnu_est_signale PASSED    [ 86%]
+tests/test_verifier_briques.py::test_ligne_vide_entre_titre_et_tableau PASSED [ 87%]
+tests/test_verifier_briques.py::test_terme_contenant_une_virgule PASSED  [ 87%]
+tests/test_verifier_briques.py::test_sujets_lus_dans_le_tableau_du_registre PASSED [ 88%]
+tests/test_verifier_briques.py::test_etat_invalide_leve_une_erreur PASSED [ 89%]
+tests/test_verifier_briques.py::test_etat_accentue_est_accepte PASSED    [ 90%]
+tests/test_verifier_briques.py::test_segments_temoin_sur_une_liste_simple PASSED [ 90%]
+tests/test_verifier_briques.py::test_segment_avec_virgule_et_parentheses_reste_entier PASSED [ 91%]
+tests/test_verifier_briques.py::test_gras_retire_et_ligne_hors_forme_ignoree PASSED [ 92%]
+tests/test_verifier_briques.py::test_segments_trop_longs_ou_sans_lettre_ignores PASSED [ 93%]
+tests/test_verifier_justifications.py::test_citation_simple PASSED       [ 93%]
+tests/test_verifier_justifications.py::test_citation_groupee PASSED      [ 94%]
+tests/test_verifier_justifications.py::test_citation_plage PASSED        [ 95%]
+tests/test_verifier_justifications.py::test_citation_s_arrete_au_premier_intrus PASSED [ 96%]
+tests/test_verifier_justifications.py::test_plage_inversee_ignoree PASSED [ 96%]
+tests/test_verifier_justifications.py::test_casse_indifferente PASSED    [ 97%]
+tests/test_verifier_justifications.py::test_fichier_illisible_ne_fait_pas_echouer PASSED [ 98%]
+tests/test_verifier_justifications.py::test_lire_adrs_rejette_un_entete_invalide PASSED [ 99%]
+tests/test_verifier_justifications.py::test_lire_adrs_ignore_le_readme PASSED [100%]
+
+============================= slowest 10 durations =============================
+624.42s call     tests/test_spark_silver.py::test_spark_vs_pandas
+500.81s setup    tests/test_spark_silver.py::test_spark_vs_pandas
+413.97s call     tests/test_artifacts_location.py::test_artifacts_location_and_model_prediction
+209.68s setup    tests/test_train_score.py::test_train_and_log_promotes_on_separable_data
+178.23s call     tests/test_dashboard.py::test_dashboard_runs_without_exception
+173.93s call     tests/test_dashboard.py::test_dashboard_metric_negative_share
+162.58s call     tests/test_dashboard.py::test_dashboard_missing_files_shows_message
+162.24s call     tests/test_gold.py::test_gold_build_and_mart
+134.23s call     tests/test_fresh_dirs.py::test_train_and_log_creates_mlflow_db_dir
+134.05s call     tests/test_decision.py::test_end_to_end_training_and_scoring
+======================= 131 passed in 4649.77s (1:17:29) =======================
+=== batterie — code 0 en 5029s ===
+
+=== tests inverses — début 06:19:58 UTC, budget 10800s ===

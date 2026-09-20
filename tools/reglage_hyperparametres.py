@@ -46,6 +46,7 @@ pandas et la bibliothèque standard suffisent.
 from __future__ import annotations
 
 import argparse
+import os
 import logging
 import time
 from datetime import datetime, timezone
@@ -217,7 +218,7 @@ def rapport_markdown(
        précise que le point courant doit être conservé.
     """
     lines = [
-        f"# Rapport de réglage d’hyperparamètres",
+        "# Rapport de réglage d’hyperparamètres",
         f"*Date :* {date_utc}",
         f"*Commit :* {commit}",
         "",

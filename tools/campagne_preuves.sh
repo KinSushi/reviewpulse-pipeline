@@ -59,6 +59,15 @@ printf 'Campagne de preuves ReviewPulse — %s UTC\nCommit : %s\n' \
 
 phase "compilation" "${BUDGET_COMPILE}" python -m compileall -q src tools dags tests
 
+# Le lint vient APRES la compilation et AVANT la batterie, et ce n'est pas un detail de
+# style : la regle F821 de ruff detecte un nom non defini, ce que compileall ne voit pas.
+# Mesure du 20/09/2026 : un « import os » manquant dans un outil neuf a compile sans bruit,
+# puis tue le script apres sept minutes de calcul, au moment d'ecrire son rapport. Le meme
+# defaut avait deja coute six echecs et cinq erreurs dans train.py le 19/09. Le garde
+# existait -- la CI et « make lint » lancent ruff sur tools/ -- mais la campagne ne le
+# passait pas. « Le code compile » n'est pas « le code fonctionne ».
+phase "lint" "${BUDGET_COMPILE}" ruff check src tests dags dashboard tools
+
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.
 COPIE=$(mktemp -d /tmp/campagne.XXXXXX)
