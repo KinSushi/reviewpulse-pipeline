@@ -5,11 +5,13 @@
 Ce document existe parce qu'une exigence peut dormir dans `08_exigences_par_bloc.md` sans que
 personne ne la voie. Le 19/09, j'ai affirmé qu'aucun énoncé n'exigeait de magasin de documents
 alors que le cas Stripe du bloc AIA 2 en demande un depuis des jours. `make briques` rend cet
-oubli impossible : **tout terme en gras de `08_exigences_par_bloc.md` doit figurer ici**, dans
+oubli impossible : **tout terme exigé de `08_exigences_par_bloc.md` doit figurer ici**, dans
 le tableau ou dans la liste des termes non techniques, et toute brique qui n'est pas `présente`
 doit porter un sujet ouvert du registre `16_registre_suivi.md`.
 
 États : `présente` · `partielle` · `absente`.
+
+**Décompte au 19/09/2026, 20 h** : 135 briques techniques — **39 présentes**, **42 partielles**, **54 absentes** — et 42 termes non techniques. Chiffres relus dans le tableau ci-dessous, pas de mémoire.
 
 **Ce que le détecteur lit, depuis le 19/09/2026** : deux sources. D'abord les termes **en gras**
 de `08_exigences_par_bloc.md`. Ensuite, et c'est la correction du jour (R43), chaque ligne de la
