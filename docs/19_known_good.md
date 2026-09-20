@@ -184,11 +184,21 @@ six fois et demie plus vite, et sans blocage. Le disque virtuel était le goulot
 | 1 — compilation | `compileall src tools dags tests` | code 0 |
 | 2 — imports | `essai_charge` importé sur le Python 3.14 de l'hôte, sans dépendance du projet | OK |
 | 3 — exécution | API et MLflow levés, `/predict` interrogé | 200 en 170 ms |
-| 4 — test avant | batterie complète, copie neuve | **125 tests verts en 8 min 07** |
+| 4 — test avant | batterie complète, copie neuve | ⚠️ **journal perdu** — voir la correction ci-dessous (R44) |
 | 4 — test avant | test de la stack déployée | **16 contrôles sur 16** |
-| 5 — test inverse | mutations | **26 sur 26 tuées**, témoin vert à 88 tests |
+| 5 — test inverse | mutations | ⚠️ **non prouvé** — voir la correction ci-dessous (R44) |
 | 6 — machine | essai de charge, 300 requêtes à 10 en parallèle | **0 % d'erreur**, 29,3 req/s, p99 925 ms |
 | 7 — non-régression | `make justifications`, `make briques` | code 0 tous les deux |
+
+**Correction du 19/09/2026, 20 h — deux lignes de ce tableau ne sont pas prouvées.**
+Le disque ne porte que **deux** journaux de campagne, `campagne_20260919-203401.log` et
+`campagne_20260919-211733.log`, tous deux **antérieurs** aux correctifs de M17 et M22. Le plus
+récent rapporte « 3 errors » dans la batterie et **24 mutations tuées sur 26**, M17 et M22
+survivantes. Aucun journal ne montre les 125 tests ni les 26 sur 26 : la campagne qui les aurait
+produits a vraisemblablement écrit son journal dans le `tmpfs` du conteneur, qui disparaît avec
+lui. **Un chiffre dont le journal n'existe plus n'est pas une preuve.** Ces deux lignes
+redeviendront vertes quand une campagne aura écrit son journal dans `docs/evidence/` (sujet R44).
+Les autres lignes gardent leur preuve : elles ont chacune un fichier daté sur disque.
 
 **Ce qui distingue cet état des précédents** : c'est le premier où les six niveaux ont été
 franchis et datés le même jour, sur le même arbre.

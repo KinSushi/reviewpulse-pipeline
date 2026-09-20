@@ -60,16 +60,61 @@ def _obtenir_commit() -> str:
 # 1. Extraction des termes en gras
 # --------------------------------------------------------------------------- #
 
+def _segments_de_liste(texte: str) -> Set[str]:
+    """
+    Extrait les segments des listes d’indicateurs du texte du fichier
+    ``docs/08_exigences_par_bloc.md``.
+
+    Chaque ligne commençant par ``- **<etiquette>** :`` est découpée sur le
+    caractère « ; ».  Chaque segment est nettoyé : espaces de bord supprimés,
+    point final retiré, astérisques de mise en gras retirés.  Les segments
+    vides, de plus de 60 caractères ou ne contenant aucune lettre sont ignorés.
+    """
+    result: Set[str] = set()
+    for ligne in texte.splitlines():
+        # Ligne du type "- **Etiquette** : contenu"
+        m = re.match(r"^\s*-\s*\*\*[^*]+\*\*\s*:\s*(.*)", ligne)
+        if not m:
+            continue
+        contenu = m.group(1)
+        for segment in contenu.split(";"):
+            seg = segment.strip()
+            # Retirer le point final éventuel
+            if seg.endswith("."):
+                seg = seg[:-1].strip()
+            # Retirer les astérisques éventuels
+            seg = seg.replace("*", "")
+            if not seg:
+                continue
+            if len(seg) > 60:
+                continue
+            if not any(ch.isalpha() for ch in seg):
+                continue
+            result.add(seg)
+    return result
+
+
 def termes_exiges(racine: Path) -> Set[str]:
     """
-    Retourne l’ensemble des termes en gras (**…**) du fichier
-    ``docs/08_exigences_par_bloc.md``.
+    Retourne l’ensemble des termes exigés du fichier
+    ``docs/08_exigences_par_bloc.md``. Deux sources sont exploitées :
+
+    1. Tous les termes en gras (**…**) restent des termes exigés.
+    2. Les listes d’indicateurs, c’est‑à‑dire chaque ligne du type
+       ``- **<etiquette>** : <contenu>``, sont découpées sur le point‑virgule et
+       chaque segment ajouté aux termes exigés. Cette seconde source a été
+       introduite parce que l’indicateur « conteneurs et orchestration sous charge »
+       du référentiel AIA 4 n’était pas en gras et n’était donc pas détecté
+       (constaté le 19/09/2026).
+
     Les espaces de bord sont supprimés.  Les termes contenant un saut de ligne
-    ou dépassant 45 caractères sont ignorés.
+    ou dépassant 45 caractères (pour les termes en gras) ou 60 caractères (pour
+    les segments de listes) sont ignorés.
     """
     chemin = racine / "docs" / "08_exigences_par_bloc.md"
     texte = chemin.read_text(encoding="utf-8")
-    # Recherche non gourmande entre deux **, excluant les sauts de ligne
+
+    # 1. Termes en gras
     raw = re.findall(r"\*\*([^*\n]+?)\*\*", texte)
     result: Set[str] = set()
     for terme in raw:
@@ -79,6 +124,10 @@ def termes_exiges(racine: Path) -> Set[str]:
         if len(terme) > 45:
             continue
         result.add(terme)
+
+    # 2. Segments de listes d’indicateurs
+    result.update(_segments_de_liste(texte))
+
     return result
 
 

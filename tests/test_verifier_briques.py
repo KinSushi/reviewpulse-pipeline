@@ -187,3 +187,36 @@ def test_etat_accentue_est_accepte(tmp_path: pathlib.Path):
     assert briques_dict["B1"]["etat"] == "presente", f"État normalisé attendu 'presente' : {briques_dict['B1']['etat']}"
     assert briques_dict["B2"]["etat"] == "partielle", f"État normalisé attendu 'partielle' : {briques_dict['B2']['etat']}"
     assert briques_dict["B3"]["etat"] == "absente", f"État normalisé attendu 'absente' : {briques_dict['B3']['etat']}"
+
+
+def test_segments_temoin_sur_une_liste_simple():
+    """Le temoin : sur la ligne '- **Indicateurs** : alpha ; beta ; gamma.' rend {'alpha','beta','gamma'}."""
+    texte = "- **Indicateurs** : alpha ; beta ; gamma."
+    result = vb._segments_de_liste(texte)
+    attendu = {"alpha", "beta", "gamma"}
+    assert result == attendu, f"Résultat attendu {attendu}, obtenu {result}"
+
+
+def test_segment_avec_virgule_et_parentheses_reste_entier():
+    """Le segment contenant virgules et parenthèses reste entier."""
+    texte = "- **Indicateurs** : risques (securite, biais, confidentialite) ; priorisation"
+    result = vb._segments_de_liste(texte)
+    attendu = {"risques (securite, biais, confidentialite)", "priorisation"}
+    assert result == attendu, f"Résultat attendu {attendu}, obtenu {result}"
+
+
+def test_gras_retire_et_ligne_hors_forme_ignoree():
+    """Les astérisques sont retirés et les lignes ne commençant pas par '-' sont ignorées."""
+    texte = "- **Livrables** : **video** de la solution ; code sur GitHub\nDu texte courant ; avec un point-virgule"
+    result = vb._segments_de_liste(texte)
+    attendu = {"video de la solution", "code sur GitHub"}
+    assert result == attendu, f"Résultat attendu {attendu}, obtenu {result}"
+
+
+def test_segments_trop_longs_ou_sans_lettre_ignores():
+    """Segments >60 chars, numériques ou vides sont ignorés."""
+    long_seg = "a" * 61
+    texte = f"- **Test** : {long_seg} ; 42 ; ; monitoring"
+    result = vb._segments_de_liste(texte)
+    attendu = {"monitoring"}
+    assert result == attendu, f"Résultat attendu {attendu}, obtenu {result}"
