@@ -17,6 +17,7 @@ seules les expressions régulières de la bibliothèque standard.
 
 import argparse
 import json
+import os
 import logging
 import re
 import sys
@@ -150,8 +151,15 @@ def charger_specification(chemin: Path) -> dict:
             raise ValueError(f"Clé obligatoire manquante dans la spécification : « {key} »")
 
     # Normalisation des chemins
-    data["gabarit"] = Path(data["gabarit"])
-    data["sortie"] = Path(data["sortie"])
+    # Les deux chemins passent par expandvars, pour que la specification cesse de coder en
+    # dur des chemins absolus Windows. Constate le 20/09/2026 : le support ne se
+    # reconstruisait que sur la machine d Enzo, et pas dans un conteneur, ce qui contredit
+    # le critere "Documentation and Usability" de la consigne du Demo Day.
+    # REVIEWPULSE_GABARIT_DIR designe le repertoire des gabarits Jedha ;
+    # REVIEWPULSE_SORTIE_DIR celui des supports produits. A defaut, la valeur ecrite dans
+    # la specification est employee telle quelle, donc rien ne casse.
+    data["gabarit"] = Path(os.path.expandvars(str(data["gabarit"])))
+    data["sortie"] = Path(os.path.expandvars(str(data["sortie"])))
 
     # Normalisation des listes et dictionnaires numériques
     slides_gardees = data["slides_gardees"]
