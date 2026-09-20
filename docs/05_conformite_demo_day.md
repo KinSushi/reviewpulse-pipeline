@@ -1,8 +1,43 @@
-# Conformité aux consignes du Demo Day — état au 16/09/2026
+# Conformité aux consignes du Demo Day — état au 20/09/2026
 
-Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé sur Julie le 16/09 (`00_sources/2026-09-16_sources_primaires.md`).
+Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, relevé sur Julie le 16/09
+(`00_sources/2026-09-16_sources_primaires.md`) et **relu intégralement le 20/09**
+(`00_sources/2026-09-20_julie_demo_day_v2_pipeline.md`).
 
-**Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09, et le 19/09 au soir l'ensemble a été rejoué **le même jour sur le même arbre** : batterie **125 tests**, tests inverses **26 mutations sur 26**, test de stack **16 contrôles sur 16**, DAG quotidien à **9 tâches**, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
+## Deux consignes, et pourquoi le projet répond aux deux
+
+Il existe **deux** énoncés de Final Project sur Julie, et ils ne demandent pas la même chose.
+
+| | Parcours | Titre | Durée | Ce qu'il met en avant |
+|---|---|---|---|---|
+| **v2** | `lead-data-v2` — **Data Lead** | *Build a Data Pipeline That Feeds an AI Model* | 840 min | **la chaîne** : « The model is the easy part […] The grade and the real-world value come from the chain around it » |
+| **v1** | `dse-lead` — Data Sc. & Eng. Lead | *Project Overview* | 1 200 min | **le cycle de vie du modèle** : « Tune hyperparameters », rapport de données, documentation d'API |
+
+**C'est v2 qui prime** pour le Demo Day du 25/09/2026 : c'est le parcours inscrit, et la charte
+du projet la cite nommément depuis le 16/09. Mais Enzo a demandé que le projet **couvre les
+deux**, et c'est le cas — les exigences de v1 ont été comblées le 20/09 sans rien retirer à v2 :
+
+| Exigence propre à **v1** | État | Preuve |
+|---|---|---|
+| « Tune hyperparameters » | tenue | `docs/evidence/reglage_hyperparametres.md` — 12 points, `C=10.0` promu par la barrière |
+| Rapport jeu de données et prétraitement | tenue | `docs/20_rapport_donnees.md` |
+| Documentation de l'API | tenue | `docs/21_guide_api.md` |
+| Surveillance de la **latence** | tenue | point d'accès `/metrics`, ADR 0029 |
+| Instructions pour exécuter et déployer | tenue | `docs/22_runbook_deploiement.md` |
+
+**La tension à connaître** : v1 exige de régler les hyperparamètres, v2 dit de **ne pas** y
+passer le projet. Les deux sont satisfaites — le réglage est fait et mesuré — mais **la
+présentation suit v2** : la chaîne d'abord, le modèle comme une boîte du schéma. Si le jury
+interroge le réglage, la réponse existe et tient en deux phrases.
+
+**Exigence de contenu, souvent oubliée** : v2 demande que la présentation dise
+**« what you would build next »**. C'est la dernière diapositive et la minute 8:00–9:20 du
+script, qui nomment les manques un par un.
+
+**Écart assumé** : v2 prévoit des **équipes de deux ou trois**. Le projet est porté par une
+seule personne. Ce n'est pas un manque à combler, c'est un fait à dire si la question vient.
+
+**Avertissement daté.** Les ✅ marqués « 16/09 » s'appuyaient sur un registre MLflow et des images **détruits le 16/09 au soir** avec le volume Docker. Tout a été reconstruit et reprouvé les 18 et 19/09, et le 19/09 au soir l'ensemble a été rejoué **le même jour sur le même arbre** : batterie **131 tests** (20/09), tests inverses **26 mutations sur 26**, test de stack **16 contrôles sur 16**, DAG quotidien à **9 tâches**, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le détail figure au journal et dans `docs/16_registre_suivi.md`.
 
 **Légende.** ✅ vérifié par exécution le 16/09 · 🟡 écrit, pas encore exécuté dans son environnement cible · ⬜ à faire · ⚠ écart ou risque.
 
