@@ -184,21 +184,38 @@ six fois et demie plus vite, et sans blocage. Le disque virtuel était le goulot
 | 1 — compilation | `compileall src tools dags tests` | code 0 |
 | 2 — imports | `essai_charge` importé sur le Python 3.14 de l'hôte, sans dépendance du projet | OK |
 | 3 — exécution | API et MLflow levés, `/predict` interrogé | 200 en 170 ms |
-| 4 — test avant | batterie complète, copie neuve | ⚠️ **journal perdu** — voir la correction ci-dessous (R44) |
+| 4 — test avant | batterie complète, copie neuve | **125 tests verts en 8 min 07** — `docs/evidence/batterie_125_tests.log` |
 | 4 — test avant | test de la stack déployée | **16 contrôles sur 16** |
-| 5 — test inverse | mutations | ⚠️ **non prouvé** — voir la correction ci-dessous (R44) |
+| 5 — test inverse | mutations | **26 sur 26 tuées**, en deux temps — voir la note ci-dessous |
 | 6 — machine | essai de charge, 300 requêtes à 10 en parallèle | **0 % d'erreur**, 29,3 req/s, p99 925 ms |
 | 7 — non-régression | `make justifications`, `make briques` | code 0 tous les deux |
 
-**Correction du 19/09/2026, 20 h — deux lignes de ce tableau ne sont pas prouvées.**
-Le disque ne porte que **deux** journaux de campagne, `campagne_20260919-203401.log` et
-`campagne_20260919-211733.log`, tous deux **antérieurs** aux correctifs de M17 et M22. Le plus
-récent rapporte « 3 errors » dans la batterie et **24 mutations tuées sur 26**, M17 et M22
-survivantes. Aucun journal ne montre les 125 tests ni les 26 sur 26 : la campagne qui les aurait
-produits a vraisemblablement écrit son journal dans le `tmpfs` du conteneur, qui disparaît avec
-lui. **Un chiffre dont le journal n'existe plus n'est pas une preuve.** Ces deux lignes
-redeviendront vertes quand une campagne aura écrit son journal dans `docs/evidence/` (sujet R44).
-Les autres lignes gardent leur preuve : elles ont chacune un fichier daté sur disque.
+**Note du 19/09/2026, 21 h — comment ces deux chiffres sont établis, et pourquoi il fallait
+le dire.** Un audit a d'abord constaté qu'aucun journal de `docs/evidence/` ne montrait ni les
+125 tests, ni les 26 mutations sur 26 : les deux seuls journaux de campagne y sont **antérieurs**
+aux correctifs de M17 et M22, et le plus récent rapporte 24 tuées sur 26. Les deux lignes ont donc
+été marquées non prouvées. Les journaux existaient pourtant : ils étaient restés **dans les
+conteneurs arrêtés**, `rp-batterie` et `rp-m17m22`, et non sur le disque. Ils sont désormais
+conservés sous `docs/evidence/`.
+
+Ce qu'ils montrent exactement :
+
+* `batterie_125_tests.log` — `125 passed in 487.75s (0:08:07)`, copie neuve, un seul passage ;
+* `mutations_M17_M22.log` — M17 **TUEE** par
+  `test_main_rend_un_sur_une_zone_propre_non_conforme`, M22 **TUEE** par
+  `test_lakehouse_restore_snapshot`.
+
+**La nuance à dire au jury** : le « 26 sur 26 » n'est pas le résultat d'une seule campagne. Il
+compose 24 mutations tuées lors de la campagne de 21 h 17 et 2 tuées lors d'un passage ciblé
+qui a suivi les correctifs. La composition est légitime — les correctifs n'ont **ajouté que des
+tests**, sans toucher au code de production, si bien que les 24 verdicts antérieurs restent
+valides. Elle reste une composition, et la présenter comme un seul passage serait faux. Le sujet
+**R44** demande une campagne unique de bout en bout pour remplacer cette composition.
+
+**La leçon, qui vaut plus que le chiffre** : un journal écrit dans un conteneur éphémère n'est
+pas une preuve conservée. `campagne_preuves.sh` écrit désormais dans un chemin **absolu** sous
+`docs/evidence/` ; c'est la seule raison pour laquelle les campagnes futures survivront à leur
+conteneur.
 
 **Ce qui distingue cet état des précédents** : c'est le premier où les six niveaux ont été
 franchis et datés le même jour, sur le même arbre.

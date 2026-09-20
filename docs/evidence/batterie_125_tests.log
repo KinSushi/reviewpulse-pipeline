@@ -1,0 +1,14 @@
+........................................................................ [ 57%]
+.....................................................                    [100%]
+============================= slowest 10 durations =============================
+143.65s setup    tests/test_spark_silver.py::test_spark_vs_pandas
+79.36s call     tests/test_gold.py::test_gold_build_and_mart
+28.46s call     tests/test_artifacts_location.py::test_artifacts_location_and_model_prediction
+13.93s call     tests/test_dashboard.py::test_dashboard_runs_without_exception
+6.22s call     tests/test_spark_silver.py::test_spark_vs_pandas
+6.16s setup    tests/test_train_score.py::test_second_training_not_promoted_new_version
+6.06s call     tests/test_decision.py::test_balance_pred_label_share
+5.99s call     tests/test_dashboard.py::test_dashboard_missing_files_shows_message
+5.78s call     tests/test_fresh_dirs.py::test_train_and_log_creates_mlflow_db_dir
+5.72s call     tests/test_boost.py::test_train_and_log_includes_boost_and_decision_threshold
+125 passed in 487.75s (0:08:07)
