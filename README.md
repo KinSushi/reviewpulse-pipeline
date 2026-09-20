@@ -1,12 +1,32 @@
 # ReviewPulse
 
+[![ci](https://github.com/KinSushi/reviewpulse-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/KinSushi/reviewpulse-pipeline/actions/workflows/ci.yml)
+
 **Un pipeline de données qui alimente un modèle d'IA** — Final Project de la formation Data Lead (Jedha, cohorte dal-ft-18), Demo Day du 25 septembre 2026.
 
 Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose bruts dans un lac de données, les nettoie et les pseudonymise, puis un modèle de sentiment suivi dans MLflow repère les avis négatifs à lire en priorité. Une API et un tableau de bord restituent le résultat à l'équipe community & live-ops.
 
 ![Architecture](docs/diagrams/png/01_architecture_globale.png)
 
-## Résultats mesurés le 16/09/2026 (données réelles, stack Docker déployée)
+## État mesuré au 20/09/2026
+
+| Mesure | Valeur | Preuve |
+|---|---|---|
+| **F1 macro**, test 100 % naturel tenu à l'écart | **0,8027** — champion en service, version 5 | registre MLflow, barrière de promotion |
+| AUC · rappel des négatifs · précision | 0,940 · 0,650 · 0,633 | même run |
+| **Batterie de tests** | **131 verts** | `docs/evidence/` |
+| **Tests inverses** | **26 mutations sur 26 tuées, 0 survivante** — en **un seul passage**, sur un runner GitHub | exécution CI `35523148761` |
+| Porte de qualité silver et gold | **4 suites, 29 attentes, 0 échec** | `docs/evidence/dag_execution_reelle.md` |
+| DAG quotidien, **exécuté en réel** | **9 tâches** : 8 vertes, 1 sautée par conception | même preuve |
+| Test de la stack déployée | 16 contrôles sur 16 | `docs/evidence/forward_test.md` |
+| Essai de charge | **0 % d'erreur**, 29,3 req/s, p99 925 ms | `docs/evidence/essai_charge.md` |
+
+*Le p99 à 925 ms est mesuré **à chaud**. Le premier appel après démarrage porte le chargement du
+modèle : 5 874 ms. Annoncer l'un sans l'autre serait trompeur.*
+
+Point de reprise : [`docs/19_known_good.md`](docs/19_known_good.md).
+
+## Historique — mesures du 16/09/2026 (données réelles, stack Docker déployée)
 
 | Mesure | Valeur |
 |---|---|
@@ -24,7 +44,7 @@ Chaque jour, ReviewPulse collecte les avis Steam de plusieurs jeux, les dépose 
 | **Test de la stack déployée** | 12 / 12 au 16/09 ; **14 / 14 au 18/09** (contrôles Iceberg F7 et F8 ajoutés) (API, tableau de bord, MLflow, idempotence, qualité, confidentialité, cohérence métier) → [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
 | Essais manuels en conditions réelles | tableau de bord piloté dans un navigateur ; DAG Airflow quotidien (3 exécutions) et hebdomadaire (1) réussis |
 
-*Mesures du 20/09/2026, sur le même arbre : **131 tests verts**, **9 tâches** du DAG quotidien exécutées **en réel** (8 vertes, 1 sautée par conception), **4 suites de qualité** sur silver et gold (**29 attentes, 0 échec**), **26 mutations sur 26** tuées en deux passages, **16 contrôles sur 16** au test de la stack, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le champion en service est la **version 5**, F1 macro **0,8027**, retenue après un réglage mesuré des hyperparamètres et **promue par la barrière**, qui a refusé le même jour un modèle à l'ancienne valeur. Le détail vit dans `docs/evidence/` et le point de reprise dans `docs/19_known_good.md`.*
+*Mesures du 20/09/2026, sur le même arbre : **131 tests verts**, **9 tâches** du DAG quotidien exécutées **en réel** (8 vertes, 1 sautée par conception), **4 suites de qualité** sur silver et gold (**29 attentes, 0 échec**), **26 mutations sur 26** tuées, **16 contrôles sur 16** au test de la stack, et un essai de charge à **0 % d'erreur**, 29,3 requêtes par seconde, p99 925 ms. Le champion en service est la **version 5**, F1 macro **0,8027**, retenue après un réglage mesuré des hyperparamètres et **promue par la barrière**, qui a refusé le même jour un modèle à l'ancienne valeur. Le détail vit dans `docs/evidence/` et le point de reprise dans `docs/19_known_good.md`.*
 
 *Avant l'ajout des avis négatifs complémentaires, le même test donnait F1 0,750 et AUC 0,896 ; le détail de la décision est dans la charte et le contrat de code.*
 
