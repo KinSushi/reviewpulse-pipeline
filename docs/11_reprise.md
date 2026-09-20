@@ -45,6 +45,28 @@ Règle d'Enzo : **rien de ReviewPulse sur C:** (ni build, ni cache, ni temporair
 | Dérive | `src/reviewpulse/drift.py`, `tests/test_drift.py` | compile ; colonnes et `config` vérifiés |
 | ADR 0015 et 0016 (proposées) | `docs/adr/` | inscrites au registre |
 
+### Piège vérifié le 19/09/2026 : le sel doit être dans l'environnement du shell
+
+`docker compose` lit `REVIEWPULSE_SALT: ${REVIEWPULSE_SALT:-}`. Si la variable n'est pas
+**exportée dans le shell qui lance compose**, le conteneur la reçoit vide, et la chaîne
+échoue à la première étape qui pseudonymise :
+
+```
+RuntimeError: Variable d'environnement REVIEWPULSE_SALT manquante ou vide
+reviewpulse.spark_silver.main() a renvoyé 1
+```
+
+`ingest` réussit quand même — il ne pseudonymise pas —, ce qui rend le défaut trompeur : le
+DAG démarre bien, puis meurt à la deuxième tâche. Avant toute exécution réelle :
+
+```bash
+export REVIEWPULSE_SALT=$(cat <chemin du secret>)
+docker compose --profile airflow up -d --force-recreate airflow
+```
+
+Pour vérifier sans jamais afficher le sel :
+`docker exec reviewpulse-airflow-1 sh -c 'echo ${#REVIEWPULSE_SALT}'` — la longueur suffit.
+
 **Pour reprendre, dans l'ordre :** lire `19_known_good.md` — le dernier état sain est `KG-2026-09-19-g` —, puis `16_registre_suivi.md`, puis le plan unique. Les chiffres attendus y sont : **125 tests**, **26 mutations sur 26**, **16 contrôles**, **9 tâches** au DAG, et une charge à 0 % d'erreur et p99 925 ms. La campagne se relance par `make campagne`, en montant `/tmp` en mémoire (`--tmpfs /tmp:size=3g`), sans quoi le journal du disque virtuel devient le goulot. Tout écart se traite comme un défaut réel, jamais comme un test à ajuster.
 
 Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Aucune mention d'outil dans l'historique (contrôle : `git log --format=%B | grep -ci claude` doit valoir 0).

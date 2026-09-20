@@ -69,13 +69,20 @@ def _run_module(module_name: str) -> None:
     Raises
         RuntimeError: Si le code de retour n’est pas nul.
     """
+    import logging
+
     try:
         import importlib
 
         module = importlib.import_module(module_name)
         result = module.main()
     except Exception as exc:  # pragma: no cover
-        logger.exception("Erreur lors de l'exécution de %s.main()", module_name)
+        # `logger` du module n'existe pas ici : ExternalPythonOperator n'expédie que le
+        # code de cette fonction dans un interpréteur séparé (constaté le 19/09/2026,
+        # « NameError: name 'logger' is not defined » masquant l'erreur réelle).
+        logging.getLogger(__name__).exception(
+            "Erreur lors de l'exécution de %s.main()", module_name
+        )
         raise RuntimeError(str(exc)) from exc
 
     if result != 0:
@@ -88,13 +95,17 @@ def _run_module_avec_args(module_name: str, argv: list) -> None:
     Pourquoi : un module dont ``main`` analyse des arguments ne peut pas lire
     ``sys.argv`` ici — il appartient au processus lancé par Airflow, pas au module.
     """
+    import logging
+
     try:
         import importlib
 
         module = importlib.import_module(module_name)
         result = module.main(argv)
     except Exception as exc:  # pragma: no cover
-        logger.exception("Erreur lors de l'exécution de %s.main(%s)", module_name, argv)
+        logging.getLogger(__name__).exception(
+            "Erreur lors de l'exécution de %s.main(%s)", module_name, argv
+        )
         raise RuntimeError(str(exc)) from exc
 
     if result != 0:
@@ -153,16 +164,20 @@ def _derive_exige_reentrainement() -> bool:
     """
     data_dir = os.environ.get("REVIEWPULSE_DATA_DIR", "/data")
     report_file = Path(data_dir) / "scored" / "drift_report.json"
+    import logging
+
     try:
         with report_file.open("r") as f:
             rapport = json.load(f)
         alerte = rapport.get("alerte", {}).get("alerte", False)
         if alerte:
             motifs = rapport.get("alerte", {}).get("motifs", [])
-            logger.info("Drift alerte levée: %s", motifs)
+            logging.getLogger(__name__).info("Alerte de dérive levée : %s", motifs)
         return bool(alerte)
     except Exception as exc:
-        logger.warning("Impossible de lire le rapport de drift %s: %s", report_file, exc)
+        logging.getLogger(__name__).warning(
+            "Impossible de lire le rapport de dérive %s : %s", report_file, exc
+        )
         return False
 
 
