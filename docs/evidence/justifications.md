@@ -1,7 +1,7 @@
 # Justifications des décisions d'architecture
 
-*Date UTC* : 2026-09-20T15:49:59Z
-*Commit* : 35d9f33
+*Date UTC* : 2026-09-20T16:05:03Z
+*Commit* : c80cf01
 
 | ADR | titre | code | questions | diapositives |
 |-----|-------|------|-----------|--------------|
@@ -25,18 +25,18 @@
 | 0018 | Reproductibilite : empreintes, tracabilite, sauvegarde | 7 | 2 | 3 |
 | 0019 | Explicabilite par contribution lineaire exacte | 4 | 1 | 3 |
 | 0020 | Porte de qualite etendue aux zones silver et gold | 4 | 2 | 4 |
-| 0021 | Garde-fous : biais et injections | 0 | 1 | 0 |
-| 0022 | Gestion des secrets, chiffrement en transit et audit | 0 | 1 | 0 |
-| 0023 | FinOps et GreenOps | 0 | 1 | 0 |
-| 0024 | Base de documents NoSQL | 0 | 1 | 0 |
-| 0025 | Modélisation étoile et SCD2 | 0 | 1 | 0 |
-| 0026 | Tracing des explications | 0 | 2 | 0 |
-| 0027 | Briques de réemploi | 0 | 2 | 1 |
-| 0028 | Gestion du backlog sans sprints | 0 | 1 | 0 |
-| 0029 | Surveillance de la latence | 1 | 0 | 0 |
+| 0021 | Garde-fous : biais et injections | 0 | 1 | 2 |
+| 0022 | Gestion des secrets, chiffrement en transit et audit | 0 | 1 | 1 |
+| 0023 | FinOps et GreenOps | 0 | 1 | 1 |
+| 0024 | Base de documents NoSQL | 0 | 1 | 1 |
+| 0025 | Modélisation étoile et SCD2 | 0 | 1 | 1 |
+| 0026 | Tracing des explications | 0 | 2 | 1 |
+| 0027 | Briques de réemploi | 0 | 2 | 2 |
+| 0028 | Gestion du backlog sans sprints | 0 | 1 | 1 |
+| 0029 | Surveillance de la latence | 1 | 0 | 1 |
 
 ## Totaux
 
 * Citations dans le code : 120
 * Citations dans les questions‑réponses : 63
-* Citations dans les diapositives : 64
+* Citations dans les diapositives : 74

@@ -128,16 +128,16 @@
    "0": "6. Industrialisation et suite",
    "2": "Ce qui tourne sans intervention",
    "3": "DAG Airflow quotidien : 9 tâches, base PostgreSQL",
-   "4": "Test de la stack déployée : 16 contrôles sur 16",
+   "4": "Test de la stack déployée : 16 contrôles sur 16 · Essai de charge : 300 requêtes, 0 % d'erreur, 29,3 req/s, p99 925 ms",
    "5": "Dérive mesurée à chaque passage, alerte écrite hors du journal, réentraînement déclenché",
    "6": "Retour arrière outillé sur le modèle et sur les données : alias MLflow, instantanés Iceberg",
    "7": "Prochaines étapes — annoncées comme telles, rien n'en est fait",
    "8": "Publication du dépôt et chaîne d'intégration verte",
-   "9": "Essai de charge de l'API : le référentiel demande l'orchestration sous charge",
+   "9": "Mesure de biais par langue et par jeu : l'AI Act la demande, nous ne l'avons pas — ADR 0021",
    "10": "Kafka pour le temps réel, stockage objet compatible S3, infrastructure en Terraform",
    "11": "Cible Kubernetes, déjà documentée : une image par rôle, `KubernetesPodOperator` (ADR 0012, 0013)",
    "12": "Ce que le projet sert au-delà",
-   "13": "Socle réemployable pour les blocs AIA et CDSD — 20 décisions écrites, ADR 0001 à 0020"
+   "13": "Socle de briques réemployables — 29 décisions écrites, ADR 0001 à 0029. Chaque bloc garde son projet imposé : ce sont les briques qui circulent, pas le projet"
   },
   "18": {
    "0": "Questions ?"
