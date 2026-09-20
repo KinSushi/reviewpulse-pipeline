@@ -24,6 +24,7 @@ import datetime
 import json
 import logging
 import os
+import threading
 import time
 import uuid
 from collections import deque
@@ -188,6 +189,17 @@ def metrics():
     }
 
 
+# Verrou du premier chargement. `lru_cache` memorise un resultat, mais il ne dedoublonne
+# PAS les appels concurrents : N requetes simultanees executent N chargements avant que
+# le cache ne soit rempli. Mesure du 20/09/2026 : le controle de sante de l'image
+# interrogeait /health toutes les 30 s avec un delai de 5 s, chaque appel declenchait un
+# chargement du champion depuis MLflow, et ils s'empilaient sur un unique processus
+# uvicorn -- /metrics a mesure un appel a 184 542 ms. Le verrou fait attendre les
+# suivants au lieu de les faire recharger : un seul chargement, les autres recuperent
+# le cache. Sujet R55.
+_VERROU_CHARGEMENT = threading.Lock()
+
+
 @lru_cache(maxsize=1)
 def _load_model() -> Tuple[object, str]:
     """Charge le modèle champion et sa version une seule fois (mise en cache).
@@ -226,7 +238,11 @@ def get_model() -> Tuple[object, str]:
         dans les tests via ``app.dependency_overrides``.
     """
     try:
-        return _load_model()
+        # Le verrou ne protege que le PREMIER chargement : une fois le cache rempli,
+        # `_load_model` rend immediatement et le verrou n'est tenu que le temps d'un
+        # appel de fonction.
+        with _VERROU_CHARGEMENT:
+            return _load_model()
     except Exception as exc:
         logger.exception("Erreur lors du chargement du modèle")
         raise HTTPException(status_code=503, detail="Modèle indisponible") from exc

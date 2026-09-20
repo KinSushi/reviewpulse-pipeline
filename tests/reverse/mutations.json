@@ -284,5 +284,16 @@
     "tests": [
       "tests/test_rollback.py"
     ]
+  },
+  {
+    "id": "M27",
+    "fichier": "src/reviewpulse/api.py",
+    "avant": "        with _VERROU_CHARGEMENT:\n            return _load_model()\n",
+    "apres": "        return _load_model()\n",
+    "defaut_simule": "Le verrou du premier chargement du modele est retire",
+    "pourquoi_grave": "Sans verrou, N requetes concurrentes declenchent N chargements du champion depuis MLflow au lieu d'un seul : le controle de sante de l'image interroge /health toutes les 30 s, les chargements s'empilent sur un unique processus uvicorn, et l'API ne devient jamais saine. Mesure du 20/09/2026 avant correction : un appel a /health a pris 184 542 ms",
+    "tests": [
+      "tests/test_api.py"
+    ]
   }
 ]

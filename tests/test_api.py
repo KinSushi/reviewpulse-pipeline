@@ -1,4 +1,6 @@
+import concurrent.futures
 import re
+import time
 
 import numpy as np
 import pandas as pd
@@ -297,3 +299,41 @@ def test_metrics_compte_les_requetes(client):
     assert data_after["total_requests"] > total_before, "total_requests doit augmenter après une requête"
     # le count de /health a augmenté
     assert data_after["endpoints"]["/health"]["count"] > health_count_before, "count de /health doit augmenter"
+
+
+def test_verrou_un_seul_chargement_sous_concurrence(monkeypatch):
+    """Dix appels concurrents à `get_model` ne doivent déclencher qu'un seul chargement."""
+    api_module._load_model.cache_clear()
+
+    compteur = {"valeur": 0}
+    version_partagee = "v_test_concurrent"
+
+    def faux_load_champion(tracking_uri):
+        # Le sommeil est indispensable : sans lui, le premier appel finirait avant que les
+        # autres ne commencent, et le test passerait même sans verrou. Il ne prouverait rien.
+        compteur["valeur"] += 1
+        time.sleep(0.2)
+        return FakeModel(), version_partagee
+
+    # La fixture `monkeypatch` défait le remplacement même si une assertion échoue ;
+    # un `undo()` écrit à la fin du test ne serait jamais atteint en cas d'échec et
+    # fuirait dans les tests voisins.
+    monkeypatch.setattr("reviewpulse.score.load_champion", faux_load_champion)
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            resultats = [f.result() for f in
+                         [executor.submit(api_module.get_model) for _ in range(10)]]
+
+        assert compteur["valeur"] == 1, (
+            "Le champion a été chargé %d fois au lieu d'une seule : le verrou de "
+            "`get_model` ne dédoublonne plus les appels concurrents." % compteur["valeur"]
+        )
+        versions = {version for _, version in resultats}
+        assert versions == {version_partagee}, (
+            "Les dix appels doivent rendre la même version, obtenu : %s" % versions
+        )
+    finally:
+        # Le cache est vidé quoi qu'il arrive : un modèle factice laissé en cache
+        # contaminerait les tests suivants.
+        api_module._load_model.cache_clear()
