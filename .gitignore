@@ -18,3 +18,7 @@ src/reviewpulse/init/
 
 # Surcharge Compose propre au poste (chemins locaux)
 docker-compose.override.yml
+
+# Fichier de travail engendre puis supprime le 20/09/2026 : copie temporaire des zones
+# du support AIA 4, servie au banc comme gabarit pour produire AIA 2 et AIA 3.
+docs/presentation/_modele_zones_aia4.json
