@@ -74,6 +74,19 @@ services:
     env_file: *envfile
     volumes:
       - ./data:/data
+    # Ce controle remplace celui de l'image, dont le timeout de 5 s est trop court ici.
+    # Defaut mesure le 20/09/2026 : /health depend de get_model, donc il CHARGE le champion
+    # depuis MLflow. Sur le disque externe, ce chargement depasse 5 s ; chaque controle
+    # abandonnait en laissant sa requete en vol, et le suivant arrivait 30 s plus tard.
+    # Empilees sur un unique processus uvicorn, elles empechaient l'API de devenir saine --
+    # elle se noyait elle-meme. Le remede est le meme que pour MLflow et PostgreSQL :
+    # laisser le temps du demarrage a froid, et espacer les controles.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=110).status == 200 else 1)"]
+      interval: 60s
+      timeout: 120s
+      retries: 3
+      start_period: 420s
     depends_on:
       mlflow:
         condition: service_healthy
