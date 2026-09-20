@@ -40,25 +40,25 @@ Les formulations entre guillemets sont reprises des sources. Tout le reste est u
 ### Bloc 1 — Gouvernance des données et des systèmes d'IA
 - **Situation** : dossier de stratégie et de pilotage de la gouvernance Data & IA ; environ 15 h.
 - **Livrables** : dossier de gouvernance (traitement de texte) et présentation synthétique.
-- **Examen** : 15 min de lecture, **15 min** de présentation, 15 min de questions.
+- **Examen** : **15 min** de présentation, 15 min de questions — 30 min en tout. Aucun temps de lecture du dossier par le jury : la page officielle de Julie n'en prévoit pas (lue le 20/09/2026, `00_sources/2026-09-20_julie_certification_aia.md`).
 - **Indicateurs** : sources, flux et sensibilités ; cartographie des systèmes d'IA ; risques (sécurité, biais, confidentialité) ; priorisation ; parties prenantes ; Data Owners et Stewards ; **RACI** ; coordination ; **Data Contracts** ; **catalogue** ; traçabilité ; interopérabilité ; **RBAC/ABAC** ; **anonymisation ou pseudonymisation** ; politique de sécurité ; **RGPD, AI Act, ISO** ; gestion des incidents ; éthique et biais ; sensibilisation ; **accessibilité et handicap** ; **KPI** de gouvernance ; audits ; amélioration continue ; veille réglementaire et technologique.
 
 ### Bloc 2 — Infrastructure de données et de calcul
 - **Situation** : environ 30 h.
 - **Livrables** : plan d'infrastructure (diagramme) ; code de déploiement (**Terraform**…) sur GitHub ; **vidéo** de l'infrastructure en production.
-- **Examen** : 20 min de lecture, 5 min de présentation, 15 min de questions.
+- **Examen** : **5 min** de présentation, 15 min de questions — 20 min en tout. Aucun temps de lecture (source du 20/09/2026).
 - **Indicateurs** : besoins **CPU/GPU** justifiés ; dimensionnement du stockage ; architectures logique et physique ; évolutivité ; arbitrage **cloud, on-premise ou hybride** et **PaaS, IaaS ou serverless** ; souveraineté ; **IaC reproductible et idempotente** ; modules et versioning ; **`terraform plan`, linters, scan de sécurité** ; Data Lake et bases vectorielles ; allocation CPU et mémoire ; **auto-scaling** et **failover** ; continuité ; **IAM/RBAC** ; chiffrement et segmentation ; **gestion des secrets** ; **FinOps, GreenOps** ; monitoring ; contrats d'interface ; documentation accessible ; mises à jour sans interruption.
 
 ### Bloc 3 — Pipelines de données pour l'IA
 - **Situation** : environ 20 h.
 - **Livrables** : plan des pipelines ; code sur GitHub ; **vidéo** du pipeline en production.
-- **Examen** : 20 min de lecture, 5 min de présentation, 15 min de questions.
+- **Examen** : **5 min** de présentation, 15 min de questions — 20 min en tout. Aucun temps de lecture (source du 20/09/2026).
 - **Indicateurs** : arbitrage **batch, streaming ou ELT** selon la fraîcheur requise ; outils de collecte (**Kafka**, API, **CDC**) dimensionnés « sans perte » ; schéma des flux ; **architecture médaillon** (Bronze, Silver, Gold) ; feature engineering ; **retraitement de l'historique** ; orchestration **Airflow**, sans lancement manuel ; dépendances du DAG ; reproductibilité test et prod ; **validation de schéma à chaque étape** ; **Dead Letter Queues** ; **retries** ; *privacy by design* ; **coffre à secrets** ; **chiffrement en transit** ; **alertes de SLA** ; **FinOps** des pipelines ; journaux d'audit ; **lignage** ; **backlog en sprints** ; documentation reprenable par un tiers.
 
 ### Bloc 4 — Industrialisation et déploiement de solutions d'IA
 - **Situation** : environ 30 h, « ML classique ou IA générative ».
 - **Livrables** : présentation (choix d'infrastructure, stratégie de déploiement, **plan de monitoring**, **note d'orientation technologique**) ; code de déploiement (automatisation du cycle de vie, conteneurs, sécurité, versioning) sur GitHub ; **vidéo** de la solution en production.
-- **Examen** : 25 min de lecture, 5 min de présentation, 10 min de questions.
+- **Examen** : **5 min** de présentation, 10 min de questions — 15 min en tout. Aucun temps de lecture : le total annoncé pour les quatre blocs, 1 h 25, vaut exactement 30 + 20 + 20 + 15 (source du 20/09/2026).
 - **Indicateurs** : **CI/CD/CT** sans intervention manuelle ; versioning **du modèle et des données** avec restauration ; **tests de validation avant toute mise à jour** ; choix temps réel, lots ou edge ; conteneurs et orchestration sous charge ; **optimisation** (cache, quantification, élagage) ; **déploiement progressif (A/B, Canary)** ; **détection de dérive** avec alerte ; **réentraînement automatique** en cas de baisse ; **FinOps** précis ; soutenabilité ; **explicabilité (SHAP, LIME, tracing)** ; **garde-fous** (biais, injections) ; **AI Act** ; supervision des équipes et cahier des charges ; dossier d'architecture ; **Model Cards** ; veille : **solutions innovantes testées**, recommandations sur la latence et la sécurité.
 
 ## 4. Consignes du Demo Day Lead (rappel)
