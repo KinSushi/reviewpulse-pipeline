@@ -64,7 +64,7 @@ L'étiquette est fournie : une classification linéaire résout la tâche en sec
 Quatre variantes mesurées ; celle-ci a le meilleur rappel des négatifs (0,639) pour un F1 équivalent, avec un seul vectoriseur, et tolère fautes et mélange de langues. → ADR 0006.
 
 **Quel est votre chiffre de qualité ?**
-F1 macro **0,807** sur un test **100 % naturel** tenu à l'écart ; 0,802 en validation croisée ; AUC 0,948 ; rappel 0,639 et précision 0,657 sur les négatifs. → README, ADR 0007.
+Champion en service au 20/09/2026, **version 5** : F1 macro **0,8027** sur un test **100 % naturel** tenu à l'écart, AUC **0,940**, rappel **0,650** et précision **0,633** sur les négatifs, sur 8 768 lignes. La mesure du 16/09 — F1 0,807, AUC 0,948 — portait sur un jeu plus petit ; les deux ne sont pas comparables, et le dire vaut mieux que choisir le plus flatteur. Le gain de la version 5 vient du réglage des hyperparamètres : `C=10.0` retenu sur une recherche à 12 points, puis **promu par la barrière**, qui a **refusé** le même jour un réentraînement à `C=4.0`. → README, ADR 0006, ADR 0007, ADR 0008.
 
 **Comment gérez-vous le déséquilibre ?**
 Pondération des classes, plus un flux d'avis négatifs réels **réservé à l'entraînement**. Le test reste naturel, sinon la mesure serait flatteuse. Gain mesuré sur le même test : F1 0,750 → 0,798. → ADR 0007.

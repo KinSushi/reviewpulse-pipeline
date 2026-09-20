@@ -1,7 +1,7 @@
 # Justifications des décisions d'architecture
 
-*Date UTC* : 2026-09-20T07:27:37Z
-*Commit* : aac17fc
+*Date UTC* : 2026-09-20T07:33:17Z
+*Commit* : 46a9131
 
 | ADR | titre | code | questions | diapositives |
 |-----|-------|------|-----------|--------------|
@@ -10,9 +10,9 @@
 | 0003 | Transformation en pandas | 4 | 2 | 1 |
 | 0004 | Pseudonymisation HMAC salée, sel obligatoire | 8 | 4 | 3 |
 | 0005 | Contrôles qualité bloquants | 7 | 3 | 2 |
-| 0006 | Modèle ML sur n-grammes de caractères | 4 | 3 | 2 |
+| 0006 | Modèle ML sur n-grammes de caractères | 4 | 4 | 2 |
 | 0007 | Avis négatifs complémentaires et seuil appris | 9 | 4 | 2 |
-| 0008 | Barrière de promotion et alias MLflow | 9 | 4 | 4 |
+| 0008 | Barrière de promotion et alias MLflow | 9 | 5 | 4 |
 | 0009 | Convention de décision centralisée | 5 | 2 | 1 |
 | 0010 | Emplacement des artefacts et des écritures | 4 | 2 | 1 |
 | 0011 | Airflow et GitHub Actions | 6 | 3 | 1 |
@@ -37,5 +37,5 @@
 ## Totaux
 
 * Citations dans le code : 119
-* Citations dans les questions‑réponses : 61
+* Citations dans les questions‑réponses : 63
 * Citations dans les diapositives : 44
