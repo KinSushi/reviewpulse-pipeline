@@ -86,3 +86,34 @@ qu'annoncer les 5 ms sans dire « à chaud ». L'ADR 0029 consacre un paragraphe
 vaut 5 : le sixième appel est celui de `/metrics` lui-même, compté mais non retenu, puisque
 le point d'accès d'observation ne s'observe pas. Le compteur réel ajouté à l'audit — là où
 le code produit déduisait le total de files bornées — se lit donc dans le premier relevé.
+
+---
+
+## Exécution de bout en bout **en intégration continue** — 20/09/2026
+
+Déclenchement manuel du workflow `pipeline.yml` sur `KinSushi/reviewpulse-pipeline`,
+exécution **35525394224**, **succès en 4 min 53** sur un runner GitHub vierge.
+
+| Étape | Résultat |
+|---|---|
+| Validation du secret de pseudonymisation | passée — la garde refuse un sel vide |
+| Ingestion depuis l'API Steam **en direct** | **5 798 nouveaux avis** |
+| Zone silver, PySpark et Iceberg | table `silver.predictions`, **5 462 lignes** |
+| Entraînement suivi par MLflow | `f1_macro` **0,7982**, `promoted: true` |
+| Score | fichier `data/scored/reviews_scored.parquet` écrit |
+| Dérive | mesurée sur le flux naturel seul, 2 974 lignes |
+
+**Ce que cette exécution établit, et que rien d'autre n'établissait.** La chaîne tourne
+**ailleurs que sur la machine d'Enzo**, en repartant d'une zone brute vide, sur des données
+collectées le jour même. Jusqu'ici toutes les preuves venaient du même poste ; celle-ci vient
+d'une machine que nous ne contrôlons pas. C'est la réponse à « ça marche chez moi ».
+
+**Un écart à expliquer plutôt qu'à masquer** : le F1 macro vaut **0,7982** ici contre **0,8027**
+en local. Ce ne sont pas les mêmes données. Le runner repart de zéro et collecte 5 462 lignes ;
+la machine locale en cumule 8 768 depuis plusieurs jours. Conformément à l'ADR 0018, chaque run
+porte l'empreinte de son jeu : `data_rows` 5 462, dont 2 974 naturelles et 2 488 du flux
+complémentaire. Deux chiffres comparables ne se comparent qu'à jeu égal.
+
+**Le même jour, l'autre workflow** : exécution `35523148761`, job `tests` vert en 5 min 06 et
+job `reverse-tests` à **26 mutations sur 26 tuées, zéro survivante** — la campagne unique que le
+disque externe ne pouvait plus produire (sujet R44).
