@@ -117,3 +117,17 @@ complémentaire. Deux chiffres comparables ne se comparent qu'à jeu égal.
 **Le même jour, l'autre workflow** : exécution `35523148761`, job `tests` vert en 5 min 06 et
 job `reverse-tests` à **26 mutations sur 26 tuées, zéro survivante** — la campagne unique que le
 disque externe ne pouvait plus produire (sujet R44).
+
+---
+
+## Campagne inverse en CI, 27 mutations — 20/09/2026
+
+Exécution `35527416813`, workflow `ci.yml`, **succès en 10 min 22** sur runner GitHub.
+
+**27 mutations, 27 tuées, zéro survivante.** La vingt-septième est neuve : elle retire le verrou
+du premier chargement du modèle, et elle est tuée par
+`tests/test_api.py::test_verrou_un_seul_chargement_sous_concurrence`.
+
+C'est ce qu'un témoin doit faire : retirer le mécanisme qu'il protège doit le faire échouer.
+Sans cette mutation, le verrou serait du code qu'on croit utile ; avec elle, il est du code
+dont l'utilité est démontrée.
