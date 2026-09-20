@@ -59,9 +59,17 @@ jobs:
         env:
           REVIEWPULSE_COMMIT: ${{ github.sha }}
         run: python tools/reverse_tests.py
+      # Le televersement ne doit pas rougir une campagne verte. Mesure du 20/09/2026,
+      # premiere execution de cette CI : les 26 mutations ont ete tuees, zero survivante,
+      # et le job a quand meme echoue sur « Artifact storage quota has been hit » -- un
+      # quota de compte, sans rapport avec le code. Un rapport qu'on n'archive pas est une
+      # gene ; une campagne verte rapportee rouge est un mensonge. La retention est bornee
+      # pour cesser d'alimenter ce quota.
       - name: Téléverser le rapport des tests inversés
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: reverse-tests-report
           path: docs/evidence/reverse_tests.md
+          retention-days: 7
