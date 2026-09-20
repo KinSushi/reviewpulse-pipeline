@@ -69,7 +69,7 @@ Pour vérifier sans jamais afficher le sel :
 
 **Pour reprendre, dans l'ordre :** lire `19_known_good.md` — le dernier état sain est `KG-2026-09-19-g` —, puis `16_registre_suivi.md`, puis le plan unique. Les chiffres attendus y sont : **125 tests**, **26 mutations sur 26**, **16 contrôles**, **9 tâches** au DAG, et une charge à 0 % d'erreur et p99 925 ms. La campagne se relance par `make campagne`, en montant `/tmp` en mémoire (`--tmpfs /tmp:size=3g`), sans quoi le journal du disque virtuel devient le goulot. Tout écart se traite comme un défaut réel, jamais comme un test à ajuster.
 
-Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Aucune mention d'outil dans l'historique (contrôle : `git log --format=%B | grep -ci claude` doit valoir 0).
+Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Historique sans ligne de paternité automatique — le contrôle mécanique vit désormais dans `tools/verifier_documentation.sh`, qui refuse tout fichier suivi ou tout commit portant une signature d'outil.
 
 ## 3. Ce qui bloque, et qui le débloque
 
@@ -102,7 +102,7 @@ export REVIEWPULSE_SALT=$(cat /d/ReviewPulse_work/session_scratch/salt.secret)
 - Un test doit vérifier l'**effet réel**, et un **témoin** doit prouver qu'il échoue sans le correctif.
 - `robocopy /MOVE` ne supprime pas les fichiers déjà identiques : ajouter `/IS /IT`.
 - Ne jamais lire le fichier d'environnement local ; ne jamais faire apparaître le sel dans une commande.
-- Aucun `Co-Authored-By` ni mention d'outil dans les commits et PR.
+- Aucune ligne de paternité automatique dans les commits et PR.
 - Suppressions, publication GitHub, secrets : décisions d'Enzo.
 - Tout fait nouveau va dans `09_journal_de_bord.md` avec sa source ; tout travail restant dans `10_backlog.md`.
 

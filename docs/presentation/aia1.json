@@ -77,7 +77,7 @@
    "0": "Politique de gouvernance",
    "2": "Six ",
    "3": "domaines couverts",
-   "4": "Qualité : contrôles bloquants, Great Expectations, 43 tests dbt",
+   "4": "Qualité : contrôles bloquants, Great Expectations, 30 tests dbt déclarés",
    "5": "Sécurité : zone brute immuable, secret obligatoire sans valeur par défaut",
    "6": "Conformité : intérêt légitime, RGPD 6.1.f ",
    "7": "· AI Act : risque minimal",

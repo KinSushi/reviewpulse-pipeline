@@ -20,7 +20,7 @@ Intégration des mutations **M23** et **M24** : relâchement de la borne d’une
 | Option | Pourquoi |
 |---|---|
 | Étendre `expectations.py` | Refondre une porte qui fonctionne à quelques jours de la soutenance serait risqué. |
-| Se contenter des **43 tests dbt** | Ils portent sur la zone gold, pas sur silver, et ne vérifient pas le format du pseudonyme. |
+| Se contenter des **30 tests dbt déclarés** | Ils portent sur la zone gold, pas sur silver, et ne vérifient pas le format du pseudonyme. |
 | Contrôler sans bloquer | Une porte qui n’arrête rien n’est pas une porte. |
 
 ## Consequences

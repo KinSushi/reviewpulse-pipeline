@@ -108,4 +108,4 @@ Mise à jour : 19/09/2026, 23 h 15. Batterie **125 verte**, mutations **26 sur 2
 1. **Avant** toute sous-tâche : relire la table des sujets ouverts et repérer ceux que la sous-tâche touche ou risque de faire oublier.
 2. **Après** : repasser sur le registre entier, pas seulement sur la ligne traitée.
 3. Un sujet ne se ferme qu'en déplaçant sa ligne vers la table des sujets fermés, **avec sa preuve**.
-4. Le plan détaillé vit à part (`.claude/plans/`) ; ce registre est la liste de ce qui reste dû.
+4. Le plan détaillé vit à part, hors du dépôt ; ce registre est la liste de ce qui reste dû.

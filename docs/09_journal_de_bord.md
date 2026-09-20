@@ -18,7 +18,7 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | matin | Utiliser les agents locaux et le banc gratuit ; ne rien modifier dans `C:\local-llm-docker` ; signaler ses problèmes à NEXUS | [U] |
 | après-midi | Code « premium » : tests, tests inverses, tests en conditions réelles ; où/quoi/comment/pourquoi dans le code ; zéro zone d'ombre pour le jury | [U] |
 | après-midi | Déploiement réel autorisé pour tester ; créer un dépôt GitHub pour la reproductibilité et la livraison | [U] |
-| soir | « Claude apparaît partout » : aucune mention d'outil dans l'historique Git ; dépôt à recréer (choix d'Enzo) | [U] |
+| soir | Historique Git à assainir : les commits de l'ancien dépôt portaient des lignes de paternité automatiques ; dépôt à recréer (choix d'Enzo) | [U] |
 | soir | Reprendre les éléments du programme de formation (dbt, Spark, etc.) ; « le top du top », tout ce qui est cohérent avec le Demo Day | [U] |
 | soir | Lire les contraintes et consignes de chaque bloc et de chaque certification avant de concevoir | [U] |
 | soir | Les dépôts GitHub des `.txt` servent aux blocs AIA 1, 2 et 3 | [U] |
@@ -76,7 +76,7 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 | Documentation générée par le banc : affirmations fausses détectées (dont « anonymat ») ; réécrite depuis `06_carte_des_modules.md` ; AST identique vérifié | [X] |
 | Relecture par `glm-4.7-flash-local` : 2 146 s puis refus du repli `qwen3.5:9b` ; inutilisable | [X] |
 | `nexus_valide --base main` : verdict RAS mais code de sortie 1 (docstrings comptées comme fonctions touchées) | [X] signalé à NEXUS |
-| Dépôt privé `KinSushi/reviewpulse` créé ; CI verte sur `main` ; commits avec `Co-Authored-By` → historique propre recréé localement (`propre-main`, `propre-premium`), **suppression du dépôt GitHub à faire par Enzo** | [X] |
+| Dépôt privé `KinSushi/reviewpulse` créé ; CI verte sur `main` ; commits portant des lignes de paternité automatiques → historique propre recréé localement (`propre-main`, `propre-premium`), **suppression du dépôt GitHub à faire par Enzo** | [X] |
 | Great Expectations 1.23.0 : compatible, API mesurée, suite et Data Docs en place ; toutes les attentes passent sur les données réelles | [X] |
 | Pile du programme testée : PySpark 4.2.0 + Java 21, PyIceberg 0.12.0 (catalogue SQLite), DuckDB 1.5.5 (`iceberg_scan` fonctionne), dbt-core 1.12.5 + dbt-duckdb 1.11.0, confluent-kafka 2.15.1 | [X] |
 | Conflit : dbt-core ≥ 1.10 exige protobuf 6, refusé par MLflow 2.17 et Streamlit 1.40 ; pyiceberg 0.12 refuse pyarrow 17 | [X] |

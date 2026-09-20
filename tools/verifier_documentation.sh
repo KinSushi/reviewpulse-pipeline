@@ -40,7 +40,49 @@ PY
 echo "$morts"
 echo "$morts" | grep -q "^total 0$" || code=1
 
+# Aucune signature d outil, nulle part : ni dans un fichier suivi, ni dans un message de commit.
+# Regle d Enzo, posee le 19/09/2026 et repetee le 20/09. Les motifs sont assembles a l execution
+# pour que ce script ne porte pas lui-meme ce qu il interdit.
+signatures=$(python - <<'PY'
+import re, subprocess, pathlib
+mots = [chr(67)+"laude", chr(65)+"nthropic", chr(67)+"o-"+chr(65)+"uthored-"+chr(66)+"y", chr(71)+"enerated with"]
+motif = re.compile("|".join(mots), re.I)
+import shutil
+touches = []
+# Sans git (image de developpement), on parcourt l arbre ; avec git, la liste des suivis.
+if shutil.which("git"):
+    fichiers = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout.split()
+else:
+    racines = ["README.md", "docs", "src", "tests", "tools", "dags", "dashboard", "dbt", "docker", ".github"]
+    fichiers = []
+    for r in racines:
+        p = pathlib.Path(r)
+        if p.is_file():
+            fichiers.append(str(p))
+        elif p.is_dir():
+            fichiers += [str(q) for q in p.rglob("*") if q.is_file() and ".git" not in q.parts]
+for f in fichiers:
+    try:
+        t = pathlib.Path(f).read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        continue
+    if motif.search(t):
+        touches.append("FICHIER : " + f)
+if shutil.which("git"):
+    journal = subprocess.run(["git", "log", "--format=%B"], capture_output=True, text=True, errors="ignore").stdout
+    if motif.search(journal):
+        touches.append("HISTORIQUE : au moins un message de commit")
+else:
+    print("(git absent : historique non verifie ici, il l est par la CI)")
+for t in touches:
+    print("SIGNATURE D OUTIL -", t)
+print("total", len(touches))
+PY
+)
+echo "$signatures"
+echo "$signatures" | grep -q "^total 0$" || code=1
+
 if [ "$code" -eq 0 ]; then
-    echo "Documentation : chaque document numerote est cite, aucun lien mort."
+    echo "Documentation : chaque document numerote est cite, aucun lien mort, aucune signature d outil."
 fi
 exit "$code"
