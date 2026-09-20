@@ -137,6 +137,14 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./data:/data
+      # Le code du paquet est monte par-dessus celui que l'image a installe, pour que le
+      # conteneur execute toujours la version versionnee du depot. Raison mesuree le
+      # 19/09/2026 : l'ecriture de l'image (« exporting layers », 4,18 Go) se bloque sur le
+      # disque externe, deux constructions de suite, sans jamais rendre la main ni d'erreur.
+      # Changer une ligne de code ne doit pas dependre de la reecriture de quatre gigaoctets.
+      # Le montage est declare ici, donc versionne : il ne remplace pas l'installation du
+      # paquet, qui reste faite par le Dockerfile et verifiee par « pip check ».
+      - ./src/reviewpulse:/opt/rp-venv/lib/python3.11/site-packages/reviewpulse:ro
     env_file: *envfile
     environment:
       <<: *secrets
