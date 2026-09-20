@@ -60,21 +60,21 @@ rappel, F1…).
 - **Documentation et facilité d'usage** — lisible par un développeur ou une partie prenante
   qui arrive après.
 
-## Confrontation au dépôt, faite le 20/09/2026
+## Confrontation au dépôt — **remise à l'heure le 20/09/2026 à midi**
 
 | Exigence | État | Preuve ou manque |
 |---|---|---|
 | Jeu trouvé et préparé | tenue | collecte Steam, zone brute immuable, nettoyage, `class_weight="balanced"` |
 | Choix de l'algorithme justifié | tenue | ADR 0006, ADR 0019 |
-| **Réglage des hyperparamètres** | **manquante** | `C=4.0`, `ngram_range=(2, 5)`, `max_features=100000` sont des constantes posées, jamais cherchées — registre **R47** |
+| **Réglage des hyperparamètres** | **tenue** | Recherche à 12 points, validation croisée à 5 plis : `C=10.0` retenu, **promu par la barrière** qui a refusé le même jour un réentraînement à `C=4.0`. `docs/evidence/reglage_hyperparametres.md`, R47 fermé |
 | Métriques d'évaluation | tenue | F1 macro, AUC, rappel des négatifs, validation croisée à 5 plis |
 | a — déploiement Docker + API REST | tenue | FastAPI, essai de charge 300 requêtes à 10 en parallèle, 0 % d'erreur |
 | b — CI/CD | partielle | `ci.yml` et `pipeline.yml` écrits, jamais exécutés en ligne — R01 |
-| c — surveillance, latence, dérive, alerte | partielle | PSI et fichier d'alerte daté prouvés en exécution réelle ; **la latence n'est pas surveillée en continu** — registre **R50** |
+| c — surveillance, latence, dérive, alerte | **tenue** | PSI et fichier d'alerte prouvés en exécution réelle ; la latence est désormais mesurée à chaque requête et exposée par **`/metrics`** — p50, p95, p99 par point d'accès. ADR 0029, R50 |
 | d — réentraînement déclenché par la dérive | tenue | branche `derive_gate` prouvée le 20/09, PSI 0,0399 pour un seuil de 0,2 |
 | e — versionnement et retour arrière | tenue | MLflow, alias `champion`, `rollback.py`, instantanés Iceberg |
-| f — documentation de l'API | **manquante** | aucun guide — registre **R49** |
-| Rapport jeu de données et prétraitement | **manquante** | aucun document — registre **R48** |
+| f — documentation de l'API | **tenue** | `docs/21_guide_api.md` : les quatre points d'accès, entrées, sorties, un exemple `curl` par point. R49 fermé |
+| Rapport jeu de données et prétraitement | **tenue** | `docs/20_rapport_donnees.md`, contrôlé contre `config.py`. R48 fermé |
 | Vidéo ou captures de la chaîne en action | manquante | R03, décision d'Enzo |
 | Dépôt GitHub avec instructions | manquante | R01, décision d'Enzo |
 | Présentation | tenue | `docs/presentation/ReviewPulse_DemoDay.pptx` |
