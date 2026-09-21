@@ -6,7 +6,7 @@
 
 Final Project de la formation Data Lead (Jedha, cohorte dal-ft-18) — *Build a Data Pipeline That Feeds an AI Model* — Demo Day du 25 septembre 2026.
 
-> *In short — a daily, orchestrated data pipeline (Steam reviews → immutable raw zone → Spark/Iceberg silver → dbt/DuckDB gold) feeding a sentiment model tracked in MLflow, served by a FastAPI endpoint and a Streamlit dashboard, with blocking data-quality gates, drift monitoring, rollback tooling, 131 automated tests and 27 mutation tests run in CI.*
+> *In short — a daily, orchestrated data pipeline (Steam reviews → immutable raw zone → Spark/Iceberg silver → dbt/DuckDB gold) feeding a sentiment model tracked in MLflow, served by a FastAPI endpoint and a Streamlit dashboard, with blocking data-quality gates, drift monitoring, rollback tooling, 144 automated tests and 27 mutation tests run in CI.*
 
 ![Architecture globale](docs/diagrams/png/01_architecture_globale.png)
 
@@ -102,7 +102,7 @@ Un chiffre seul ne vaut rien ; chaque ligne ci-dessous nomme sa preuve.
 
 | Preuve | Résultat | Où |
 |---|---|---|
-| Batterie de tests | **131 verts**, en intégration continue | onglet [Actions](https://github.com/KinSushi/reviewpulse-pipeline/actions) |
+| Batterie de tests | **144 verts**, en intégration continue | onglet [Actions](https://github.com/KinSushi/reviewpulse-pipeline/actions) |
 | **Tests inverses** : un défaut volontaire est injecté (pseudonymisation supprimée, convention de décision inversée, barrière de promotion retirée…) et un test **nommé** doit le détecter | **27 mutations sur 27 tuées**, en un seul passage, sur un runner GitHub | [`tests/reverse/mutations.json`](tests/reverse/mutations.json) |
 | Test de la pile déployée (services réellement levés par `docker compose`) | **16 contrôles sur 16** | [`docs/evidence/forward_test.md`](docs/evidence/forward_test.md) |
 | Portes de qualité silver et gold | 4 suites, 29 attentes, 0 échec | [`docs/evidence/dag_execution_reelle.md`](docs/evidence/dag_execution_reelle.md) |
@@ -137,7 +137,7 @@ src/reviewpulse/     le paquet : ingestion, silver Spark/Iceberg, qualité, mod�
 dags/                DAG Airflow quotidien et hebdomadaire
 dbt/                 zone gold : modèles, contrats et tests dbt (DuckDB)
 dashboard/           tableau de bord Streamlit
-tests/               131 tests ; tests/reverse/ : les 27 mutations
+tests/               144 tests ; tests/reverse/ : les 27 mutations
 tools/               campagne de preuves, test de la pile, essai de charge, contrôles de cohérence
 docker/ · docker-compose.yml · Makefile
 .github/workflows/   ci.yml (tests, lint, mutations) · pipeline.yml (chaîne entière, planifiée)

@@ -90,7 +90,7 @@ Sur un test cent pour cent naturel, tenu à l'écart : F1 macro 0,803, AUC 0,940
 0,650. Le rappel, c'est le chiffre qui compte pour l'utilisateur : la part des vrais avis négatifs
 qu'on retrouve.
 
-Mais un chiffre seul ne vaut rien. Voici comment je sais que ça marche. Cent trente et un tests
+Mais un chiffre seul ne vaut rien. Voici comment je sais que ça marche. Cent quarante-quatre tests
 automatisés, verts. Vingt-sept tests inverses : j'injecte un défaut volontaire — je supprime la
 pseudonymisation, j'inverse la convention de décision, je retire la barrière de promotion — et je
 vérifie qu'un test nommé le détecte. Vingt-sept sur vingt-sept, en un seul passage, sur un runner

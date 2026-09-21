@@ -29,7 +29,7 @@ intégralement sur Julie le 20/09/2026 et versé mot pour mot dans
 | J2 | Une exécution de bout en bout, source → sortie IA | ✅ ingestion → silver → porte de qualité → score → dérive → gold → porte de qualité, dans Airflow et dans GitHub Actions |
 | J2 | **Un chiffre de qualité défendable** | ✅ F1 macro **0,8027** sur un test 100 % naturel tenu à l'écart ; cinq variantes comparées ([`evidence/reglage_hyperparametres.md`](evidence/reglage_hyperparametres.md), ADR 0006 et 0007) |
 | J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ les trois : `docker compose` complet (MLflow, API, tableau de bord, Airflow sur PostgreSQL) ; test automatisé de la pile déployée : **16 contrôles sur 16** |
-| J3 | **Le dépôt** | ✅ public, intégration continue verte : 131 tests, 27 mutations sur 27 tuées en un seul passage |
+| J3 | **Le dépôt** | ✅ public, intégration continue verte : 144 tests, 27 mutations sur 27 tuées en un seul passage |
 | J3 | **Le diagramme** | ✅ dix schémas, sources Mermaid versionnées |
 | J3 | **La présentation** : 10 min, démonstration en direct, puis 5 min de questions — cas métier, choix ML ou LLM, conception de la chaîne, **« what you would build next »** | ✅ [`presentation/ReviewPulse_DemoDay.pptx`](presentation/ReviewPulse_DemoDay.pptx) sur le gabarit Jedha ; [discours mot pour mot](presentation/discours_demo_day.md) ; [minutage](presentation/script_10_minutes.md) ; la dernière diapositive et la minute 8:00–9:20 nomment les manques un par un |
 | J3 | **La démonstration qui marche** | ✅ la pile tourne et répond · ⛔ **répétition chronométrée : Enzo** (R05) |

@@ -148,3 +148,16 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 
 - **`forward_test.py`** : contrôle la stack **déployée** (API, tableau de bord, MLflow, fichiers réels) et écrit un rapport daté dans `docs/evidence/`.
 - **`reverse_tests.py`** : injecte des défauts connus dans une copie du code et vérifie que la batterie de tests les détecte ; rapport dans `docs/evidence/`.
+
+## `tools/comparaison_modeles.py`
+
+- **Rôle** : répondre par une mesure à « ne peut-on pas obtenir un meilleur score avec un autre modèle ? ». Compare le modèle en service à huit autres candidats de familles différentes — SVM linéaire, SGD, Bayes naïf complémentaire, Ridge, gradient boosting sur SVD, forêt aléatoire, XGBoost, régression logistique sur mots.
+- **Place** : hors chaîne ; lit la zone propre, écrit `docs/evidence/comparaison_modeles.md`. Tourne à la demande sur un runner GitHub (`.github/workflows/comparaison.yml`).
+- **Fonctionnement** : les **mêmes plis** pour tous les candidats ; le flux complémentaire d'avis négatifs ajouté à l'entraînement de chaque pli, jamais à la validation ; probabilités hors plis par `decision.negative_proba` ; seuil choisi sur `config.THRESHOLD_GRID` avec le même départage que `train.py`. Rend F1 macro, seuil, AUC, rappel et précision des négatifs, coût d'entraînement, latence pour 1 000 avis, et si l'explication terme par terme reste exacte.
+- **Choix** : le candidat en service est `train.build_pipeline()` tel quel — c'est le **témoin** du banc. XGBoost n'est pas une dépendance du projet : absent, il s'écrit « non mesuré » et l'outil ne tombe pas. La décision qui en découle est l'ADR 0030.
+- **Tests** : `tests/test_comparaison_modeles.py`, six tests, dont le témoin (le candidat en service **est** le pipeline du projet) et celui qui compte (aucun avis du flux complémentaire n'est jamais validé).
+
+## Les portes d'un module réécrit
+
+- **`tools/appliquer_enrichissement.sh`** enchaîne cinq portes avant de remplacer un fichier rendu par un modèle : syntaxe ; `tools/citations_perdues.sh` (aucune citation perdue ni inventée) ; `tools/explication_appauvrie.sh` (la nouvelle version n'explique pas moins) ; `tools/verifier_equivalence.sh` (arbre syntaxique identique, docstrings et journaux retirés) ; copie de l'original en quarantaine.
+- **`tools/tester_portes.sh`** éprouve ces portes par dix-huit témoins, chaque tolérance avec le refus voisin ; **`tools/verifier_journaux.sh`** refuse qu'un journal écrive un texte d'avis, un identifiant, le sel ou un DataFrame ; **`tools/verifier_chiffres.sh`** refuse qu'un document tourné vers le jury contredise le dépôt ; **`tools/lint_conteneur.sh`** passe `ruff` dans l'image de dev avant un envoi. Détail et mesures : `docs/23_standard_agents.md`.
