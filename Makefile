@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: documentation help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
+.PHONY: documentation portes journaux help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -100,6 +100,14 @@ briques:
 ## Demo Day exige nommement -- rapport de donnees, guide de l API, runbook de deploiement.
 documentation:
 	sh tools/verifier_documentation.sh
+
+## Non-regression des portes d'enrichissement : seize temoins, chaque tolerance avec le refus voisin
+portes:
+	sh tools/tester_portes.sh
+
+## Aucun journal n'ecrit une donnee issue de personnes, un secret ou un jeu de donnees entier
+journaux:
+	sh tools/verifier_journaux.sh
 
 ## Campagne de preuves : compilation, batterie, tests inverses, chacune sous une garde
 ## de temps, journal date dans docs/evidence/. Ne le 19/09/2026 : une campagne a tourne

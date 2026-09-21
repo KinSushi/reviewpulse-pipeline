@@ -74,6 +74,12 @@ phase "lint" "${BUDGET_COMPILE}" ruff check src tests dags dashboard tools
 # le README en premier ; un livrable qui n y figure pas n existe pas pour lui.
 phase "documentation" "${BUDGET_COMPILE}" sh tools/verifier_documentation.sh
 
+# Les portes qui jugent un module reecrit sont eprouvees a chaque campagne : seize temoins,
+# chaque tolerance avec le refus voisin (21/09/2026). Puis le controle des journaux : un journal
+# est une sortie, aucune donnee issue de personnes ne doit y passer.
+phase "portes" "${BUDGET_COMPILE}" sh tools/tester_portes.sh
+phase "journaux" "${BUDGET_COMPILE}" sh tools/verifier_journaux.sh
+
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.
 COPIE=$(mktemp -d /tmp/campagne.XXXXXX)

@@ -29,6 +29,17 @@ jobs:
       - name: Lint with Ruff
         # Ajout du répertoire tools aux vérifications
         run: ruff check src tests dags dashboard tools
+      # Les portes qui decident de ce qui entre dans le depot sont elles-memes eprouvees :
+      # seize temoins, chaque tolerance avec le refus voisin. Une porte qui n'a jamais refuse
+      # ne prouve rien.
+      - name: Portes — non-régression (équivalence, citations, journaux)
+        run: sh tools/tester_portes.sh
+      # Un journal est une sortie : aucun texte d'avis, identifiant, sel ni DataFrame entier
+      # ne doit y passer, et aucune chaine n'est formatee avant l'appel.
+      - name: Journaux — aucune donnée, aucune f-string
+        run: sh tools/verifier_journaux.sh
+      - name: Documentation — documents cités, liens vivants, aucune signature d'outil
+        run: sh tools/verifier_documentation.sh
       - name: Run tests
         env:
           REVIEWPULSE_SALT: ci-salt
