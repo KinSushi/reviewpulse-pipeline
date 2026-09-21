@@ -1,5 +1,5 @@
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: documentation portes journaux help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
+.PHONY: documentation portes journaux chiffres help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -108,6 +108,10 @@ portes:
 ## Aucun journal n'ecrit une donnee issue de personnes, un secret ou un jeu de donnees entier
 journaux:
 	sh tools/verifier_journaux.sh
+
+## Les totaux ecrits dans les documents tournes vers le jury sont ceux du depot ; aucune case ouverte
+chiffres:
+	sh tools/verifier_chiffres.sh
 
 ## Campagne de preuves : compilation, batterie, tests inverses, chacune sous une garde
 ## de temps, journal date dans docs/evidence/. Ne le 19/09/2026 : une campagne a tourne

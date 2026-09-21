@@ -79,6 +79,7 @@ phase "documentation" "${BUDGET_COMPILE}" sh tools/verifier_documentation.sh
 # est une sortie, aucune donnee issue de personnes ne doit y passer.
 phase "portes" "${BUDGET_COMPILE}" sh tools/tester_portes.sh
 phase "journaux" "${BUDGET_COMPILE}" sh tools/verifier_journaux.sh
+phase "chiffres" "${BUDGET_COMPILE}" sh tools/verifier_chiffres.sh
 
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.
