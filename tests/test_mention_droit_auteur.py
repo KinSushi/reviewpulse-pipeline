@@ -15,9 +15,8 @@ from reviewpulse import api
 def test_le_paquet_expose_auteur_et_mention():
     """Le paquet expose un auteur contenant 'Sovralys LLC' et un copyright valide."""
     assert "Sovralys LLC" in reviewpulse.__author__, "L'auteur doit contenir 'Sovralys LLC'"
-    assert reviewpulse.__copyright__.startswith("Copyright "), "Le copyright doit commencer par 'Copyright '"
     # Vérification du caractère U+00A9 (©) juste après "Copyright "
-    assert reviewpulse.__copyright__[9] == "\u00a9", "Le caractère de droit d'auteur (U+00A9) est attendu après 'Copyright '"
+    assert reviewpulse.__copyright__.startswith("Copyright " + chr(169) + " "), "Le caractère de droit d'auteur (U+00A9) est attendu après 'Copyright '"
     assert "2026" in reviewpulse.__copyright__, "L'année 2026 doit figurer dans le copyright"
     assert reviewpulse.__copyright__.endswith(reviewpulse.__author__), "Le copyright doit se terminer par le nom de l'auteur"
 
