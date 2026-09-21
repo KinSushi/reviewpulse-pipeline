@@ -66,6 +66,20 @@ def valeur(texte):
     return int(texte) if texte.isdigit() else EN_LETTRES[texte]
 
 
+# Le total de tests se compte par collecte, la ou pytest est installe (integration continue, image
+# de dev) ; sur un hote sans pytest, ce controle-la est saute et le dit. Le 21/09/2026, quatre tests
+# ajoutes le matin ont laisse « 144 tests » dans six documents alors que la CI en comptait 148.
+tests_collectes = None
+try:
+    import subprocess
+    sortie = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"],
+                            capture_output=True, text=True, timeout=600).stdout
+    trouve = re.search(r"([0-9]+) tests? collected", sortie)
+    tests_collectes = int(trouve.group(1)) if trouve else None
+except Exception:
+    tests_collectes = None
+MOTIF_TESTS = re.compile(r"([0-9]{3}) (?:automated tests|tests verts|tests automatis[ée]s|verts|tests ;|tests,)")
+
 fautes = []
 for nom in FACADE:
     chemin = pathlib.Path(nom)
@@ -74,6 +88,10 @@ for nom in FACADE:
     for numero, ligne in enumerate(chemin.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
         if MOTIF_OUVERT.search(ligne) and "Légende" not in ligne and "États" not in ligne:
             fautes.append("%s:%d OUVERT : une case ou un etat « a faire » dans un document tourne vers le jury" % (nom, numero))
+        if tests_collectes is not None and not HISTOIRE.search(ligne):
+            for trouve in MOTIF_TESTS.finditer(ligne):
+                if int(trouve.group(1)) != tests_collectes:
+                    fautes.append("%s:%d CHIFFRE : « %s » alors que la batterie collecte %d tests" % (nom, numero, trouve.group(0), tests_collectes))
         for motif, attendu, quoi in ((MOTIF_MUTATIONS, mutations, "mutations"), (MOTIF_DECISIONS, decisions, "decisions d'architecture")):
             for trouve in motif.finditer(ligne):
                 n = valeur(trouve.group(1))
@@ -83,6 +101,7 @@ for nom in FACADE:
 
 for faute in fautes:
     print(faute)
+print("Tests collectes : %s." % (tests_collectes if tests_collectes is not None else "non comptes ici (pytest absent), ils le sont en integration continue"))
 print("Chiffres : %d mutations et %d decisions dans le depot ; %d document(s) relu(s), %d contradiction(s)."
       % (mutations, decisions, sum(1 for n in FACADE if pathlib.Path(n).exists()), len(fautes)))
 sys.exit(1 if fautes else 0)

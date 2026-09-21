@@ -44,6 +44,9 @@ jobs:
       # Un document perime fait paraitre inacheve un projet qui ne l'est pas : les totaux ecrits dans
       # les documents tournes vers le jury doivent etre ceux du depot, et aucune case n'y reste ouverte.
       - name: Chiffres — les documents ne contredisent pas le dépôt
+        # Le total de tests se compte par collecte : pytest importe le paquet, qui lit ce secret.
+        env:
+          REVIEWPULSE_SALT: ci-salt
         run: sh tools/verifier_chiffres.sh
       # La mention de droit d'auteur est apposee par un outil et verifiee ici : un fichier cree sans
       # elle fait echouer l'integration, en le nommant.
