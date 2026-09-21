@@ -236,3 +236,53 @@ Légende des sources : **[J]** lu sur Julie · **[R]** référentiel officiel ·
 3. Déclencher `reviewpulse_daily` en réel : 9 tâches attendues.
 4. Rafraîchir les chiffres partout : `docs/evidence/`, README, `05_conformite_demo_day.md`, le deck du Demo Day (9 054 → 9 271 lignes brutes ; 9 → 19 instantanés ; 14 → 16 contrôles ; 6 → 9 tâches ; 73 → 84 tests ; 16 → 24 mutations) et `script_10_minutes.md`.
 5. Quatre présentations sur six restent à produire : CDSD, AIA 1, AIA 2, AIA 3.
+
+## 20/09/2026
+
+| Moment | Fait | Source |
+|---|---|---|
+| nuit | **DAG quotidien exécuté en réel, 9 tâches** : 8 vertes, 1 sautée par conception (dérive sous le seuil). 4 suites Great Expectations sur silver et gold, **29 attentes**, 0 échec | [X] `evidence/dag_execution_reelle.md` |
+| matin | Batterie complète sur copie neuve : **131 tests verts** | [X] `evidence/campagne_20260920-045514.log` |
+| matin | **Réglage des hyperparamètres** : 12 points, validation croisée 5 plis ; `C=10.0` retenu, version 5 **promue** par la barrière (F1 macro 0,8027), qui refuse le même jour un modèle à l'ancienne valeur | [X] `evidence/reglage_hyperparametres.md` |
+| midi | **Dépôt propre publié** : `KinSushi/reviewpulse-pipeline`, intégration continue verte ; `pipeline.yml` sur un runner vierge, zone brute vide : 5 798 avis collectés en direct, modèle entraîné et promu (F1 0,7982) | [X] onglet Actions |
+| après-midi | **27 mutations sur 27 tuées en un seul passage**, en CI. La 27e retire le verrou du premier chargement du modèle : `/health` avait mesuré 184 s sous ses propres contrôles de santé concurrents | [X] ADR 0029, R55 |
+| après-midi | Point d'accès `/metrics` (p50, p95, p99, sans dépendance nouvelle), décidé par arbitrage entre trois familles de modèles ; trois défauts du code rendu corrigés à l'audit | [X] ADR 0029 |
+| 18 h 55 | **Toute la pile tombe** (blocage du disque externe). Relancée ; historique MLflow et Airflow intact | [X] R64 |
+| soir | Rapport sur les données, guide de l'API, runbook de déploiement, neuf ADR (0021 à 0029), supports AIA 2 et AIA 3, **discours du Demo Day mot pour mot**, sept réponses « Comment le projet se prouve » | [D] |
+| soir | Point de reprise **`KG-2026-09-20-c`** : tous les niveaux franchis, preuves de niveau 4 et 5 venues d'un runner GitHub | [X] `19_known_good.md` |
+
+## Nuit du 20 au 21/09/2026 — « le dépôt est très insuffisant »
+
+Enzo lit le dépôt sur GitHub et le dit sans détour : très insuffisant, projet pas achevé, code pas
+premium. Les trois étaient vrais, et visibles en dix minutes de lecture. La nuit leur répond.
+
+### Ce qui a été trouvé
+
+| Moment | Constat | Source |
+|---|---|---|
+| 22 h | Le README était un journal de mesures : chiffres périmés (26 mutations, douze décisions, quatre points d'accès), chaîne décrite en v1, historique du 16/09 en pleine page | [X] lecture sur GitHub |
+| 22 h | Un module enrichi sur dix-neuf était publié. Le modèle local rendait un module en quinze minutes, et cinq rendus sur neuf étaient refusés | [X] R66 |
+| 23 h | La grille de conformité datait du 16/09 : cases ouvertes pour le dépôt, les diapositives et Great Expectations — tous faits | [X] `grep` des cases ouvertes |
+| 00 h 30 | **La première capture réelle du tableau de bord affiche « version du modèle 2, seuil 0,750 »** : les scores sur disque dataient d'avant la promotion de la version 5 | [X] `docs/captures/` |
+| 00 h 40 | **Le serveur web d'Airflow était mort** depuis la panne de disque : planificateur vivant, interface injoignable | [X] `ps` dans le conteneur |
+
+### Ce qui a été fait
+
+| Moment | Fait | Source |
+|---|---|---|
+| 22 h 30 | Quota cloud revenu : le modèle local est arrêté, **19 modules envoyés à cinq familles cloud en parallèle** | [X] |
+| 23 h – 01 h | **19 modules de production sur 19 au standard**, chacun à travers les portes mécaniques ; CI verte sur la branche de travail puis sur `main` : batterie et 27 mutations avec le code premium | [X] onglet Actions |
+| 23 h – 01 h | Les portes sont durcies et assouplies **par la mesure**, chaque règle avec son témoin : citations inventées refusées ; réparation typographique (un module ne se perd plus pour une espace fine) ; ordre des imports de tête ; `except X as exc` de pur journal ; bloc conditionnel de pur journal à condition sans effet de bord ; **non-appauvrissement** | [X] `tools/tester_portes.sh`, 18 témoins |
+| 23 h 30 | README réécrit : problème et utilisateur, chaîne réelle à 9 tâches, données, choix ML contre LLM, preuves, limites. Noms des trois jeux vérifiés auprès de l'API Steam | [D] |
+| 00 h | Relecture croisée par trois familles : **435 constats, plus de la moitié faux** — 19 « fuites » signalées sur des journaux qui n'écrivent que des comptes. Le contrôle d'arbre tranche : 207 appels, 0 fautif | [X] `tools/verifier_journaux.sh` |
+| 00 h 30 | Arbitrage par une troisième famille : 3 modules améliorés ; 9 rendus refusés, amaigris ou tronqués | [X] `tools/explication_appauvrie.sh` |
+| 00 h 30 | Captures réelles par un Chromium piloté, dans l'image Mermaid déjà présente : documentation de l'API, registre MLflow (champion version 5, challenger version 6 refusé) | [X] `tools/capture_ecrans.js` |
+| 00 h 47 | Conteneur Airflow redémarré, interface à 200 ; **DAG quotidien relancé avec le code premium** | [X] `premium-20260921-0048` |
+| vers 1 h | Quota cloud de nouveau épuisé (les appels expirent) ; reset à 2 h 00. Restent quatre outils à porter au standard : lot prêt | [X] |
+
+### La leçon
+
+Je mesurais l'avancement à mon registre et à la CI, jamais à ce que voit un lecteur. Un registre à
+jour ne prouve pas qu'un dépôt est présentable : il faut l'ouvrir dans un navigateur et le lire
+comme un inconnu, chasser les chiffres périmés, et **regarder les écrans** — c'est une capture qui
+a trouvé le modèle périmé du tableau de bord et l'interface morte d'Airflow, pas un test.

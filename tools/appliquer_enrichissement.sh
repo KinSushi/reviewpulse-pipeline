@@ -102,8 +102,13 @@ def reparer_typographie(chemin_original, candidat):
         return candidat, 0
 
 for ligne in pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines():
-    d = json.loads(ligne)
-    if "texte" not in d:
+    # Une ligne vide ou illisible n'arrete pas le lot : le banc ecrit une ligne par tache aboutie,
+    # et un fichier filtre peut n'en contenir aucune (21/09/2026).
+    try:
+        d = json.loads(ligne)
+    except json.JSONDecodeError:
+        continue
+    if not isinstance(d, dict) or not d.get("texte"):
         continue
     nom = d.get("nom", "?")
     joints = d.get("fichiers_joints") or []
