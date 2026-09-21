@@ -24,6 +24,62 @@ défini dans :pymod:`reviewpulse.config` et ne dépend que de la bibliothèque
 standard, de *pandas* et de *numpy*.
 
 Décision appliquée ici : ADR 0015 — surveillance de la dérive, révisée le 19/09/2026 (flux naturel seul, colonnes surveillées restreintes).
+
+Quoi
+----
+Ce module mesure la dérive entre deux fenêtres temporelles de la zone propre
+et du résumé quotidien, et produit un rapport JSON ainsi qu'une alerte si des
+seuils sont franchis.
+
+Pourquoi
+--------
+Sans surveillance, une dérive des données d'entrée ou des prédictions peut
+dégrader silencieusement le modèle en production. Ce module fournit une mesure
+quantitative (PSI) et un garde-fou sur les parts de négatifs prédites, afin de
+déclencher une alerte et un ré-entraînement si nécessaire.
+
+Où
+--
+Appelé par la tâche `drift` du DAG quotidien, après `score`. Lit
+`config.CLEAN_FILE` et `config.SUMMARY_FILE`, écrit `drift_report.json` dans
+`config.SCORED_DIR` et, le cas échéant, un fichier d'alerte dans
+`config.SCORED_DIR / "alertes"`.
+
+Comment
+-------
+Le module calcule l'indice de stabilité de population (PSI) sur les colonnes
+d'intérêt de la zone propre, en utilisant la première moitié comme référence
+et la seconde comme fenêtre courante. Pour les prédictions, il compare les
+parts de négatifs prédites et réelles du résumé quotidien et marque les lignes
+hors bornes. Un verdict d'alerte est ensuite évalué à partir des seuils
+configurés, et une alerte est écrite si nécessaire.
+
+Choix de conception
+-------------------
+- **PSI plutôt qu'un test statistique** : le PSI se lit par seuils (0,1 et
+  0,2) et supporte les variables catégorielles, contrairement à un test de
+  Kolmogorov-Smirnov ou du chi-deux qui nécessiterait des hypothèses
+  supplémentaires. ADR 0015.
+- **Colonnes surveillées restreintes** : seules les colonnes de
+  `COLONNES_ALERTE` peuvent lever une alerte. `language` et `app_id` sont
+  exclues car leur composition est imposée par le plan de collecte, pas
+  observée sur une population (mesure du 19/09/2026). ADR 0015.
+- **Flux naturel seul** : le flux `negative_boost` est une collecte ponctuelle
+  destinée à l'entraînement et n'arrive jamais en production ; l'inclure
+  fausserait la mesure de la population réelle. ADR 0015.
+- **Écriture atomique** : le rapport et l'alerte sont écrits via des fichiers
+  temporaires et `os.replace` (pour l'alerte) ou directement avec `open` (pour
+  le rapport), garantissant qu'un fichier partiel n'est jamais lu.
+
+Limites connues
+---------------
+- Le module ne surveille que les colonnes listées dans `COLONNES_ALERTE` pour
+  les alertes ; les autres colonnes sont calculées mais informatives.
+- La détection de dérive des prédictions repose sur le résumé quotidien, qui
+  est limité aux avis naturels ; les groupes de moins de `n_min` avis sont
+  ignorés.
+- Aucune correction automatique n'est appliquée : le module se contente de
+  signaler et d'écrire une alerte.
 """
 
 from __future__ import annotations
@@ -42,12 +98,21 @@ from reviewpulse import config
 
 logger = logging.getLogger(__name__)
 
+# Pourquoi : ces seuils sont ceux de la littérature PSI (0,1 et 0,2) et le
+# garde-fou sur la part hors bornes évite les faux positifs sur de petits
+# échantillons. L'alternative d'un seuil unique sur le PSI ne couvrait pas la
+# dérive des prédictions.
 # Seuils d'alerte. 0,2 est le seuil usuel du PSI, celui qu'emploie deja
 # `interpretation` pour parler de derive ; la part hors bornes est le
 # garde-fou cote predictions.
 SEUIL_PSI_ALERTE = 0.2
 SEUIL_PART_HORS_BORNES = 0.1
 
+# Pourquoi : restreindre les colonnes d'alerte évite de déclencher une alerte
+# sur des colonnes dont la distribution est imposée par le plan de collecte
+# (language, app_id) ou constante après filtrage (sample_source). L'alternative
+# de surveiller toutes les colonnes produisait des faux positifs (mesure du
+# 19/09/2026 : PSI 3,10 sur `language` sans changement de nature des avis).
 # Colonnes dont le PSI peut lever une alerte. `language` et `app_id` en sont
 # exclus : leur composition est imposée par notre propre plan de collecte
 # (`config.APP_IDS` × `config.LANGUAGES`), pas observée sur une population.
@@ -61,6 +126,10 @@ COLONNES_ALERTE = ("text_len",)
 def evaluer_alerte(rapport: dict, colonnes: tuple[str, ...] | None = None) -> dict:
     """
     Évalue si une alerte de dérive doit être levée.
+
+    Pourquoi : centralise la décision d'alerte pour que `main` et les tests
+    partagent la même logique de seuils, et pour permettre de restreindre les
+    colonnes surveillées sans modifier le rapport.
 
     Paramètres
     ----------
@@ -133,6 +202,9 @@ def ecrire_alerte(verdict: dict, repertoire: Path) -> Path | None:
     Si ``verdict["alerte"]`` est ``False``, aucune écriture n'est effectuée et
     ``None`` est retourné.
 
+    Pourquoi : ne pas écrire de fichier inutile quand il n'y a pas d'alerte, et
+    journaliser l'échec sans interrompre le pipeline si l'écriture échoue.
+
     Paramètres
     ----------
     verdict : dict
@@ -183,6 +255,11 @@ def psi_numerique(reference: pd.Series, courant: pd.Series, bins: int = 10) -> f
 
     Formule appliquée :
     ``∑ (p_c - p_r) × ln(p_c / p_r)``
+
+    Pourquoi : utiliser les quantiles de la référence garantit que les classes
+    sont définies une fois pour toutes et ne dépendent pas de la fenêtre
+    courante, ce qui rend la comparaison stable. Le remplacement des zéros par
+    une petite valeur évite les divisions par zéro sans biaiser le résultat.
 
     Parameters
     ----------
@@ -237,6 +314,11 @@ def psi_categoriel(reference: pd.Series, courant: pd.Series) -> float:
     Les parts nulles sont remplacées par ``1e-6`` pour éviter la division par
     zéro.
 
+    Pourquoi : l'union des modalités garantit qu'une catégorie absente d'une
+    fenêtre est traitée avec une part nulle, ce qui capture l'apparition ou la
+    disparition de modalités. Le remplacement des zéros évite les divisions par
+    zéro.
+
     Parameters
     ----------
     reference : pd.Series
@@ -279,6 +361,10 @@ def derive_entrees(reference: pd.DataFrame, courant: pd.DataFrame) -> Dict[str, 
 
     Les colonnes absentes de *l’une* des deux fenêtres sont simplement ignorées.
 
+    Pourquoi : ne pas échouer si une colonne manque dans une fenêtre permet au
+    module de fonctionner même si le schéma évolue légèrement, et de ne
+    surveiller que les colonnes réellement présentes.
+
     Parameters
     ----------
     reference : pd.DataFrame
@@ -303,6 +389,7 @@ def derive_entrees(reference: pd.DataFrame, courant: pd.DataFrame) -> Dict[str, 
             result[col] = psi_categoriel(reference[col].astype(str), courant[col].astype(str))
 
     logger.info("PSI sur les entrées calculés : %s", result)
+    logger.info("Nombre de colonnes analysées : %d", len(result))
     return result
 
 
@@ -322,6 +409,11 @@ def derive_predictions(
     ``share_negative_pred / share_negative_true`` est calculé (en excluant les
     lignes où la part réelle est nulle).  Le champ ``hors_bornes`` indique si
     le ratio sort de l’intervalle ``[ratio_min, ratio_max]``.
+
+    Pourquoi : le seuil `n_min` évite de considérer des groupes trop petits où
+    le ratio serait instable, et l'exclusion des parts réelles nulles évite une
+    division par zéro. Les bornes `ratio_min` et `ratio_max` définissent une
+    plage acceptable autour de 1 (prédiction parfaite).
 
     Parameters
     ----------
@@ -384,6 +476,9 @@ def interpretation(indice: float) -> str:
     Ces seuils sont ceux communément employés pour le Population Stability
     Index (PSI) dans les projets de monitoring de modèles.
 
+    Pourquoi : fournir une lecture humaine immédiate du PSI, alignée sur les
+    seuils d'alerte utilisés dans `evaluer_alerte`.
+
     Parameters
     ----------
     indice : float
@@ -421,11 +516,17 @@ def main() -> int:
     - Retourne ``0`` en cas de succès, ``1`` sinon (fichier manquant ou erreur).
 
     Tous les messages d’erreur sont journalisés avec le logger du module.
+
+    Pourquoi : ce module est conçu pour être appelé comme tâche du DAG ; il
+    doit donc retourner un code de sortie exploitable par Airflow et journaliser
+    chaque étape pour faciliter le diagnostic en cas d'échec.
     """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+
+    logger.info("Début du calcul de dérive")
 
     # ------------------------------------------------------------------- #
     # Chargement de la zone propre
@@ -436,6 +537,10 @@ def main() -> int:
         logger.error("Impossible de lire le fichier propre %s : %s", config.CLEAN_FILE, exc)
         return 1
 
+    # Pourquoi : le flux `negative_boost` est une collecte ponctuelle destinée
+    # à l'entraînement ; il n'arrive jamais en production. L'inclure fausserait
+    # la mesure de la population réelle (mesure du 19/09/2026 : PSI 2,07 sur
+    # `language`). La zone gold applique déjà ce même filtre.
     # Seul le flux naturel est surveillé. Le flux `negative_boost` est une
     # collecte ponctuelle destinée à l'entraînement : il n'arrive jamais en
     # production, et sa présence dans la seule fenêtre ancienne faisait mesurer
@@ -455,12 +560,17 @@ def main() -> int:
             logger.error("Aucune ligne du flux naturel dans la zone propre.")
             return 1
 
+    # Pourquoi : `created_at` est la date de création de l'avis, plus fiable que
+    # `updated_at` qui peut changer après une mise à jour. Si `created_at` est
+    # absente, on se replie sur `updated_at`.
     # Choix de la colonne date
     date_col = "created_at" if "created_at" in df_clean.columns else "updated_at"
     if date_col not in df_clean.columns:
         logger.error("Aucune colonne date disponible dans la zone propre.")
         return 1
 
+    # Pourquoi : trier par date garantit que la première moitié est bien la plus
+    # ancienne, servant de référence, et la seconde la plus récente.
     # Tri chronologique et découpage en deux moitiés
     df_clean = df_clean.sort_values(by=date_col)
     midpoint = len(df_clean) // 2
@@ -509,6 +619,7 @@ def main() -> int:
             logger.error("Échec de l'écriture de l'alerte de dérive.")
             return 1
 
+    logger.info("Fin du calcul de dérive")
     return 0
 
 

@@ -79,6 +79,14 @@ def logique(chemin):
                   if not (isinstance(n, ast.Import) and all(a.name == "logging" for a in n.names))
                   and not (isinstance(n, ast.Assign) and len(n.targets) == 1
                            and isinstance(n.targets[0], ast.Name) and n.targets[0].id in NOMS_JOURNAL)]
+    # Le bloc d'imports de tete est compare sans egard a son ordre interne. Un modele qui recopie un
+    # fichier trie volontiers ses imports (api.py et rollback.py, 20/09/2026) ; entre imports
+    # contigus de tete de module, l'ordre ne change rien a l'execution. Un import retire, ajoute, ou
+    # deplace APRES une instruction reste une divergence : seul le bloc contigu de tete est trie.
+    n_tete = 0
+    while n_tete < len(arbre.body) and isinstance(arbre.body[n_tete], (ast.Import, ast.ImportFrom)):
+        n_tete += 1
+    arbre.body[:n_tete] = sorted(arbre.body[:n_tete], key=ast.dump)
     return ast.dump(arbre, include_attributes=False)
 
 

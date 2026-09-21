@@ -4,64 +4,126 @@
 Rôle
 ----
 Fournit des outils en ligne de commande pour revenir à une version antérieure
-du modèle MLflow « champion ». Le projet ne possède aucun mécanisme
-automatique de retour en arrière : l’alias ``champion`` ne fait que progresser.
+du modèle MLflow « champion ». Le projet ne possède aucun mécanisme
+automatique de retour en arrière : l'alias ``champion`` ne fait que progresser.
 Ce module permet de :
 
 * lister les versions disponibles avec leurs métadonnées,
 * identifier la version actuellement désignée comme champion,
-* déplacer l’alias ``champion`` vers une version antérieure, en journalisant
-  l’opération.
+* déplacer l'alias ``champion`` vers une version antérieure, en journalisant
+  l'opération.
 
 Place dans la chaîne
 --------------------
-Utilisé manuellement par les opérateurs ou dans des scripts d’administration.
+Utilisé manuellement par les opérateurs ou dans des scripts d'administration.
 Aucun autre module du projet ne dépend directement de ce fichier.
 
 Fonctionnement
 --------------
 * ``versions_disponibles`` interroge le registre MLflow via :class:`mlflow.tracking.MlflowClient`,
   récupère les versions du modèle ``config.MODEL_NAME`` et, pour chaque version,
-  extrait :
+  extrait :
   - le numéro de version,
   - le timestamp de création,
   - les métriques ``f1_macro`` et ``ecart_train_test`` si elles existent,
   - la liste des alias qui pointent vers cette version.
   Le résultat est trié du plus récent au plus ancien.
-* ``champion_actuel`` renvoie la version associée à l’alias ``config.ALIAS_CHAMPION``,
-  ou ``None`` si l’alias n’est pas défini.
-* ``basculer`` vérifie que la version demandée existe, puis déplace l’alias
+* ``champion_actuel`` renvoie la version associée à l'alias ``config.ALIAS_CHAMPION``,
+  ou ``None`` si l'alias n'est pas défini.
+* ``basculer`` vérifie que la version demandée existe, puis déplace l'alias
   ``champion`` vers celle‑ci en appelant ``client.set_registered_model_alias``.
-  L’ancienne version (ou ``None``) et la nouvelle version sont retournées dans un
+  L'ancienne version (ou ``None``) et la nouvelle version sont retournées dans un
   dictionnaire.
-* ``main`` expose une interface CLI simple : sans argument, il affiche la liste
-  des versions et le champion actuel ; avec ``--vers VERSION`` il effectue la
+* ``main`` expose une interface CLI simple : sans argument, il affiche la liste
+  des versions et le champion actuel ; avec ``--vers VERSION`` il effectue la
   bascule.
 
-Le module suit le même style que :pymod:`reviewpulse.score` : typage strict,
+Le module suit le même style que :pymod:`reviewpulse.score` : typage strict,
 journalisation via le module ``logging`` et utilisation du même client MLflow.
 
 Décision appliquée ici : ADR 0016 — le déploiement progressif passe par l'alias `champion`, et le retour arrière aussi.
+
+Quoi
+----
+Module de rollback manuel pour le modèle MLflow champion. Permet de lister les versions,
+identifier le champion actuel, et déplacer l'alias champion vers une version antérieure.
+
+Pourquoi
+--------
+Le projet ne possède aucun mécanisme automatique de retour en arrière. L'alias ``champion``
+ne fait que progresser lors des promotions. Ce module évite le défaut où un opérateur
+devrait modifier manuellement le registre MLflow sans trace, sans validation et sans
+journalisation. Il garantit que chaque rollback est vérifié (la version existe), journalisé
+et réversible par la commande inverse.
+
+Ou
+----
+Appelé manuellement par les opérateurs ou dans des scripts d'administration. Lit et écrit
+dans le registre MLflow (config.MLFLOW_TRACKING_URI, config.MODEL_NAME, config.ALIAS_CHAMPION).
+Aucun autre module du projet ne dépend directement de ce fichier.
+
+Comment
+-------
+Le module instancie un client MLflow avec l'URI de tracking configurée. Il interroge le
+registre pour lister les versions du modèle, extrait les métriques depuis les runs associés,
+et récupère les alias. Pour le rollback, il vérifie d'abord que la version cible existe,
+relève l'ancien champion, déplace l'alias via l'API MLflow, et journalise l'opération.
+Les timestamps MLflow (millisecondes) sont convertis en datetime UTC pour l'affichage.
+
+Choix de conception
+-------------------
+* Déplacer un alias plutôt que recopier un artefact : l'opération est atomique côté registre
+  et se défait par la commande inverse. Alternative écartée : copier les artefacts du modèle
+  (non atomique, risque d'incohérence, pas de trace dans le registre).
+* Vérification explicite de l'existence de la version avant bascule : lève ValueError si
+  la version n'existe pas. Alternative écartée : laisser MLflow lever MlflowException
+  (message moins clair pour l'opérateur).
+* Tri décroissant par timestamp : les versions les plus récentes en premier pour faciliter
+  la lecture. Alternative écartée : tri par numéro de version (ordre non garanti dans MLflow).
+* Récupération des métriques non critique : si échec, on logue en debug et on continue.
+  Alternative écartée : échec complet de la liste (bloquerait le rollback pour un détail).
+
+Limites connues
+---------------
+* Ne garantit pas que la version cible est fonctionnelle (pas de test de chargement du modèle).
+* Ne journalise pas dans un fichier d'audit dédié (utilise le logging standard).
+* Ne gère pas les rollbacks en cascade (un seul alias à la fois).
+* Dépend de la disponibilité du serveur MLflow au moment de l'exécution.
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import mlflow
-from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
+from mlflow.tracking import MlflowClient
 
 from reviewpulse import config
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 
 def _client(tracking_uri: Optional[str] = None) -> MlflowClient:
-    """Instancie un :class:`MlflowClient` avec l'URI fourni ou la valeur par défaut."""
+    """
+    Instancie un client MLflow pour accéder au registre.
+
+    Pourquoi : centraliser la création du client avec gestion de l'URI de tracking,
+    permettant aux tests de fournir une URI différente sans modifier config.
+
+    Args
+    ----
+    tracking_uri : Optional[str]
+        URI du serveur MLflow. Si None, utilise config.MLFLOW_TRACKING_URI.
+
+    Returns
+    -------
+    MlflowClient
+        Client MLflow configuré avec l'URI fournie.
+    """
     if tracking_uri is None:
         tracking_uri = config.MLFLOW_TRACKING_URI
     mlflow.set_tracking_uri(tracking_uri)
@@ -70,16 +132,30 @@ def _client(tracking_uri: Optional[str] = None) -> MlflowClient:
 
 def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]]:
     """
-    Liste les versions du modèle ``config.MODEL_NAME`` dans le registre MLflow.
+    Liste les versions du modèle config.MODEL_NAME dans le registre MLflow.
 
-    Chaque dictionnaire retourné contient :
-    - ``version`` (str) : numéro de version,
-    - ``creation_timestamp`` (int) : timestamp (ms depuis epoch) de création,
-    - ``f1_macro`` (float | None) : métrique si disponible,
-    - ``ecart_train_test`` (float | None) : métrique si disponible,
-    - ``aliases`` (list[str]) : alias pointant sur la version.
+    Pourquoi : fournir aux opérateurs une vue complète des versions disponibles
+    avec leurs métriques et alias, pour décider quelle version utiliser en rollback.
 
-    Le résultat est trié du plus récent au plus ancien.
+    Args
+    ----
+    tracking_uri : str | None
+        URI du serveur MLflow. Si None, utilise la valeur par défaut de config.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        Liste de dictionnaires, chacun contenant :
+        - version (str) : numéro de version,
+        - creation_timestamp (int) : timestamp (ms depuis epoch) de création,
+        - f1_macro (float | None) : métrique si disponible,
+        - ecart_train_test (float | None) : métrique si disponible,
+        - aliases (list[str]) : alias pointant sur la version.
+        Trié du plus récent au plus ancien.
+
+    Raises
+    ------
+    Aucune exception levée explicitement. Les erreurs MLflow sont propagées.
     """
     client = _client(tracking_uri)
     versions = client.search_model_versions(f"name='{config.MODEL_NAME}'")
@@ -99,6 +175,9 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
             f1_macro = metrics.get("f1_macro")
             ecart_train_test = metrics.get("ecart_train_test")
         except Exception:  # pragma: no cover – récupération des métriques non critique
+            # Pourquoi : la récupération des métriques est secondaire pour le rollback.
+            # Un échec ici ne doit pas bloquer la liste des versions.
+            # Alternative écartée : lever une exception (bloquerait l'opérateur).
             logger.debug("Impossible de récupérer les métriques pour la version %s", version_str)
 
         # Alias – l'attribut ``aliases`` existe depuis MLflow 2.0
@@ -114,16 +193,33 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
             }
         )
 
-    # Tri décroissant selon le timestamp de création
+    # Pourquoi : tri décroissant pour afficher les versions les plus récentes en premier.
+    # L'opérateur voit d'abord le champion actuel et les versions récentes.
+    # Alternative écartée : tri par numéro de version (ordre non garanti dans MLflow).
     result.sort(key=lambda d: d["creation_timestamp"], reverse=True)
     return result
 
 
 def champion_actuel(tracking_uri: str | None = None) -> str | None:
     """
-    Retourne la version désignée par l'alias ``config.ALIAS_CHAMPION``.
+    Retourne la version désignée par l'alias config.ALIAS_CHAMPION.
 
-    Si l'alias n'existe pas, renvoie ``None``.
+    Pourquoi : identifier quelle version est actuellement en production avant
+    d'effectuer un rollback, et pour afficher l'état actuel à l'opérateur.
+
+    Args
+    ----
+    tracking_uri : str | None
+        URI du serveur MLflow. Si None, utilise la valeur par défaut de config.
+
+    Returns
+    -------
+    str | None
+        Numéro de version du champion actuel, ou None si l'alias n'existe pas.
+
+    Raises
+    ------
+    Aucune exception levée explicitement. MlflowException est capturée et retourne None.
     """
     client = _client(tracking_uri)
     try:
@@ -132,6 +228,8 @@ def champion_actuel(tracking_uri: str | None = None) -> str | None:
         )
         return str(mv.version)
     except MlflowException:
+        # Pourquoi : l'absence d'alias champion est un état valide (premier déploiement).
+        # On logue en debug pour tracer sans alerter l'opérateur.
         logger.debug("Alias %s non trouvé pour le modèle %s", config.ALIAS_CHAMPION, config.MODEL_NAME)
         return None
 
@@ -140,12 +238,15 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
     """
     Déplace l'alias ``champion`` vers la version demandée.
 
-    Parameters
-    ----------
+    Pourquoi : effectuer le rollback de manière atomique et journalisée, en vérifiant
+    que la version cible existe avant de modifier le registre.
+
+    Args
+    ----
     version: str
-        Numéro de version cible (exemple : ``"3"``).
+        Numéro de version cible (exemple : ``"3"``).
     tracking_uri: str | None
-        URI du serveur MLflow ; si ``None``, la valeur par défaut du
+        URI du serveur MLflow ; si ``None``, la valeur par défaut du
         fichier de configuration est utilisée.
 
     Returns
@@ -157,6 +258,8 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
     ------
     ValueError
         Si la version cible n'existe pas dans le registre.
+    MlflowException
+        Si le déplacement de l'alias échoue côté MLflow.
     """
     client = _client(tracking_uri)
 
@@ -164,6 +267,8 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
     try:
         client.get_model_version(name=config.MODEL_NAME, version=version)
     except MlflowException as exc:
+        # Pourquoi : message d'erreur clair pour l'opérateur plutôt que l'exception MLflow brute.
+        # Alternative écartée : laisser propaguer MlflowException (message moins explicite).
         raise ValueError(f"La version {version} n'existe pas pour le modèle {config.MODEL_NAME}") from exc
 
     ancienne = champion_actuel(tracking_uri)
@@ -182,6 +287,7 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
             version,
         )
     except MlflowException as exc:
+        # Pourquoi : journaliser l'échec avant de propager, pour trace d'audit.
         logger.error("Échec du déplacement de l'alias %s vers la version %s : %s", config.ALIAS_CHAMPION, version, exc)
         raise
 
@@ -189,7 +295,22 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
 
 
 def _afficher_versions(versions: List[Dict[str, Any]]) -> None:
-    """Affiche de façon lisible la liste des versions retournées par ``versions_disponibles``."""
+    """
+    Affiche de façon lisible la liste des versions retournées par versions_disponibles.
+
+    Pourquoi : présenter les métadonnées des versions dans un format tabulaire lisible
+    pour l'opérateur en ligne de commande.
+
+    Args
+    ----
+    versions : List[Dict[str, Any]]
+        Liste de dictionnaires de versions (sortie de versions_disponibles).
+
+    Returns
+    -------
+    None
+        Affiche sur stdout via print.
+    """
     if not versions:
         print("Aucune version disponible.")
         return
@@ -198,7 +319,8 @@ def _afficher_versions(versions: List[Dict[str, Any]]) -> None:
     print("-" * 80)
     for v in versions:
         ts = v["creation_timestamp"]
-        # Le registre MLflow rend un horodatage en millisecondes depuis l'époque Unix.
+        # Pourquoi : le registre MLflow rend un horodatage en millisecondes depuis l'époque Unix.
+        # Conversion en datetime UTC pour affichage lisible par l'opérateur.
         date_str = (
             datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
             if isinstance(ts, (int, float))
@@ -214,10 +336,17 @@ def main() -> int:
     """
     Interface en ligne de commande.
 
-    - Sans argument : affiche les versions disponibles et le champion actuel.
-    - Avec ``--vers VERSION`` : déplace l'alias ``champion`` vers la version indiquée.
+    Pourquoi : exposer les fonctions de rollback via une CLI simple pour les opérateurs,
+    avec deux modes : liste des versions (sans argument) ou bascule (avec --vers).
 
-    Retourne ``0`` en cas de succès, ``1`` sinon.
+    Returns
+    -------
+    int
+        0 en cas de succès, 1 sinon.
+
+    Raises
+    ------
+    Aucune exception levée explicitement. Toutes les exceptions sont capturées et logguées.
     """
     logging.basicConfig(
         level=logging.INFO,
@@ -244,6 +373,8 @@ def main() -> int:
             print(f"\nChampion actuel : {champ if champ is not None else 'Aucun'}")
         return 0
     except Exception as exc:  # pragma: no cover
+        # Pourquoi : journaliser l'erreur complète pour diagnostic, puis retourner code d'erreur.
+        # Alternative écartée : laisser propager (pas de trace dans les logs).
         logger.exception("Erreur lors de l'exécution du rollback : %s", exc)
         return 1
 

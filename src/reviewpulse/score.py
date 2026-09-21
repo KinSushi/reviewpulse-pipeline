@@ -32,6 +32,37 @@ Tests associés
 - ``test_boost.py``  
 - ``test_decision.py``  
 - ``test_spark_silver.py`` (vérifie la persistance Iceberg)  
+
+Quoi
+----
+Ce module charge le modèle champion, applique le scoring aux avis de la zone propre, génère un résumé agrégé quotidien et persiste les prédictions dans la couche *silver* du lakehouse.
+
+Pourquoi
+--------
+Le besoin métier est de fournir chaque jour des scores de sentiment fiables aux tableaux de bord et à l’API ``/insights``. Le module évite le défaut d’incohérence entre le seuil utilisé en production et celui entraîné (ADR 0007) et garantit que le résumé ne mélange pas les avis naturels et les avis complémentaires, préservant ainsi la validité des métriques.
+
+Où
+---
+- Appelé par le DAG quotidien ``dags/reviewpulse_daily.py`` (étape *score*).  
+- Lit le fichier ``config.CLEAN_FILE`` (zone propre).  
+- Écrit ``config.SCORED_FILE`` et ``config.SUMMARY_FILE`` dans le répertoire de sortie.  
+- Persiste les prédictions dans la table Iceberg ``config.SILVER_PREDICTIONS_TABLE`` via ``lakehouse.write_table``.
+
+Comment
+-------
+1. Chargement du modèle champion via MLflow.  
+2. Vérification de la présence de la colonne ``review_text``.  
+3. Extraction du seuil depuis le modèle, calcul des probabilités négatives et des étiquettes.  
+4. Enrichissement du DataFrame avec les métadonnées requises.  
+5. Filtrage du flux naturel, création d’une colonne date en UTC et agrégation par application, langue et jour.  
+6. Écriture atomique des résultats et persistance Iceberg.
+
+Limites connues
+---------------
+- Le module ne gère pas les cas où le modèle ne possède pas la méthode attendue ``predict`` ; une exception ``MlflowException`` sera levée.  
+- Aucun contrôle de cohérence entre le schéma du DataFrame d’entrée et le contrat de la table Iceberg n’est effectué au niveau du code (c’est géré par ``lakehouse``).  
+- Le seuil est uniquement lu depuis le modèle ; il n’est pas possible de le surcharger via configuration.
+
 """
 
 import logging
@@ -52,6 +83,8 @@ logger = logging.getLogger(__name__)
 def load_champion(tracking_uri: str | None = None) -> tuple[object, str]:
     """
     Charge le modèle désigné comme champion depuis le registre MLflow.
+
+    Pourquoi : charger le modèle champion garantit que le scoring utilise la version la plus récente promue (ADR 0007).
 
     Args:
         tracking_uri: URI du serveur de suivi MLflow. Si ``None``, la valeur
@@ -85,6 +118,10 @@ def score(
     Calcule les scores de probabilité négative, les prédictions et les
     métadonnées associées pour chaque avis du DataFrame fourni.
 
+    Pourquoi : le calcul des scores et l’ajout des métadonnées permettent aux
+    tableaux de bord et à l’API d’afficher les parts négatives prédites et de
+    tracer l’historique des modèles.
+
     Args:
         df: DataFrame contenant au minimum la colonne ``review_text``.
         model: Modèle MLflow chargé (compatible scikit‑learn).
@@ -99,10 +136,15 @@ def score(
         KeyError: si la colonne ``review_text`` est absente.
     """
     if "review_text" not in df.columns:
+        # Pourquoi : la colonne ``review_text`` est indispensable pour le calcul du score.
+        logger.warning("Colonne 'review_text' manquante dans le DataFrame d'entrée")
         raise KeyError("La colonne 'review_text' est requise pour le scoring.")
 
+    # Pourquoi : le seuil est lu depuis le modèle pour garantir cohérence avec le modèle (ADR 0007)
     threshold = decision.model_threshold(model)
+    # Pourquoi : on calcule la probabilité de la classe négative pour chaque texte
     proba_negative = decision.negative_proba(model, df["review_text"])
+    # Pourquoi : les étiquettes sont dérivées en comparant la probabilité au seuil
     pred_label = decision.predict_labels(proba_negative, threshold)
 
     scored = df.copy()
@@ -118,6 +160,10 @@ def summarize(scored: pd.DataFrame) -> pd.DataFrame:
     """
     Agrège les scores par application, langue et jour, uniquement sur les lignes
     issues du flux « natural ».
+
+    Pourquoi : le résumé agrégé alimente les tableaux de bord et l’API
+    ``/insights`` avec des métriques quotidiennes fiables, en excluant le
+    flux complémentaire qui biaiserait les parts négatives.
 
     Args:
         scored: DataFrame produit par :func:`score`.
@@ -143,11 +189,13 @@ def summarize(scored: pd.DataFrame) -> pd.DataFrame:
         raise KeyError(f"Colonnes manquantes pour le résumé : {missing}")
 
     if "sample_source" in scored.columns:
+        # Pourquoi : on ne garde que le flux naturel pour éviter gonflement des parts négatives (ADR 0007)
         natural = scored[scored["sample_source"] == config.SAMPLE_NATURAL]
     else:
         natural = scored
 
     natural = natural.copy()
+    # Pourquoi : conversion en UTC puis extraction de la date pour agrégation journalière
     natural["date"] = natural["created_at"].dt.tz_convert("UTC").dt.date
 
     agg = (
@@ -168,6 +216,8 @@ def summarize(scored: pd.DataFrame) -> pd.DataFrame:
 def _atomic_write(df: pd.DataFrame, path: Path) -> None:
     """
     Écriture atomique d'un DataFrame au format Parquet.
+
+    Pourquoi : garantir l'intégrité du fichier même en cas d'interruption du processus.
 
     Args:
         df: DataFrame à écrire.
@@ -191,6 +241,10 @@ def main() -> int:
     """
     Orchestration du scoring quotidien.
 
+    Pourquoi : centraliser le flux complet de chargement du modèle, scoring,
+    génération du résumé et persistance afin de garantir une exécution
+    atomique et traçable.
+
     - Charge le modèle champion.
     - Lit le jeu de données propre.
     - Applique le scoring.
@@ -202,17 +256,23 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    logger.info("Début du scoring quotidien")
     try:
         model, version = load_champion()
         logger.info("Modèle champion chargé, version %s", version)
 
         df_clean = pd.read_parquet(config.CLEAN_FILE)
+        logger.info("Fichier propre lu : %s, %d lignes", config.CLEAN_FILE, len(df_clean))
+
         df_scored = score(df_clean, model, version)
+        logger.info("Scoring appliqué, %d lignes", len(df_scored))
 
         _atomic_write(df_scored, config.SCORED_FILE)
         logger.info("Fichier scored écrit : %s", config.SCORED_FILE)
 
         df_summary = summarize(df_scored)
+        logger.info("Résumé généré, %d lignes", len(df_summary))
+
         _atomic_write(df_summary, config.SUMMARY_FILE)
         logger.info("Fichier de résumé écrit : %s", config.SUMMARY_FILE)
 
@@ -231,7 +291,7 @@ def main() -> int:
             "scored_at",
         ]
         df_predictions = df_scored[pred_columns].copy()
-        # Conversion en table Arrow ; lakehouse gère le cast des timestamps
+        # Pourquoi : conversion en table Arrow ; lakehouse gère le cast des timestamps
         arrow_table = pa.Table.from_pandas(df_predictions, preserve_index=False)
         lakehouse.write_table(config.SILVER_PREDICTIONS_TABLE, arrow_table)
         logger.info(
@@ -240,6 +300,7 @@ def main() -> int:
             len(df_predictions),
         )
 
+        logger.info("Scoring quotidien terminé avec succès")
         return 0
     except Exception as exc:  # pragma: no cover
         logger.exception("Erreur lors du scoring : %s", exc)

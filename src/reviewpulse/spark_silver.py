@@ -3,7 +3,7 @@
 
 Rôle
 ----
-Construire la zone « silver » à l’aide de Spark, en reproduisant exactement le
+Construire la zone « silver » à l'aide de Spark, en reproduisant exactement le
 résultat de :func:`reviewpulse.transform.clean`.  Le DataFrame obtenu est
 validé, écrit au format Parquet (compatibilité avec le pipeline existant) et
 stocké dans Iceberg via :mod:`reviewpulse.lakehouse`.
@@ -11,7 +11,7 @@ stocké dans Iceberg via :mod:`reviewpulse.lakehouse`.
 Place dans la chaîne
 --------------------
 Après :mod:`reviewpulse.ingest` et avant les étapes de validation Great
-Expectations, d’entraînement et de scoring.  Ce module constitue le
+Expectations, d'entraînement et de scoring.  Ce module constitue le
 remplacement Spark de :mod:`reviewpulse.transform` pour le DAG quotidien.
 
 Fonctionnement
@@ -21,14 +21,14 @@ Fonctionnement
 2. **Lecture des fichiers bruts** (`*.jsonl`) en mode récursif, extraction des
    partitions ``app_id``, ``language`` et ``sample_source`` via
    :func:`pyspark.sql.functions.regexp_extract`.
-3. **Nettoyage** :
+3. **Nettoyage** :
    - Suppression du BBCode avec ``regexp_replace`` ;
    - Réduction des espaces multiples et ``trim`` ;
    - Filtrage des lignes dont le texte devient vide.
-4. **Dédoublonnage** : fenêtre ``row_number`` ordonnée par priorité
-   (``natural`` = 0, ``negative_boost`` = 1) puis par
-   ``timestamp_updated`` décroissant.  On ne garde que le rang 1.
-5. **Conversion des champs** : types, dates UTC, scores, temps de jeu, longueur
+4. **Dédoublonnage** : fenêtre ``row_number`` ordonnée par priorité
+   (``natural`` = 0, ``negative_boost`` = 1) puis par
+   ``timestamp_updated`` décroissant.  On ne garde que le rang 1.
+5. **Conversion des champs** : types, dates UTC, scores, temps de jeu, longueur
    du texte, etc.
 6. **Pseudonymisation** du ``steamid`` via un ``pandas_udf`` qui applique
    ``hmac.new(salt, steamid.encode(), hashlib.sha256).hexdigest()``.  Le sel
@@ -36,39 +36,45 @@ Fonctionnement
 7. **Alignement** du DataFrame Spark → pandas, puis cast aux types définis dans
    ``config.CLEAN_COLUMNS`` (ordre strict).
 8. **Contrôle qualité** avec :func:`reviewpulse.quality.assert_quality`.
-9. **Écriture** :
+9. **Écriture** :
    - Parquet atomique via :func:`reviewpulse.transform.write_clean` (compatibilité
      avec les modules non‑Spark) ;
-   - Table Iceberg « silver.reviews » via :func:`reviewpulse.lakehouse.write_table`
+   - Table Iceberg « silver.reviews » via :func:`reviewpulse.lakehouse.write_table`
      (un ``overwrite`` crée un instantané).
 10. **Purge** des partitions brutes anciennes via
     :func:`reviewpulse.transform.purge_raw`.
-11. Journalisation du nombre de lignes traitées et du nombre d’instantanés
+11. Journalisation du nombre de lignes traitées et du nombre d'instantanés
     créés.
 
 Choix de conception
 -------------------
-- **Spark vs Pandas** : on utilise Spark uniquement pour la lecture et le
+- **Spark vs Pandas** : on utilise Spark uniquement pour la lecture et le
   pré‑traitement massifs, puis on convertit en pandas pour réutiliser les
-  fonctions de contrôle et d’écriture déjà testées (ADR 0013, ADR 0014).
-- **Gestion du temps** : Iceberg ne supporte pas les timestamps en nanosecondes,
+  fonctions de contrôle et d'écriture déjà testées (ADR 0013, ADR 0014).
+- **Gestion du temps** : Iceberg ne supporte pas les timestamps en nanosecondes,
   on les convertit en ``timestamp[us, tz=UTC]`` avec ``pyarrow.compute.cast``.
-- **UDF HMAC** : implémentée en ``pandas_udf`` (type ``string``) afin d’éviter
+- **UDF HMAC** : implémentée en ``pandas_udf`` (type ``string``) afin d'éviter
   les limitations de Spark native.
-- **Idempotence** : chaque appel de :func:`main` écrase la table Iceberg,
+- **Idempotence** : chaque appel de :func:`main` écrase la table Iceberg,
   créant ainsi un nouveau snapshot, conformément aux exigences mesurées.
 
 Tests associés
 --------------
-- ``tests/test_spark_silver.py`` : comparaison stricte Spark / pandas,
+- ``tests/test_spark_silver.py`` : comparaison stricte Spark / pandas,
   écriture Iceberg et relecture identique, gestion des instantanés,
   validation du schéma (déclenchement de ``ValueError`` en cas de divergence).
+
+Limites connues
+---------------
+- La conversion Spark → pandas limite la taille des données à la mémoire disponible.
+- Une divergence de schéma lors de l'écriture Iceberg lève ``ValueError`` (ADR 0014).
+- Chaque exécution crée un nouveau snapshot Iceberg, ce qui peut augmenter l'espace de stockage.
 """
 
 import logging
 import hashlib
 import hmac
-import sys  # nécessaire pour pointer Spark vers l'interpréteur du projet
+import sys
 import os
 from pathlib import Path
 from typing import Optional
@@ -83,7 +89,7 @@ from reviewpulse import config, lakehouse, transform, quality
 
 _logger = logging.getLogger(__name__)
 
-# Regex Spark pour le BBCode (identique à celui de transform)
+# Pourquoi : Regex identique à celle de transform.clean pour assurer la cohérence du nettoyage BBCode.
 _BBCODE_REGEX = r"\[/?[a-zA-Z*]+(?:=[^\]]*)?\]"
 
 
@@ -92,19 +98,32 @@ def build_spark(app_name: str = "reviewpulse-silver") -> SparkSession:
 
     Depuis le 16/09/2026 et confirmé le 17/09/2026, dans l'image Airflow
     l'interpréteur Python par défaut (``python3``) ne possède pas *pandas*.
-    Avec PySpark 4.2, ``SparkContext.pythonExec`` lit **uniquement** les
+    Avec PySpark 4.2, ``SparkContext.pythonExec`` lit **uniquement** les
     variables d'environnement ``PYSPARK_PYTHON`` (et
-    ``PYSPARK_DRIVER_PYTHON``) ; la configuration ``spark.pyspark.python`` n’est
+    ``PYSPARK_DRIVER_PYTHON``) ; la configuration ``spark.pyspark.python`` n'est
     plus prise en compte.  On définit donc, avant la création de la session,
-    ces variables d’environnement avec ``sys.executable`` via
+    ces variables d'environnement avec ``sys.executable`` via
     ``os.environ.setdefault``.  ``setdefault`` laisse la priorité à une valeur
     déjà explicitement définie, ce qui permet de surcharger le comportement si
     nécessaire.
 
+    Pourquoi : Garantir que Spark utilise l'interpréteur du projet qui dispose de pandas, requis pour les pandas_udf.
+
+    Args:
+        app_name: Nom de l'application Spark.
+
+    Returns:
+        SparkSession: Session Spark configurée.
+
+    Raises:
+        Aucun : la session est créée avec les paramètres de config.
+
     """
-    # Garantir que Spark utilise l'interpréteur du projet (avec pandas)
+    # Pourquoi : setdefault préserve les variables d'environnement déjà définies, permettant un surchargement si nécessaire.
     os.environ.setdefault('PYSPARK_PYTHON', sys.executable)
     os.environ.setdefault('PYSPARK_DRIVER_PYTHON', sys.executable)
+
+    _logger.info("Création de la session Spark : %s", app_name)
 
     return (
         SparkSession.builder.appName(app_name)
@@ -117,9 +136,21 @@ def build_spark(app_name: str = "reviewpulse-silver") -> SparkSession:
 
 
 def _priority_expr(sample_col: str) -> F.Column:
-    """Renvoie l’expression de priorité de dédoublonnage.
+    """Renvoie l'expression de priorité de dédoublonnage.
 
     ``natural`` → 0, ``negative_boost`` → 1.  Valeur par défaut 1.
+
+    Pourquoi : Assurer que le flux naturel (plus fiable) prime sur le flux négatif complémentaire lors du dédoublonnage.
+
+    Args:
+        sample_col: Nom de la colonne contenant la source de l'échantillon.
+
+    Returns:
+        F.Column: Expression Spark pour le tri par priorité.
+
+    Raises:
+        Aucun.
+
     """
     return F.when(F.col(sample_col) == config.SAMPLE_NATURAL, 0).otherwise(1)
 
@@ -129,10 +160,12 @@ def build_silver(
     raw_dir: Optional[Path] = None,
     salt: Optional[bytes] = None,
 ) -> pd.DataFrame:
-    """Produit le DataFrame « silver » identique à ``transform.clean``.
+    """Produit le DataFrame « silver » identique à ``transform.clean``.
 
     Le résultat est un ``pandas.DataFrame`` avec les colonnes et types définis
     dans ``config.CLEAN_COLUMNS`` et trié par ``review_id``.
+
+    Pourquoi : Permettre le traitement massif des données brutes avec Spark tout en conservant la compatibilité avec les fonctions de contrôle et d'écriture pandas existantes (ADR 0014).
 
     Args:
         spark: Session Spark déjà construite.
@@ -141,9 +174,15 @@ def build_silver(
 
     Returns:
         DataFrame pandas conforme à la spécification.
+
+    Raises:
+        Aucun : les erreurs de qualité sont levées par ``quality.assert_quality`` appelé après.
+
     """
     raw_dir = raw_dir or config.RAW_DIR
     salt = salt or config.salt()
+
+    _logger.info("Lecture des fichiers bruts depuis %s", raw_dir)
 
     # ------------------------------------------------------------------ #
     # Lecture des JSONL avec récupération du chemin complet
@@ -173,12 +212,13 @@ def build_silver(
     # ------------------------------------------------------------------ #
     # Nettoyage du texte
     # ------------------------------------------------------------------ #
-    # NOTE : En Python, ``\\s`` reconnait les espaces Unicode (ex. U+00A0, U+2028).
-    # En Spark/Java, ``\\s`` ne reconnait que l’ASCII sauf si le drapeau
+    # NOTE : En Python, ``\\s`` reconnait les espaces Unicode (ex. U+00A0, U+2028).
+    # En Spark/Java, ``\\s`` ne reconnait que l'ASCII sauf si le drapeau
     # ``(?U)`` (Unicode‑aware) est activé.  Une mesure effectuée le 16/09/2026
-    # sur les données réelles a montré 11 divergences sur 8 800 avis (10 fois
+    # sur les données réelles a montré 11 divergences sur 8 800 avis (10 fois
     # U+00A0, 1 fois U+2028).  On utilise donc ``(?U)\\s+`` pour obtenir le même
     # comportement que ``reviewpulse.transform.clean``.
+    # Pourquoi : Le drapeau (?U) active la reconnaissance des espaces Unicode pour cohérence avec transform.clean.
     df = df.withColumn(
         "review_text",
         F.trim(
@@ -193,6 +233,7 @@ def build_silver(
     # ------------------------------------------------------------------ #
     # Dédoublonnage avec priorité
     # ------------------------------------------------------------------ #
+    # Pourquoi : Priorité au flux naturel (0) puis au flux négatif (1), et dans chaque flux à la mise à jour la plus récente.
     w = Window.partitionBy("recommendationid").orderBy(
         _priority_expr("sample_source").asc(),
         F.col("timestamp_updated").desc_nulls_last(),
@@ -234,9 +275,23 @@ def build_silver(
     # ------------------------------------------------------------------ #
     # Pseudonymisation du steamid via pandas_udf
     # ------------------------------------------------------------------ #
+    # Pourquoi : pandas_udf évite les limitations de Spark native pour HMAC et permet l'utilisation de hashlib.
     @F.pandas_udf(StringType())
     def _hash_steamid(steamid_series: pd.Series) -> pd.Series:
-        """Pseudonymise le steamid en appliquant HMAC‑SHA256 avec le sel du projet, série par série."""
+        """Pseudonymise le steamid en appliquant HMAC‑SHA256 avec le sel du projet, série par série.
+
+        Pourquoi : Appliquer le même algorithme de hachage que transform.clean pour cohérence (ADR 0004).
+
+        Args:
+            steamid_series: Série pandas contenant les steamid.
+
+        Returns:
+            pd.Series: Série pandas contenant les steamid hachés.
+
+        Raises:
+            Aucun.
+
+        """
         return steamid_series.apply(
             lambda sid: hmac.new(salt, str(sid).encode(), hashlib.sha256).hexdigest()
         )
@@ -255,10 +310,13 @@ def build_silver(
     # Conversion Spark → pandas
     pdf = df.toPandas()
 
+    _logger.info("Conversion Spark → pandas : %d lignes", len(pdf))
+
     # --------------------------------------------------------------
     # Gestion des timestamps : si la série est timezone‑naïve,
     # on la localise explicitement en UTC avant le cast.
     # --------------------------------------------------------------
+    # Pourquoi : Garantir que tous les timestamps sont en UTC avant conversion Arrow (ADR 0014).
     for ts_col in ("created_at", "updated_at"):
         if pd.api.types.is_datetime64_any_dtype(pdf[ts_col]):
             if pdf[ts_col].dt.tz is None:
@@ -273,10 +331,23 @@ def build_silver(
 
 
 def _arrow_table_from_df(df: pd.DataFrame) -> pa.Table:
-    """Convertit le DataFrame pandas en ``pyarrow.Table`` avec timestamps en µs."""
+    """Convertit le DataFrame pandas en ``pyarrow.Table`` avec timestamps en µs.
+
+    Pourquoi : Iceberg ne supporte pas les timestamps en nanosecondes ; la conversion en microsecondes est requise pour l'écriture (ADR 0014).
+
+    Args:
+        df: DataFrame pandas avec des colonnes datetime64[ns, UTC].
+
+    Returns:
+        pa.Table: Table PyArrow avec timestamps en timestamp[us, tz=UTC].
+
+    Raises:
+        Aucun.
+
+    """
     table = pa.Table.from_pandas(df, preserve_index=False)
 
-    # Conversion des colonnes datetime64[ns, UTC] → timestamp[us, tz=UTC]
+    # Pourquoi : Conversion explicite ns→us requise par Iceberg (ADR 0014).
     for name, dtype in df.dtypes.items():
         if pd.api.types.is_datetime64tz_dtype(dtype):
             col = table.column(name)
@@ -286,10 +357,19 @@ def _arrow_table_from_df(df: pd.DataFrame) -> pa.Table:
 
 
 def main() -> int:
-    """Exécute le pipeline Spark → Iceberg.
+    """Exécute le pipeline Spark → Iceberg.
 
     Retourne 0 en cas de succès, 1 sinon (qualité insuffisante,
     sel manquant ou autre exception).
+
+    Pourquoi : Orchestrer la construction de la zone silver, la validation qualité, l'écriture Parquet et Iceberg, et la purge des données brutes.
+
+    Returns:
+        int: 0 en cas de succès, 1 en cas d'échec.
+
+    Raises:
+        Aucun : les exceptions sont capturées et journalisées.
+
     """
     logging.basicConfig(
         level=logging.INFO,
@@ -297,21 +377,29 @@ def main() -> int:
     )
     spark = None
     try:
+        _logger.info("Démarrage du pipeline Spark silver")
         spark = build_spark()
         silver_df = build_silver(spark)
 
+        _logger.info("DataFrame silver produit : %d lignes", len(silver_df))
+
         # Validation qualité (bloquante)
         quality.assert_quality(silver_df)
+        _logger.info("Validation qualité passée")
 
         # Écriture parquet compatible avec le reste du pipeline
         transform.write_clean(silver_df)
+        _logger.info("Parquet écrit")
 
         # Écriture Iceberg (overwrite → nouveau snapshot)
         arrow_tbl = _arrow_table_from_df(silver_df)
         result = lakehouse.write_table(config.SILVER_REVIEWS_TABLE, arrow_tbl)
 
+        _logger.info("Table Iceberg écrite : %d instantané(s)", result.get("snapshots", 0))
+
         # Purge des données brutes
         transform.purge_raw()
+        _logger.info("Purge des données brutes effectuée")
 
         _logger.info(
             "Spark silver terminé : %d lignes écrites, historique de la table : %d instantané(s)",

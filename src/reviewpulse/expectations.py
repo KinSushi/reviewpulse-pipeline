@@ -38,6 +38,16 @@ Choix de conception
 * Aucun import inutilisé – chaque symbole est employé dans le code.
 * Les messages d’erreur sont normalisés dans le dictionnaire retourné, ce qui
   simplifie les assertions dans les tests.
+
+Limites connues
+---------------
+* Le module ne valide pas les contraintes métier qui ne sont pas exprimées
+  via Great Expectations (ex. cohérence entre colonnes dérivées).
+* En cas d’erreur de lecture du parquet, le processus s’arrête avec le code
+  de sortie 1 ; aucune tentative de récupération n’est prévue.
+* Le rapport HTML est généré dans un répertoire temporaire lorsqu’il est
+  exécuté en mode « ephemeral », ce qui le rend inaccessible hors du processus
+  appelant.
 """
 
 from __future__ import annotations
@@ -64,13 +74,13 @@ SUITE_NAME = "zone_propre"
 # Nom de la source de données pandas
 SOURCE_NAME = "reviewpulse"
 
-
 def _reset(context: AbstractDataContext) -> None:
     """Supprime, dans l’ordre, la validation, la suite puis la source.
 
     Les erreurs éventuelles (absence d’objet) sont ignorées conformément
     aux spécifications de l’API Great Expectations 1.23.0.
     """
+    # Pourquoi : réinitialiser le contexte avant chaque exécution pour éviter les duplications de définitions ou de suites.
     # Validation definition
     try:
         context.validation_definitions.delete(SUITE_NAME)
@@ -93,6 +103,7 @@ def _run(context: AbstractDataContext, df: pd.DataFrame):
     La fonction réinitialise le contexte, crée la source, la suite,
     ajoute les attentes, crée la validation et lance l’exécution.
     """
+    # Pourquoi : encapsuler la séquence complète de création et d’exécution afin de garantir la cohérence du processus.
     _reset(context)
 
     # Source pandas
@@ -120,6 +131,7 @@ def _run(context: AbstractDataContext, df: pd.DataFrame):
 
 def _summarize(result) -> Dict:
     """Construit le dictionnaire de synthèse attendu par le contrat."""
+    # Pourquoi : transformer le résultat brut de Great Expectations en une structure simple et stable pour les appels ultérieurs.
     failed: List[Dict] = []
     for r in result.results:
         if not r.success:
@@ -139,6 +151,7 @@ def _summarize(result) -> Dict:
 
 def build_expectations() -> List[gx.Expectation]:
     """Construit la liste d’attentes dans l’ordre indiqué par le contrat."""
+    # Pourquoi : centraliser la définition des attentes afin de garantir qu’elles restent synchronisées avec le contrat métier.
     exp: List[gx.Expectation] = []
 
     # 1. Colonnes dans le bon ordre
@@ -160,7 +173,9 @@ def build_expectations() -> List[gx.Expectation]:
 
     # 5. Valeurs dans des ensembles autorisés
     exp.append(
-        gx.expectations.ExpectColumnValuesToBeInSet(column="label", value_set=[0, 1])
+        gx.expectations.ExpectColumnValuesToBeInSet(
+            column="label", value_set=[0, 1]
+        )
     )
     exp.append(
         gx.expectations.ExpectColumnValuesToBeInSet(
@@ -207,7 +222,9 @@ def validate(df: pd.DataFrame, context: AbstractDataContext | None = None) -> Di
 
     Un contexte éphémère est créé si *context* n’est pas fourni.
     """
+    # Pourquoi : offrir une interface simple pour les tests unitaires (contexte éphémère) tout en permettant l’injection d’un contexte persistant.
     if context is None:
+        # Contexte éphémère pour éviter toute persistance disque lors des tests.
         context = gx.get_context(mode="ephemeral")
     result = _run(context, df)
     return _summarize(result)
@@ -219,9 +236,11 @@ def run_and_document(df: pd.DataFrame, project_dir: Path | None = None) -> Tuple
     Retourne le dictionnaire de synthèse et le chemin absolu du fichier
     ``index.html`` du site généré.
     """
+    # Pourquoi : séparer la génération du rapport de la simple validation afin de réutiliser la logique dans d’autres contextes.
     root = Path(project_dir or config.GX_DIR)
     root.mkdir(parents=True, exist_ok=True)
 
+    # Contexte « file » pour persister les Data Docs.
     context = gx.get_context(mode="file", project_root_dir=str(root))
     result = _run(context, df)
 
@@ -242,18 +261,23 @@ def run_and_document(df: pd.DataFrame, project_dir: Path | None = None) -> Tuple
 
 def build_data_docs(df: pd.DataFrame, project_dir: Path | None = None) -> Path:
     """Génère les Data Docs et renvoie le chemin du fichier ``index.html``."""
+    # Pourquoi : fournir une fonction utilitaire simple lorsqu’on ne veut que le chemin du rapport.
     return run_and_document(df, project_dir)[1]
 
 
 def main() -> int:
     """Point d’entrée du module : génère le rapport Great Expectations."""
+    # Pourquoi : orchestrer la lecture du parquet, la génération du rapport et le code de sortie selon le résultat.
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
+    logger.info("Début de la génération du rapport Great Expectations")
     try:
         df = pd.read_parquet(config.CLEAN_FILE)
+        # Journaliser le nombre de lignes lues.
+        logger.info("%d lignes lues depuis %s", df.shape[0], config.CLEAN_FILE)
     except Exception as exc:  # pragma: no cover – cas rare en production
         logger.error(
             "Impossible de lire le fichier nettoyé %s : %s", config.CLEAN_FILE, exc
@@ -269,6 +293,7 @@ def main() -> int:
 
     if summary["success"]:
         logger.info("Toutes les attentes Great Expectations sont satisfaites.")
+        logger.info("Fin de la génération du rapport Great Expectations")
         return 0
     else:
         nb_failed = len(summary["failed"])
@@ -280,6 +305,7 @@ def main() -> int:
                 f.get("column"),
                 f.get("unexpected_count"),
             )
+        logger.info("Fin de la génération du rapport Great Expectations")
         return 1
 
 

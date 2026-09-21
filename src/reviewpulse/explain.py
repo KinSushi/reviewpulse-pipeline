@@ -46,6 +46,29 @@ Le module valide d'abord le pipeline pour s'assurer de la présence des
 coefficients du classifieur, calcule les contributions locales via le
 produit de la valeur TF-IDF et du coefficient, et trie les résultats par
 magnitude pour identifier les traits les plus discriminants.
+
+Choix de conception
+-------------------
+- Contribution linéaire exacte (ADR 0019) plutôt que SHAP ou LIME : le modèle
+  est une régression logistique sur TF-IDF, donc la contribution d'un terme
+  est exactement le produit de sa valeur TF-IDF par le coefficient de la
+  classe. Pas d'approximation par échantillonnage.
+- Validation stricte du pipeline : les fonctions lèvent ValueError si les
+  étapes ``tfidf`` et ``clf`` ne sont pas présentes ou du bon type, pour
+  éviter des erreurs obscures en aval.
+- Recherche explicite de l'indice de la classe négative dans ``clf.classes_``
+  (comme dans ``decision.negative_proba``) plutôt que supposer que la colonne 0
+  est la classe 0, car l'ordre des classes n'est pas garanti.
+
+Limites connues
+---------------
+- Le module ne gère que les modèles binaires de type Pipeline avec exactement
+  deux étapes nommées ``tfidf`` et ``clf``. Tout autre modèle est refusé.
+- Les contributions locales sont calculées uniquement pour la classe négative ;
+  les contributions vers la classe positive sont l'opposé (voir docstring de
+  ``local_contributions``).
+- Aucune lecture/écriture disque, journalisation ou appel à MLflow n'est
+  effectué ici.
 """
 
 from __future__ import annotations
@@ -72,6 +95,9 @@ __all__: List[str] = [
 def _validate_model(model: Pipeline) -> Tuple[TfidfVectorizer, LogisticRegression]:
     """Vérifie que *model* possède les étapes attendues.
 
+    Pourquoi : garantit que le modèle est un pipeline TF-IDF + régression
+    logistique, condition nécessaire pour les calculs d'explicabilité.
+
     Parameters
     ----------
     model: Pipeline
@@ -91,6 +117,8 @@ def _validate_model(model: Pipeline) -> Tuple[TfidfVectorizer, LogisticRegressio
     logger.info("Début de la validation du modèle.")
     if not isinstance(model, Pipeline):
         raise ValueError("Le modèle doit être une instance de sklearn.pipeline.Pipeline.")
+    # Pourquoi : on attrape KeyError pour transformer l'absence d'étape en
+    # ValueError explicite, plus utile pour l'appelant qu'une KeyError brute.
     try:
         tfidf = model.named_steps["tfidf"]
         clf = model.named_steps["clf"]
@@ -109,6 +137,10 @@ def _validate_model(model: Pipeline) -> Tuple[TfidfVectorizer, LogisticRegressio
 
 def _negative_coefficients(clf: LogisticRegression) -> np.ndarray:
     """Renvoie le vecteur de coefficients associé à la classe négative.
+
+    Pourquoi : l'ordre des classes dans ``clf.classes_`` n'est pas garanti,
+    donc on cherche explicitement l'indice de la classe négative pour
+    déterminer le signe des coefficients.
 
     En classification binaire, ``clf.coef_[0]`` correspond aux coefficients
     de la classe ``clf.classes_[1]``.  Ainsi, si la classe négative occupe
@@ -146,6 +178,9 @@ def _negative_coefficients(clf: LogisticRegression) -> np.ndarray:
 
 def global_terms(model: Pipeline, n: int = 20) -> Dict[str, List[Tuple[str, float]]]:
     """Retourne les *n* termes les plus influents pour chaque classe.
+
+    Pourquoi : fournit une vue globale des termes qui poussent le modèle vers
+    chaque classe, utile pour la Model Card.
 
     Les termes sont triés par valeur absolue décroissante du coefficient
     associé à la classe correspondante.
@@ -194,6 +229,9 @@ def local_contributions(
 ) -> List[Tuple[str, float]]:
     """Calcule les contributions locales d’un texte.
 
+    Pourquoi : explique une prédiction individuelle en montrant quels termes
+    ont le plus contribué à la décision, pour le tableau de bord.
+
     La contribution d’un trait est le produit de sa valeur TF‑IDF par le
     coefficient de la classe négative.  Les contributions positives poussent
     vers la classe « negative », les négatives vers « positive ».
@@ -222,6 +260,9 @@ def local_contributions(
 
     # Vectorisation du texte (sparse)
     X = tfidf.transform([text])  # shape (1, n_features)
+    # Pourquoi : un texte sans aucun trait vectorisé (par exemple, vide ou
+    # composé uniquement de caractères inconnus) n'a aucune contribution à
+    # expliquer ; on retourne une liste vide.
     if X.nnz == 0:
         return []
 
@@ -251,6 +292,9 @@ def explain_batch(
 ) -> List[List[Tuple[str, float]]]:
     """Explique un lot de textes en appliquant :func:`local_contributions`.
 
+    Pourquoi : permet d'expliquer plusieurs textes en une seule vectorisation,
+    ce qui est plus efficace que des appels répétés à ``local_contributions``.
+
     La vectorisation de l’ensemble des textes n’est effectuée qu’une seule
     fois pour des raisons de performance.
 
@@ -276,8 +320,12 @@ def explain_batch(
     logger.info("Exploration d'un lot de %d textes.", len(texts))
     tfidf, clf = _validate_model(model)
 
+    # Pourquoi : vectoriser tout le lot en une fois est plus efficace que
+    # d'appeler transform pour chaque texte individuellement.
     # Vectorisation en bloc
     X = tfidf.transform(list(texts))  # shape (len(texts), n_features)
+    # Pourquoi : si aucun texte n'a de trait vectorisé, chaque texte reçoit
+    # une liste vide ; on évite de traiter une matrice vide.
     if X.nnz == 0:
         return [[] for _ in texts]
 

@@ -39,11 +39,59 @@ fi
 PLAN="${TRAVAIL}/enrichissement_plan.txt"
 
 python - "$JSONL" "$TRAVAIL" > "${PLAN}" <<'PY'
-import json, re, sys, pathlib
+import io, json, re, sys, pathlib, tokenize
 # Sous Windows, print() termine ses lignes en CRLF et le shell garde le retour chariot colle
 # au chemin : on force LF a l'ecriture du plan.
 sys.stdout.reconfigure(newline=chr(10))
 travail = pathlib.Path(sys.argv[2])
+
+FINE, INSECABLE = chr(0x202F), chr(0xA0)
+
+
+def _normaliser(texte):
+    return texte.replace(FINE, " ").replace(INSECABLE, " ")
+
+
+def _jetons_de_chaine(source):
+    genres = {tokenize.STRING}
+    if hasattr(tokenize, "FSTRING_MIDDLE"):
+        genres.add(tokenize.FSTRING_MIDDLE)
+    return [t for t in tokenize.generate_tokens(io.StringIO(source).readline) if t.type in genres]
+
+
+def reparer_typographie(chemin_original, candidat):
+    """Rend au candidat les espaces fines insecables des chaines de l'original.
+
+    Pourquoi : les messages du depot suivent la typographie francaise (espace fine avant « : »).
+    Un modele qui recopie un fichier remplace volontiers U+202F par une espace ordinaire ; la
+    chaine change, la porte d'equivalence refuse a juste titre, et un module entier est perdu pour
+    un caractere (transform.py, 20/09/2026). La reparation est mecanique : une chaine du candidat
+    qui ne differe d'une chaine de l'original QUE par ses espaces insecables reprend la forme de
+    l'original. Tout autre ecart reste un refus ; la porte d'equivalence juge ensuite.
+    """
+    try:
+        original = pathlib.Path(chemin_original).read_text(encoding="utf-8")
+        attendues = {}
+        for t in _jetons_de_chaine(original):
+            if FINE in t.string or INSECABLE in t.string:
+                attendues.setdefault(_normaliser(t.string), t.string)
+        if not attendues:
+            return candidat, 0
+        lignes = candidat.split(chr(10))
+        reparations = 0
+        for t in reversed(_jetons_de_chaine(candidat)):
+            voulu = attendues.get(_normaliser(t.string))
+            if voulu is None or voulu == t.string or t.start[0] != t.end[0]:
+                continue
+            i = t.start[0] - 1
+            if lignes[i][t.start[1]:t.end[1]] != t.string:
+                continue
+            lignes[i] = lignes[i][:t.start[1]] + voulu + lignes[i][t.end[1]:]
+            reparations += 1
+        return chr(10).join(lignes), reparations
+    except (tokenize.TokenError, SyntaxError, IndentationError, OSError):
+        return candidat, 0
+
 for ligne in pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines():
     d = json.loads(ligne)
     if "texte" not in d:
@@ -77,6 +125,9 @@ for ligne in pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="repla
     # git refuserait le fichier (.gitattributes impose eol=lf).
     LF = chr(10)
     corps = corps.replace(chr(13) + LF, LF)
+    corps, reparees = reparer_typographie(cible, corps)
+    if reparees:
+        print("typographie : %d chaine(s) de %s rendue(s) a la forme de l'original" % (reparees, nom), file=sys.stderr)
     tmp.write_bytes((corps + (LF if not corps.endswith(LF) else '')).encode('utf-8'))
     print("CANDIDAT\t%s\t%s\t%s" % (nom, cible, tmp.as_posix()))
 PY
@@ -112,7 +163,7 @@ while IFS="$(printf '\t')" read -r statut nom cible tmp; do
             if perdu="$(sh tools/citations_perdues.sh "${cible}" "${tmp}")"; then
                 :
             else
-                echo "REFUS      ${nom} : citations perdues par l'enrichissement : ${perdu}"
+                echo "REFUS      ${nom} : citations fautives -- ${perdu}"
                 continue
             fi
             if sh tools/verifier_equivalence.sh "${cible}" "${tmp}" > "${TRAVAIL}/eq_${nom}.txt" 2>&1; then

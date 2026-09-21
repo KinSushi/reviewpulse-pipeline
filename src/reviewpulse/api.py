@@ -3,19 +3,65 @@
 
 Rôle
 ----
-Servir le modèle champion via les endpoints : ``/health``, ``/predict`` et ``/insights``.
+Servir le modèle champion via les endpoints : ``/health``, ``/predict`` et ``/insights``.
+
+Place dans la chaîne
+--------------------
+Dernier maillon exposé aux consommateurs. Il est appelé par le tableau de bord
+``dashboard/app.py`` et par les contrôles A1 à A4 de ``tools/forward_test.py``.
+Il lit le modèle champion dans le registre MLflow via ``score.load_champion`` et
+le fichier de résumé quotidien pointé par ``config.SUMMARY_FILE`` ; il n'écrit
+aucune donnée métier, seulement des métriques de latence en mémoire.
+
+Fonctionnement
+--------------
+L'application FastAPI démarre sans exiger le modèle. Le premier appel à
+``/health`` ou ``/predict`` déclenche le chargement paresseux du champion,
+mis en cache par ``functools.lru_cache`` et protégé par un verrou pour éviter
+les chargements concurrents. Si le chargement échoue, l'API renvoie ``503`` et
+réessaie au prochain appel. Les requêtes ``/predict`` et ``/explain`` passent
+par la dépendance ``get_model`` qui centralise cette logique. L'endpoint
+``/insights`` lit le résumé parquet, filtre sur l'``app_id`` demandé et
+retourne les ``days`` dernières journées comptées depuis la dernière date
+disponible. Un middleware mesure la latence de chaque requête et expose les
+centiles via ``/metrics``.
+
+Pourquoi
+--------
+L'API doit rester démarrable même lorsqu'aucun modèle n'est promu champion,
+car le pipeline d'entraînement est hebdomadaire et le service peut être
+déployé avant la première promotion (constaté le 16/09/2026). La validation
+des entrées côté API évite d'appeler le modèle avec des charges inadaptées et
+de journaliser des textes d'avis complets.
 
 Choix de conception
---------------------
-* Chargement paresseux du modèle champion, mis en cache ; le cache ne conserve que les chargements réussis : si le modèle n’est pas disponible, l’API renvoie ``503`` et réessaie au prochain appel (constaté le 16/09/2026) [ADR 0008].
-* Validation des requêtes avec Pydantic : 1 ≤ nombre de textes ≤ 100, chaque texte 1 ≤ longueur ≤ 5 000 caractères.
-* Aucun texte d’avis n’est journalisé ; seules les exceptions sont loggées.
-* Le seuil de décision est renvoyé avec chaque prédiction et dans ``/health`` (seuil 0,5 documenté).
+-------------------
+* Chargement paresseux du modèle champion, mis en cache ; le cache ne conserve que les chargements réussis : si le modèle n’est pas disponible, l’API renvoie ``503`` et réessaie au prochain appel (constaté le 16/09/2026) [ADR 0008].
+  - Alternative écartée : charger le modèle au démarrage de l'application. Raison : l'API serait impossible à démarrer sans champion, ce qui bloquerait les déploiements initiaux et les redémarrages en l'absence de modèle.
+* Validation des requêtes avec Pydantic : 1 ≤ nombre de textes ≤ 100, chaque texte 1 ≤ longueur ≤ 5 000 caractères.
+  - Alternative écartée : laisser le modèle ou le scorer rejeter les entrées. Raison : obtenir une réponse ``422`` structurée avant tout appel coûteux et éviter de propager des erreurs opaques.
+* Aucun texte d’avis n’est journalisé ; seules les exceptions sont loggées.
+  - Alternative écartée : logger les préfixes ou les identifiants des textes. Raison : les textes d'avis sont des données métier sensibles ; seules les métadonnées de requête et les erreurs techniques sont conservées.
+* Le seuil de décision est renvoyé avec chaque prédiction et dans ``/health`` (seuil 0,5 documenté).
+  - Alternative écartée : hardcoder le seuil dans la réponse. Raison : le seuil voyage avec le modèle (``decision.model_threshold``) et peut varier d'une version à l'autre ; le client doit connaître le seuil appliqué.
 * L’endpoint ``/insights`` renvoie les indicateurs agrégés des ``days`` dernières journées comptées depuis la dernière date disponible pour l’application demandée.
+  - Alternative écartée : une fenêtre calendaire fixe (par exemple les 7 derniers jours depuis aujourd'hui). Raison : la démo doit être rejouable avec des données historiques ; la dernière date disponible dans le résumé sert d'ancrage.
+
+Limites connues
+---------------
+* ``/metrics`` mélange les requêtes à froid et à chaud ; le premier passage
+  emporte le chargement du modèle et peut produire un centile très élevé qui
+  ne reflète pas la latence à chaud.
+* Le compteur ``_TOTAL_REQUESTS`` est global au processus uvicorn ; en mode
+  multi-processus il ne compte que les requêtes du worker courant.
+* ``/insights`` ne vérifie pas que le modèle est chargé : il répond dès que
+  le fichier de résumé existe, même si le champion est indisponible.
+* Les métriques de latence sont stockées en mémoire ; elles disparaissent au
+  redémarrage du service.
 
 Tests associés
 --------------
-* ``test_api.py`` couvre les trois endpoints et les cas d’erreur (modèle indisponible, fichier de résumé manquant) ; ``test_artifacts_location.py`` vérifie le comportement ``503`` lorsque le champion est absent.
+* ``test_api.py`` couvre les trois endpoints et les cas d’erreur (modèle indisponible, fichier de résumé manquant) ; ``test_artifacts_location.py`` vérifie le comportement ``503`` lorsque le champion est absent.
 """
 
 from __future__ import annotations
@@ -28,6 +74,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, List, Tuple
 
@@ -35,7 +82,6 @@ import pandas as pd
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from functools import lru_cache
 
 from reviewpulse import config
 from reviewpulse import decision
@@ -101,6 +147,11 @@ def _percentile(valeurs: List[float], centile: float) -> float:
     -------
     float
         Le centile calculé, en millisecondes.
+
+    Pourquoi :
+        L'interpolation linéaire est cohérente avec les outils scientifiques
+        habituels et évite de surestimer systématiquement les queues de
+        distribution.
     """
     if not valeurs:
         return 0.0
@@ -119,7 +170,25 @@ def _percentile(valeurs: List[float], centile: float) -> float:
 
 @app.middleware("http")
 async def latency_middleware(request, call_next):
-    """Mesure la durée de chaque requête HTTP et l'enregistre par endpoint."""
+    """Mesure la durée de chaque requête HTTP et l'enregistre par endpoint.
+
+    Parameters
+    ----------
+    request : Request
+        Requête HTTP entrante.
+    call_next : Callable
+        Fonction appelée pour passer la requête au endpoint suivant.
+
+    Returns
+    -------
+    Response
+        Réponse HTTP produite par l'application.
+
+    Pourquoi :
+        Le suivi continu de la latence est requis par la consigne Demo Day
+        (latency, accuracy, drift) et permet de détecter les dégradations sans
+        instrumentation externe.
+    """
     start = time.perf_counter()
     response = await call_next(request)
     duration_s = time.perf_counter() - start
@@ -139,6 +208,8 @@ async def latency_middleware(request, call_next):
         "status_code": response.status_code,
         "duration_ms": duration_ms,
     }
+    # Pourquoi : une seule ligne de journal par requête, sans texte d'avis,
+    # pour conserver une trace technique sans exposer les données métier.
     logger.info(json.dumps(log_entry, ensure_ascii=False))
 
     return response
@@ -150,6 +221,16 @@ def metrics():
 
     Ce point d'accès est indépendant du modèle : il répond même si le champion
     n'est pas chargé, contrairement à /health.
+
+    Returns
+    -------
+    dict
+        Dictionnaire contenant les centiles par endpoint, le nombre total de
+        requêtes, le nombre d'échantillons retenus et le temps de fonctionnement.
+
+    Pourquoi :
+        Fournir un endpoint dédié aux opérateurs pour surveiller la santé du
+        service sans dépendre de la disponibilité du modèle.
     """
     endpoints: dict[str, dict[str, float]] = {}
     echantillons_retenus: int = 0
@@ -204,10 +285,16 @@ _VERROU_CHARGEMENT = threading.Lock()
 def _load_model() -> Tuple[object, str]:
     """Charge le modèle champion et sa version une seule fois (mise en cache).
 
-    Retourne
+    Returns
     -------
     Tuple[object, str]
         Le modèle chargé et sa version (identifiant de version MLflow).
+
+    Raises
+    ------
+    Exception
+        Toute exception levée par ``score.load_champion`` est propagée au
+        gestionnaire de dépendance.
 
     Pourquoi :
         Le chargement du modèle implique un accès disque/MLflow coûteux ; le cache
@@ -217,13 +304,14 @@ def _load_model() -> Tuple[object, str]:
     # Import local pour éviter un import lourd au niveau du module
     from reviewpulse import score  # pylint: disable=import-outside-toplevel
 
+    logger.info("Chargement du modele champion depuis MLflow")
     return score.load_champion(tracking_uri=config.MLFLOW_TRACKING_URI)
 
 
 def get_model() -> Tuple[object, str]:
     """Dépendance FastAPI qui renvoie le modèle et sa version, en gérant les erreurs de chargement.
 
-    Retourne
+    Returns
     -------
     Tuple[object, str]
         Le modèle et sa version.
@@ -244,7 +332,7 @@ def get_model() -> Tuple[object, str]:
         with _VERROU_CHARGEMENT:
             return _load_model()
     except Exception as exc:
-        logger.exception("Erreur lors du chargement du modèle")
+        logger.exception("Erreur lors du chargement du modele")
         raise HTTPException(status_code=503, detail="Modèle indisponible") from exc
 
 
@@ -254,7 +342,7 @@ class PredictRequest(BaseModel):
     Attributes
     ----------
     texts : List[str]
-        Liste de 1 à 100 chaînes, chacune de 1 à 5 000 caractères.
+        Liste de 1 à 100 chaînes, chacune de 1 à 5 000 caractères.
 
     Pourquoi :
         Utilise la validation Pydantic pour garantir les contraintes de taille
@@ -269,6 +357,16 @@ class PredictRequest(BaseModel):
     @classmethod
     def no_empty_texts(cls, v: List[str]) -> List[str]:
         """Vérifie qu’aucun texte n’est vide.
+
+        Parameters
+        ----------
+        v : List[str]
+            Liste de textes déjà validée par Pydantic.
+
+        Returns
+        -------
+        List[str]
+            La liste inchangée si aucun texte n'est vide.
 
         Raises
         ------
@@ -298,7 +396,8 @@ class PredictionItem(BaseModel):
         ``"negative"`` ou ``"positive"`` selon le seuil.
 
     Pourquoi :
-        Sépare la logique de présentation (preview) de la donnée brute.
+        Sépare la logique de présentation (preview) de la donnée brute et évite
+        d'exposer le texte complet dans la réponse.
     """
     text_preview: str
     proba_negative: float
@@ -336,9 +435,13 @@ class ExplainRequest(BaseModel):
     Attributes
     ----------
     text : str
-        Texte à expliquer, 1 ≤ longueur ≤ 5 000 caractères.
+        Texte à expliquer, 1 ≤ longueur ≤ 5 000 caractères.
     n : int, optional
-        Nombre maximal de contributions locales à retourner (1..50, défaut = 10).
+        Nombre maximal de contributions locales à retourner (1..50, défaut = 10).
+
+    Pourquoi :
+        Restreindre l'explication à un seul texte et un nombre borné de termes
+        pour maîtriser le temps de réponse et la charge du serveur.
     """
     text: Annotated[
         str,
@@ -351,7 +454,18 @@ class ExplainRequest(BaseModel):
 
 
 class TermContribution(BaseModel):
-    """Terme et sa contribution locale."""
+    """Terme et sa contribution locale.
+
+    Attributes
+    ----------
+    terme : str
+        Mot ou n-gramme concerné.
+    contribution : float
+        Contribution pondérée au score de la classe négative.
+
+    Pourquoi :
+        Structurer la réponse d'explication locale pour le tableau de bord.
+    """
     terme: str
     contribution: float
 
@@ -359,7 +473,19 @@ class TermContribution(BaseModel):
 
 
 class TermCoeff(BaseModel):
-    """Terme et son coefficient global."""
+    """Terme et son coefficient global.
+
+    Attributes
+    ----------
+    terme : str
+        Mot ou n-gramme concerné.
+    coefficient : float
+        Coefficient appris par le modèle pour la classe négative.
+
+    Pourquoi :
+        Structurer la réponse d'explication globale pour la Model Card et le
+        tableau de bord.
+    """
     terme: str
     coefficient: float
 
@@ -379,6 +505,10 @@ class ExplainResponse(BaseModel):
         Dix termes les plus influents pour la classe négative.
     global_positive : List[TermCoeff]
         Dix termes les plus influents pour la classe positive.
+
+    Pourquoi :
+        Fournir à la fois l'explication locale et les termes globaux dans un seul
+        objet de réponse.
     """
     model_version: str
     terms: List[TermContribution]
@@ -421,9 +551,9 @@ class InsightItem(BaseModel):
     language : str
         Langue des avis (``english`` ou ``french``).
     date : str
-        Date ISO (YYYY‑MM‑DD) du jour agrégé.
+        Date ISO (YYYY-MM-DD) du jour agrégé.
     n_reviews : int
-        Nombre d’avis considérés ce jour‑là.
+        Nombre d’avis considérés ce jour-là.
     share_negative_pred : float
         Part des avis prédits négatifs.
     share_negative_true : float
@@ -538,6 +668,24 @@ def explain_endpoint(
 ) -> ExplainResponse:
     """Explique la décision pour le texte fourni.
 
+    Parameters
+    ----------
+    payload : ExplainRequest
+        Texte à expliquer et nombre de contributions demandées.
+    model_info : Tuple[object, str]
+        Modèle et version fournis par la dépendance ``get_model``.
+
+    Returns
+    -------
+    ExplainResponse
+        Contributions locales et termes globaux pour les deux classes.
+
+    Pourquoi :
+        Offrir une explication compréhensible par le community manager sans
+        dépendre d'une bibliothèque d'explicabilité externe (ADR 0019).
+
+    Notes
+    -----
     Une contribution positive pousse vers l'étiquette négative,
     tandis qu'une contribution négative pousse vers l'étiquette positive.
     """

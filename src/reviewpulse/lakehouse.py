@@ -7,6 +7,26 @@ Gestion du *lakehouse* Iceberg (catalogue, tables, lecture/écriture) sans Spark
 Les fonctions exposées sont utilisées par le pipeline Spark (`spark_silver.py`) et
 par les tests unitaires.
 
+Quoi
+----
+Module fournissant les opérations de base sur un lakehouse Iceberg adossé à un
+catalogue SQLite : création du catalogue, écriture avec validation de schéma,
+lecture, historique des instantanés, lecture à un instantané donné et
+restauration d'un instantané.
+
+Pourquoi
+--------
+Ce module évite l'usage de Spark pour la gestion du lakehouse, permettant des
+opérations légères et testables. Il garantit l'absence d'évolution de schéma
+silencieuse (ADR 0013) et la compatibilité des timestamps avec PyIceberg
+(ADR 0014).
+
+Ou
+--
+Appelé par `spark_silver.py` pour écrire la table `silver.reviews`, par
+`score.py` pour lire les tables Iceberg, et par les tests. Il lit et écrit dans
+le répertoire `config.LAKEHOUSE_DIR` et le catalogue SQLite `catalog.db`.
+
 Place dans la chaîne
 --------------------
 - `spark_silver.main()` produit un DataFrame pandas puis l’écrit dans la table
@@ -45,6 +65,15 @@ Choix de conception
   l’écriture, conformément à la contrainte mesurée de PyIceberg
   (``UnsupportedPyArrowTypeException``).
 
+Limites connues
+---------------
+- Ne gère pas les évolutions de schéma : toute différence de colonnes ou de
+  types est refusée par une ``ValueError``.
+- Ne prend pas en charge les types non supportés par PyIceberg autres que les
+  timestamps nanosecondes (convertis en microsecondes).
+- Aucun mécanisme de verrouillage concurrent : deux écritures simultanées
+  peuvent entrer en conflit au niveau du catalogue SQLite.
+
 Tests associés
 --------------
 - ``tests/test_spark_silver.py`` vérifie que deux écritures successives
@@ -70,7 +99,16 @@ log = logging.getLogger(__name__)
 
 
 def _ensure_lakehouse_dir() -> Path:
-    """Crée le répertoire ``config.LAKEHOUSE_DIR`` s’il n’existe pas."""
+    """Crée le répertoire ``config.LAKEHOUSE_DIR`` s’il n’existe pas.
+
+    Pourquoi : centralise la création du répertoire pour éviter les erreurs de
+    chemin et garantir que le catalogue peut être instancié.
+
+    Returns
+    -------
+    Path
+        Le chemin du répertoire du lakehouse.
+    """
     lakehouse_dir = config.LAKEHOUSE_DIR
     lakehouse_dir.mkdir(parents=True, exist_ok=True)
     return lakehouse_dir
@@ -83,6 +121,9 @@ def get_catalog() -> SqlCatalog:
     - Instancie ``SqlCatalog`` avec une base SQLite ``catalog.db``.
     - Crée le namespace ``config.SILVER_NAMESPACE`` lorsqu’il n’est pas présent.
 
+    Pourquoi : fournit un point d'accès unique au catalogue, avec création
+    automatique du namespace pour que les appels ultérieurs n'échouent pas.
+
     Returns
     -------
     SqlCatalog
@@ -90,6 +131,8 @@ def get_catalog() -> SqlCatalog:
     """
     lakehouse_dir = _ensure_lakehouse_dir()
     catalog_path = lakehouse_dir / "catalog.db"
+    # Pourquoi : l'URI SQLite doit être un chemin absolu au format fichier pour
+    # que SQLAlchemy puisse ouvrir la base quel que soit le répertoire courant.
     catalog_uri = f"sqlite:///{catalog_path.resolve().as_posix()}"
     warehouse_uri = lakehouse_dir.resolve().as_uri()
 
@@ -100,6 +143,7 @@ def get_catalog() -> SqlCatalog:
     )
     # Le namespace « silver » doit exister.
     catalog.create_namespace_if_not_exists(config.SILVER_NAMESPACE)
+    log.debug("Catalogue Iceberg initialisé avec URI %s", catalog_uri)
     return catalog
 
 
@@ -111,6 +155,17 @@ def _cast_timestamps_us(table: pa.Table) -> pa.Table:
     les colonnes de type ``timestamp`` dont l’unité est ``ns`` sont converties,
     le fuseau horaire étant conservé (ex. ``UTC`` ou ``None``). La table est
     reconstruite avec le nouveau schéma dérivé des colonnes converties.
+
+    Pourquoi : PyIceberg 0.12.0 lève ``UnsupportedPyArrowTypeException`` pour
+    les timestamps en nanosecondes ; la conversion explicite en microsecondes
+    est la seule solution compatible sans perte d'information significative.
+
+    Args:
+        table: Table PyArrow dont les colonnes timestamp en ns doivent être
+            converties.
+
+    Returns:
+        Nouvelle table PyArrow avec les timestamps en microsecondes.
     """
     arrays = []
     for field in table.schema:
@@ -133,6 +188,9 @@ def write_table(identifier: str, arrow_table: pa.Table) -> dict:
       ``timestamp[us, tz=...]`` avant l’appel ``overwrite``.
     - Un instantané est créé à chaque ``overwrite``.
 
+    Pourquoi : garantit l'idempotence des écritures et la non-évolution
+    silencieuse du schéma, tout en respectant les contraintes de PyIceberg.
+
     Parameters
     ----------
     identifier : str
@@ -144,7 +202,13 @@ def write_table(identifier: str, arrow_table: pa.Table) -> dict:
     -------
     dict
         ``{"table": identifier, "rows": n, "snapshots": s, "metadata_location": str}``
+
+    Raises
+    ------
+    ValueError
+        Si le schéma de la table existante ne correspond pas à celui fourni.
     """
+    log.info("Début de l'écriture de la table %s", identifier)
     catalog = get_catalog()
 
     # 1. Conversion des timestamps avant toute autre opération.
@@ -159,6 +223,9 @@ def write_table(identifier: str, arrow_table: pa.Table) -> dict:
         # Table déjà existante : on récupère son schéma Arrow.
         table = catalog.load_table(identifier)
         cible = table.schema().as_arrow()
+        # Pourquoi : comparer d'abord les noms de colonnes permet de donner un
+        # message d'erreur explicite avant de tenter un cast qui pourrait
+        # échouer de manière obscure.
         if converted.schema.names != cible.names:
             raise ValueError(
                 f"Schéma incompatible pour {identifier} : {converted.schema.names} au lieu de {cible.names}"
@@ -179,11 +246,20 @@ def write_table(identifier: str, arrow_table: pa.Table) -> dict:
         "metadata_location": table.metadata_location,
     }
     log.debug("Écriture terminée pour %s : %s", identifier, result)
+    log.info(
+        "Écriture de %s : %d lignes, %d instantanés",
+        identifier,
+        converted.num_rows,
+        len(history),
+    )
     return result
 
 
 def read_table(identifier: str) -> pa.Table:
     """Lit le contenu d’une table Iceberg et le renvoie sous forme de ``pyarrow.Table``.
+
+    Pourquoi : fournit un accès simple et uniforme aux données Iceberg pour les
+    modules consommateurs.
 
     Parameters
     ----------
@@ -195,6 +271,7 @@ def read_table(identifier: str) -> pa.Table:
     pyarrow.Table
         Le tableau complet.
     """
+    log.debug("Lecture de la table %s", identifier)
     catalog = get_catalog()
     table = catalog.load_table(identifier)
     return table.scan().to_arrow()
@@ -204,6 +281,9 @@ def table_history(identifier: str) -> list[dict]:
     """Retourne l’historique des instantanés d’une table Iceberg.
 
     Chaque entrée contient ``snapshot_id`` et ``timestamp_ms``.
+
+    Pourquoi : permet de suivre les versions d'une table et de vérifier la
+    création d'instantanés lors des écritures.
 
     Parameters
     ----------
@@ -215,6 +295,7 @@ def table_history(identifier: str) -> list[dict]:
     list[dict]
         Liste ordonnée des instantanés.
     """
+    log.debug("Récupération de l'historique de %s", identifier)
     catalog = get_catalog()
     table = catalog.load_table(identifier)
     return [
@@ -225,6 +306,9 @@ def table_history(identifier: str) -> list[dict]:
 
 def read_table_at(identifier: str, snapshot_id: int) -> pa.Table:
     """Lit une table Iceberg à un instantané donné.
+
+    Pourquoi : permet de consulter une version antérieure sans modifier l'état
+    courant, utile pour l'audit ou la comparaison.
 
     Parameters
     ----------
@@ -239,6 +323,7 @@ def read_table_at(identifier: str, snapshot_id: int) -> pa.Table:
         Le tableau correspondant à l'instantané demandé. La table source n'est
         pas modifiée.
     """
+    log.debug("Lecture de %s à l'instantané %s", identifier, snapshot_id)
     catalog = get_catalog()
     table = catalog.load_table(identifier)
     return table.scan(snapshot_id=snapshot_id).to_arrow()
@@ -249,6 +334,9 @@ def restore_snapshot(identifier: str, snapshot_id: int) -> dict:
 
     La fonction vérifie que ``snapshot_id`` figure dans l'historique, effectue
     le rollback puis confirme que le nouveau snapshot est bien celui attendu.
+
+    Pourquoi : offre une opération de retour arrière contrôlée, avec
+    vérification de l'existence de l'instantané et de la réussite du rollback.
 
     Parameters
     ----------
@@ -269,6 +357,7 @@ def restore_snapshot(identifier: str, snapshot_id: int) -> dict:
     RuntimeError
         Si la restauration n'a pas abouti.
     """
+    log.info("Restauration de %s vers l'instantané %s", identifier, snapshot_id)
     catalog = get_catalog()
     table = catalog.load_table(identifier)
 
@@ -315,6 +404,9 @@ def restore_snapshot(identifier: str, snapshot_id: int) -> dict:
 def main() -> int:
     """Interface en ligne de commande pour la gestion des instantanés Iceberg.
 
+    Pourquoi : fournit un point d'entrée exécutable pour les opérations
+    d'administration du lakehouse, utilisable manuellement ou dans des scripts.
+
     Options
     -------
     --table IDENTIFIER
@@ -324,6 +416,11 @@ def main() -> int:
         horodatage UTC lisible. L'instantané courant est marqué.
     --restaurer SNAPSHOT_ID
         Restaure la table à l'instantané indiqué.
+
+    Returns
+    -------
+    int
+        Code de sortie : 0 en cas de succès, 1 en cas d'erreur.
     """
     import argparse  # import local
     from datetime import datetime, timezone  # import local
@@ -348,6 +445,7 @@ def main() -> int:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
+    log.info("Démarrage de la commande lakehouse")
 
     if args.restaurer is not None:
         try:
@@ -357,6 +455,7 @@ def main() -> int:
                 f"nouveau snapshot : {result['nouveau_snapshot_id']}, "
                 f"lignes : {result['lignes']}"
             )
+            log.info("Commande terminée avec succès")
             return 0
         except (ValueError, RuntimeError) as exc:
             log.error(str(exc))
@@ -378,6 +477,7 @@ def main() -> int:
             if entry["snapshot_id"] == current_id:
                 line += " (courant)"
             print(line)
+        log.info("Commande terminée avec succès")
         return 0
     except Exception as exc:  # pragma: no cover
         log.error(str(exc))
