@@ -61,3 +61,21 @@ code réel : existence des fichiers et des fonctions cités, chiffres non fourni
 compilation, tests, et retours de la machine. Les contrôles employés à ce jour vivent dans
 `tools/verifier_briques.py`, `tools/verifier_justifications.py`,
 `tools/verifier_documentation.sh` et la phase de lint de `tools/campagne_preuves.sh`.
+
+Quand un agent réécrit un module entier — c'est le cas de l'enrichissement du code, R66 — le
+résultat passe par `tools/appliquer_enrichissement.sh`, qui enchaîne quatre portes et ne remplace
+l'original qu'après la dernière :
+
+1. le rendu est du Python valide (`ast.parse`), et l'erreur de syntaxe est rendue en clair ;
+2. **rien n'est perdu** : `tools/citations_perdues.sh` refuse toute version d'où a disparu une
+   citation d'ADR, de test ou de registre présente dans l'original — le 20/09/2026, le banc a
+   réécrit la docstring de `transform.py` en oubliant ses trois tests associés, et la porte
+   d'équivalence, qui ignore les docstrings, ne l'aurait pas vu ;
+3. **la logique est inchangée** : `tools/verifier_equivalence.sh` compare les arbres syntaxiques
+   après avoir retiré docstrings et appels de journal (`logger`, `_logger`, `log`, `LOGGER`) ; un
+   `print` n'est pas retiré, parce qu'il change la sortie observable ;
+4. l'original est copié dans la quarantaine datée et inscrit au journal avant le remplacement,
+   et un lot rejoué ne recopie rien (`cmp`).
+
+Puis `ruff` et la batterie tournent dans l'image de dev sur une copie jetable du dépôt
+(`docker run -d --name`, jamais `--rm`), et la CI confirme sur un runner neutre.

@@ -29,6 +29,11 @@ import sys
 import pathlib
 
 
+# Noms usuels d'un journal de module : le banc local a rendu `_logger` la ou le depot ecrit
+# `logger` (20/09/2026) ; l'un et l'autre n'executent aucune logique metier.
+NOMS_JOURNAL = ("logger", "_logger", "log", "LOGGER")
+
+
 class Depouilleur(ast.NodeTransformer):
     """Retire docstrings et appels logger.* ; ne touche a rien d'autre."""
 
@@ -59,7 +64,7 @@ class Depouilleur(ast.NodeTransformer):
         # Un appel logger.<niveau>(...) n'execute aucune logique metier : on l'ignore.
         v = noeud.value
         if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) \
-                and isinstance(v.func.value, ast.Name) and v.func.value.id in ("logger", "log") \
+                and isinstance(v.func.value, ast.Name) and v.func.value.id in NOMS_JOURNAL \
                 and v.func.attr in ("debug", "info", "warning", "error", "exception", "critical"):
             return None
         return noeud
@@ -73,7 +78,7 @@ def logique(chemin):
     arbre.body = [n for n in arbre.body
                   if not (isinstance(n, ast.Import) and all(a.name == "logging" for a in n.names))
                   and not (isinstance(n, ast.Assign) and len(n.targets) == 1
-                           and isinstance(n.targets[0], ast.Name) and n.targets[0].id == "logger")]
+                           and isinstance(n.targets[0], ast.Name) and n.targets[0].id in NOMS_JOURNAL)]
     return ast.dump(arbre, include_attributes=False)
 
 

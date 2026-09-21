@@ -22,13 +22,37 @@ Les fonctions lèvent :class:`ValueError` si ces exigences ne sont pas respecté
 Aucune lecture/écriture disque, journalisation ou appel à MLflow n’est
 effectué ici.
 
-Décision appliquée ici : ADR 0019 — explicabilité par contribution linéaire exacte, plutôt que SHAP ou LIME.
+Quoi
+----
+Ce module fournit des fonctions d’explicabilité locale et globale pour le
+modèle de classification de sentiment de ReviewPulse.
+
+Pourquoi
+--------
+Le besoin métier est de présenter les termes influents (Model Card) et
+d'expliquer les décisions individuelles (Tableau de bord). Cette approche
+privilégie la contribution linéaire exacte (ADR 0019) plutôt que des
+méthodes approximatives comme SHAP ou LIME, garantissant une
+interprétabilité exacte et des performances constantes.
+
+Ou
+--
+Ce module s'exécute en mémoire, sans accès disque, ni journalisation externe.
+
+Comment
+-------
+Le module valide d'abord le pipeline pour s'assurer de la présence des
+étapes TfidfVectorizer et LogisticRegression. Il extrait ensuite les
+coefficients du classifieur, calcule les contributions locales via le
+produit de la valeur TF-IDF et du coefficient, et trie les résultats par
+magnitude pour identifier les traits les plus discriminants.
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Sequence, Tuple
 
+import logging
 import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -36,6 +60,7 @@ from sklearn.linear_model import LogisticRegression
 
 from reviewpulse.decision import LABEL_NEGATIVE
 
+logger = logging.getLogger(__name__)
 
 __all__: List[str] = [
     "global_terms",
@@ -63,6 +88,7 @@ def _validate_model(model: Pipeline) -> Tuple[TfidfVectorizer, LogisticRegressio
         Si le pipeline ne contient pas les étapes ``tfidf`` et ``clf`` ou si
         les objets ne sont pas du type attendu.
     """
+    logger.info("Début de la validation du modèle.")
     if not isinstance(model, Pipeline):
         raise ValueError("Le modèle doit être une instance de sklearn.pipeline.Pipeline.")
     try:
@@ -77,6 +103,7 @@ def _validate_model(model: Pipeline) -> Tuple[TfidfVectorizer, LogisticRegressio
         raise ValueError("L'étape 'tfidf' doit être un TfidfVectorizer.")
     if not isinstance(clf, LogisticRegression):
         raise ValueError("L'étape 'clf' doit être un LogisticRegression.")
+    logger.info("Validation du modèle réussie.")
     return tfidf, clf
 
 
@@ -99,7 +126,8 @@ def _negative_coefficients(clf: LogisticRegression) -> np.ndarray:
         Coefficients (float64) de la classe négative, de même forme que
         ``clf.coef_[0]``.
     """
-    # Recherche explicite de l’indice de la classe négative, comme dans decision.negative_proba
+    logger.info("Extraction des coefficients pour la classe négative.")
+    # Pourquoi : L'ordre des classes dans clf.classes_ n'est pas garanti, on cherche l'index explicite.
     try:
         idx_negative = list(clf.classes_).index(LABEL_NEGATIVE)
     except ValueError as exc:
@@ -139,13 +167,14 @@ def global_terms(model: Pipeline, n: int = 20) -> Dict[str, List[Tuple[str, floa
     ValueError
         Si le pipeline ne respecte pas les exigences décrites.
     """
+    logger.info("Calcul des termes globaux pour %d termes.", n)
     tfidf, clf = _validate_model(model)
 
     terms = tfidf.get_feature_names_out()
     coeff_pos = clf.coef_[0]               # coefficients de la classe positive
     coeff_neg = _negative_coefficients(clf)  # coefficients de la classe négative
 
-    # Sélection des termes négatifs (coeff positif pour la classe négative) et positifs (coeff positif pour la classe positive)
+    # Comment : On filtre les coefficients positifs car ils indiquent une influence positive vers la classe cible.
     neg_pairs = [(term, coeff) for term, coeff in zip(terms, coeff_neg) if coeff > 0]
     pos_pairs = [(term, coeff) for term, coeff in zip(terms, coeff_pos) if coeff > 0]
 
@@ -153,6 +182,7 @@ def global_terms(model: Pipeline, n: int = 20) -> Dict[str, List[Tuple[str, floa
     neg_pairs.sort(key=lambda x: abs(x[1]), reverse=True)
     pos_pairs.sort(key=lambda x: abs(x[1]), reverse=True)
 
+    logger.info("Terme global calculé pour %d classes.", len(neg_pairs) + len(pos_pairs))
     return {
         "negative": neg_pairs[:n],
         "positive": pos_pairs[:n],
@@ -187,6 +217,7 @@ def local_contributions(
     ValueError
         Si le pipeline ne respecte pas les exigences décrites.
     """
+    logger.info("Calcul des contributions locales pour un texte.")
     tfidf, clf = _validate_model(model)
 
     # Vectorisation du texte (sparse)
@@ -201,6 +232,7 @@ def local_contributions(
     # La multiplication peut retourner une matrice au format COO qui ne possède pas
     # l’attribut ``indices``. On la convertit donc en CSR (format supportant ``indices``)
     # avant d’en extraire les indices et les valeurs.
+    # Comment : La conversion en CSR est nécessaire pour accéder aux indices via l'attribut .indices.
     contrib_sparse = X.multiply(coeff_neg).tocsr()
 
     indices = contrib_sparse.indices
@@ -210,6 +242,7 @@ def local_contributions(
     contributions = [(terms[idx], val) for idx, val in zip(indices, values)]
     contributions.sort(key=lambda x: abs(x[1]), reverse=True)
 
+    logger.info("Contribution locale calculée pour %d termes.", len(contributions))
     return contributions[:n]
 
 
@@ -240,6 +273,7 @@ def explain_batch(
     ValueError
         Si le pipeline ne respecte pas les exigences décrites.
     """
+    logger.info("Exploration d'un lot de %d textes.", len(texts))
     tfidf, clf = _validate_model(model)
 
     # Vectorisation en bloc
@@ -253,6 +287,7 @@ def explain_batch(
     # La multiplication peut produire une matrice au format COO qui ne possède pas
     # l’attribut ``indices``. On la convertit en CSR pour pouvoir accéder aux indices
     # et aux valeurs de chaque ligne.
+    # Comment : La conversion en CSR est nécessaire pour itérer ligne par ligne.
     contrib_matrix = X.multiply(coeff_neg).tocsr()  # même forme que X, mais valeurs = tfidf * coeff_neg
 
     terms = tfidf.get_feature_names_out()
@@ -269,4 +304,5 @@ def explain_batch(
         contribs.sort(key=lambda x: abs(x[1]), reverse=True)
         results.append(contribs[:n])
 
+    logger.info("Lot de %d textes expliqués.", len(results))
     return results
