@@ -15,42 +15,74 @@ Fonctionnement
 -------------
 Pour chaque jeu (``config.APP_IDS``) et chaque langue (``config.LANGUAGES``) :
 
-* flux naturel : jusqu’à ``config.MAX_PAGES`` pages, ``review_type="all"`` ;
-* flux négatif complémentaire : jusqu’à ``config.BOOST_MAX_PAGES`` pages,
+* flux naturel : jusqu'à ``config.MAX_PAGES`` pages, ``review_type="all"`` ;
+* flux négatif complémentaire : jusqu'à ``config.BOOST_MAX_PAGES`` pages,
   ``review_type="negative"`` (ADR 0007).
 
-La pagination utilise le curseur retourné par l’API. La boucle s’arrête
-lorsqu’une page ne contient aucun nouvel avis, que la liste ``reviews`` est vide,
+La pagination utilise le curseur retourné par l'API. La boucle s'arrête
+lorsqu'une page ne contient aucun nouvel avis, que la liste ``reviews`` est vide,
 que le curseur ne change pas, ou que le nombre maximal de pages est atteint.
 
 Les appels réseau sont effectués avec ``requests.Session``,
-``timeout=config.HTTP_TIMEOUT_S`` et un back‑off exponentiel (1, 2, 4, 8 s)
+``timeout=config.HTTP_TIMEOUT_S`` et un back‑off exponentiel (1, 2, 4, 8 s)
 sur les codes 429 et 5xx, limité à ``config.HTTP_MAX_RETRIES`` (ADR 0002).
 
-Les avis dont l’identifiant ``recommendationid`` n’est pas présent dans le
+Les avis dont l'identifiant ``recommendationid`` n'est pas présent dans le
 manifeste sont écrits dans un fichier ``batch_…jsonl`` sous
 ``config.RAW_DIR`` (chemin différent pour le flux négatif, préfixe
 ``sample=negative_boost``). Le manifeste est mis à jour atomiquement
-(``.tmp`` → ``os.replace``) (ADR 0002). Aucun fichier n’est créé si aucune
-nouvelle revue n’est disponible.
+(``.tmp`` → ``os.replace``) (ADR 0002). Aucun fichier n'est créé si aucune
+nouvelle revue n'est disponible.
+
+Quoi
+----
+Module d'ingestion des avis Steam vers la zone brute du lakehouse.
+
+Pourquoi
+--------
+Éviter la perte de données brutes et la duplication d'avis lors des
+réexécutions du pipeline. Le manifeste d'IDs vus garantit l'idempotence
+(ADR 0002).
+
+Ou
+--
+Appelé par : ``dags/reviewpulse_daily.py`` (tâche Airflow), tests d'intégration.
+Lit : API publique Steam (``config.STEAM_URL``), manifeste d'IDs vus
+      (``config.STATE_DIR``).
+Écrit : Fichiers JSONL bruts (``config.RAW_DIR``), manifeste mis à jour
+        (``config.STATE_DIR``).
+
+Comment
+-------
+Pour chaque combinaison (app_id, language, sample_source) : charge le
+manifeste des IDs déjà vus, parcourt les pages de l'API Steam avec un
+curseur de pagination, filtre les avis déjà présents, écrit les nouveaux
+avis dans un fichier JSONL temporaire puis le déplace atomiquement, met
+à jour le manifeste de la même manière.
 
 Choix de conception
 --------------------
 * Injection du sommeil via le paramètre ``sleep`` pour faciliter les tests.
-* Retry exponentiel (1, 2, 4, 8 s) plutôt que back‑off fixe.
+* Retry exponentiel (1, 2, 4, 8 s) plutôt que back‑off fixe.
 * Écriture atomique du lot et du manifeste.
 * Séparation des répertoires par flux pour garder la compatibilité ascendante
   (le flux naturel conserve le chemin historique).
 
+Limites connues
+---------------
+* Ne gère pas les erreurs d'API persistantes au-delà de ``HTTP_MAX_RETRIES``.
+* Ne valide pas le contenu des avis (fait par ``transform.py``).
+* Ne purge pas les anciens fichiers bruts (fait par ``transform.py``).
+
 Preuves
 -------
-* 16/09/2026 : 6 000 avis au premier passage, 0 au second, confirmant
-  l’absence de doublons (ADR 0002).
+* 16/09/2026 : 6 000 avis au premier passage, 0 au second, confirmant
+  l'absence de doublons (ADR 0002).
 
 Tests associés
 ---------------
 * ``test_ingest.py`` couvre ``fetch_page``, ``ingest_app`` et ``main``,
-  y compris les scénarios de pagination, de retry et d’écriture atomique.
+  y compris les scénarios de pagination, de retry et d'écriture atomique.
 * ``test_fresh_dirs.py`` et ``test_boost.py`` vérifient la séparation des flux
   et la compatibilité ascendante.
 
@@ -115,7 +147,7 @@ def fetch_page(
         après le nombre maximal de retries.
 
     Pourquoi :
-        Centralise la logique d’appel HTTP avec gestion du retry exponentiel.
+        Centralise la logique d'appel HTTP avec gestion du retry exponentiel.
     """
     url = config.STEAM_URL.format(app_id=app_id)
     params = {
@@ -137,24 +169,35 @@ def fetch_page(
                 timeout=config.HTTP_TIMEOUT_S,
             )
         except Exception as exc:
+            logger.exception("Erreur réseau lors de la requête app_id=%s", app_id)
             raise RuntimeError(f"Erreur réseau lors de la requête : {exc}") from exc
 
         if response.status_code == 200:
             payload = response.json()
             if payload.get("success") != 1:
+                logger.error("API Steam a renvoyé success != 1 pour app_id=%s", app_id)
                 raise RuntimeError("L'API Steam a renvoyé success != 1")
             return payload
 
         if response.status_code in (429,) + tuple(range(500, 600)):
             if attempts >= config.HTTP_MAX_RETRIES:
+                logger.error(
+                    "Échec après %d tentatives, code %d pour app_id=%s",
+                    attempts + 1,
+                    response.status_code,
+                    app_id,
+                )
                 raise RuntimeError(
                     f"Échec après {attempts + 1} tentatives, code {response.status_code}"
                 )
             backoff = 2 ** attempts
+            # Pourquoi : back-off exponentiel (1, 2, 4, 8 s) pour respecter les limites
+            # de l'API sans bloquer indéfiniment (ADR 0002).
             _sleep(backoff, sleep)
             attempts += 1
             continue
 
+        logger.error("Erreur HTTP inattendue %d pour app_id=%s", response.status_code, app_id)
         raise RuntimeError(f"Erreur HTTP inattendue : {response.status_code}")
 
 
@@ -175,7 +218,7 @@ def ingest_app(
     Le paramètre ``sample_source`` indique la partition (``natural`` ou
     ``negative_boost``). S'il est ``None``, il est résolu à
     ``config.SAMPLE_NATURAL``. Le type d'avis demandé (``review_type``) est
-    dérivé du flux : ``negative`` si ``sample_source`` correspond à
+    dérivé du flux : ``negative`` si ``sample_source`` correspond à
     ``config.SAMPLE_NEGATIVE_BOOST``, sinon ``all``.
 
     Retourne le nombre d'avis nouveaux écrits.
@@ -210,6 +253,8 @@ def ingest_app(
     is_natural = sample_source == config.SAMPLE_NATURAL
 
     # Détermination du type d'avis à demander à l'API
+    # Pourquoi : le type d'avis découle uniquement du flux pour ne jamais écrire
+    # d'avis positifs dans la partition négative (ADR 0002).
     review_type = "negative" if sample_source == config.SAMPLE_NEGATIVE_BOOST else "all"
 
     # S'assurer que le répertoire d'état existe
@@ -229,6 +274,14 @@ def ingest_app(
     else:
         seen_ids = set()
 
+    logger.info(
+        "Début ingestion app_id=%s language=%s sample=%s max_pages=%d",
+        app_id,
+        language,
+        sample_source,
+        max_pages,
+    )
+
     session = session or requests.Session()
     cursor = "*"
     total_new = 0
@@ -247,10 +300,12 @@ def ingest_app(
 
         returned_cursor = payload.get("cursor")
         if returned_cursor == cursor:
+            # Pourquoi : arrêt si le curseur ne change pas (fin de pagination).
             break
 
         reviews = payload.get("reviews", [])
         if not reviews:
+            # Pourquoi : arrêt si la page est vide (plus de données).
             break
 
         new_reviews = [
@@ -258,6 +313,7 @@ def ingest_app(
         ]
 
         if not new_reviews:
+            # Pourquoi : arrêt si aucune nouvelle revue (idempotence atteinte).
             break
 
         batch_reviews.extend(new_reviews)
@@ -268,6 +324,13 @@ def ingest_app(
 
         cursor = returned_cursor
         page_index += 1
+
+    logger.info(
+        "Fin pagination app_id=%s pages=%d nouvelles_reviews=%d",
+        app_id,
+        page_index,
+        total_new,
+    )
 
     if batch_reviews:
         date_str = now.strftime("%Y-%m-%d")
@@ -305,7 +368,16 @@ def ingest_app(
         os.replace(batch_tmp, batch_path)
 
         # Remplacement atomique du manifeste
+        # Pourquoi : écriture atomique pour éviter les états corrompus en cas
+        # d'interruption (ADR 0002).
         os.replace(manifest_tmp, state_path)
+
+        logger.info(
+            "Écriture terminée app_id=%s batch=%s manifeste=%s",
+            app_id,
+            batch_path.name,
+            state_path.name,
+        )
 
     return total_new
 
@@ -318,9 +390,12 @@ def main() -> int:
     Returns:
         0 en cas de succès (les exceptions sont propagées).
 
+    Raises:
+        Exception: Propagation des erreurs d'ingestion.
+
     Pourquoi :
-        Point d’entrée exécutable du module, utilisé par le DAG Airflow et les
-        tests d’intégration.
+        Point d'entrée exécutable du module, utilisé par le DAG Airflow et les
+        tests d'intégration.
     """
     logging.basicConfig(
         level=logging.INFO,

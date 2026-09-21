@@ -13,30 +13,30 @@ Place dans la chaîne
 Fonctionnement
 --------------
 1. ``_column_type_mismatch`` compare les colonnes et leurs types avec ``config.CLEAN_COLUMNS`` ; toute différence produit une erreur et interrompt les vérifications suivantes.
-2. ``check_clean`` exécute successivement :
+2. ``check_clean`` exécute successivement :
    - vérification d’ordre et de type,
    - présence d’au moins une ligne,
    - unicité et non‑nullité de ``review_id``,
-   - valeurs de ``label`` limitées à {0, 1},
+   - valeurs de ``label`` limitées à {0, 1},
    - appartenance de ``language`` à ``config.LANGUAGES``,
    - appartenance de ``sample_source`` à ``config.SAMPLE_SOURCES``,
-   - ``text_len`` ≥ 1,
+   - ``text_len`` ≥ 1,
    - absence des colonnes listées dans ``config.FORBIDDEN_CLEAN_COLUMNS``,
-   - format hexadécimal 64 caractères de ``author_pseudo``,
-   - part de négatifs calculée uniquement sur les lignes où ``sample_source == config.SAMPLE_NATURAL`` et comprise entre 0,5 % et 95 %.
+   - format hexadécimal 64 caractères de ``author_pseudo``,
+   - part de négatifs calculée uniquement sur les lignes où ``sample_source == config.SAMPLE_NATURAL`` et comprise entre 0,5 % et 95 %.
    Les messages d’erreur sont agrégés dans une liste.
 3. ``assert_quality`` appelle ``check_clean`` et lève ``DataQualityError`` contenant tous les messages si la liste n’est pas vide.
-4. ``main`` lit ``config.CLEAN_FILE``, invoque ``assert_quality`` et renvoie 0 en cas de succès, 1 sinon.
+4. ``main`` lit ``config.CLEAN_FILE``, invoque ``assert_quality`` et renvoie 0 en cas de succès, 1 sinon.
 
 Choix de conception
 -------------------
-* Retourner une liste d’erreurs plutôt que d’interrompre au premier problème, pour fournir un diagnostic complet (ADR 0005).
-* Calculer la part de négatifs uniquement sur le flux « natural » conformément à la spécification v2 (ADR 0005 et 0007).
+* Retourner une liste d’erreurs plutôt que d’interrompre au premier problème, pour fournir un diagnostic complet (ADR 0005).
+* Calculer la part de négatifs uniquement sur le flux « natural » conformément à la spécification v2 (ADR 0005 et 0007).
 * Le script expose un ``main() -> int`` compatible avec la convention du projet (voir SPEC_CODE.md).
 
 Preuves
 -------
-* Les contrôles sont couverts par les tests ``test_transform_quality.py`` et ``test_boost.py`` (ADR 0005).
+* Les contrôles sont couverts par les tests ``test_transform_quality.py`` et ``test_boost.py`` (ADR 0005).
 
 Tests associés
 --------------
@@ -44,6 +44,26 @@ Tests associés
 * ``test_boost.py`` – confirme la prise en compte du champ ``sample_source``.
 * ``test_fresh_dirs.py`` – vérifie que le répertoire de sortie est créé avant l’appel à ``main``.
 * ``test_artifacts_location.py`` – s’assure que le module ne dépend pas d’un chemin codé en dur.
+
+Quoi
+----
+Module de validation bloquante du DataFrame de la zone propre.
+
+Pourquoi
+--------
+Le pipeline ne doit pas entraîner ni scorer sur des données corrompues, incomplètes ou mal typées. Cette porte centralise les règles de qualité afin que l’échec soit explicite et complet avant toute consommation aval.
+
+Où
+--
+* Appelé par :pymod:`reviewpulse.transform.main` et par le script CLI.
+* Lit ``config.CLEAN_FILE`` dans :func:`main`.
+* N’écrit aucun fichier ; lève ``DataQualityError`` ou renvoie un code de sortie.
+
+Limites connues
+---------------
+* Ne répare pas les données : il signale seulement les écarts.
+* Ne valide pas le contenu sémantique du texte (langue réelle, sens de l’avis).
+* La part de négatifs est calculée uniquement sur le flux naturel ; un déséquilibre dans le flux complémentaire n’est pas détecté ici.
 """
 
 import logging
@@ -75,7 +95,7 @@ def _column_type_mismatch(df: pd.DataFrame) -> list[str]:
         df: DataFrame à valider.
 
     Returns:
-        Liste d’erreurs ; vide si les colonnes et leurs types correspondent à
+        Liste d’erreurs ; vide si les colonnes et leurs types correspondent à
         ``config.CLEAN_COLUMNS``.
 
     Pourquoi :

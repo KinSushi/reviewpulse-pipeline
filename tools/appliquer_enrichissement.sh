@@ -42,14 +42,22 @@ python - "$JSONL" "$TRAVAIL" > "${PLAN}" <<'PY'
 import io, json, re, sys, pathlib, tokenize
 # Sous Windows, print() termine ses lignes en CRLF et le shell garde le retour chariot colle
 # au chemin : on force LF a l'ecriture du plan.
-sys.stdout.reconfigure(newline=chr(10))
+sys.stdout.reconfigure(newline=chr(10), encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 travail = pathlib.Path(sys.argv[2])
 
-FINE, INSECABLE = chr(0x202F), chr(0xA0)
+# Caracteres typographiques qu'un modele remplace volontiers par leur voisin ASCII : espace fine
+# insecable, espace insecable, trait d'union insecable, trait d'union, apostrophes courbes.
+TYPOGRAPHIE = {
+    chr(0x202F): " ", chr(0xA0): " ", chr(0x2011): "-", chr(0x2010): "-",
+    chr(0x2019): "'", chr(0x2018): "'",
+}
 
 
 def _normaliser(texte):
-    return texte.replace(FINE, " ").replace(INSECABLE, " ")
+    for fin, ascii_voisin in TYPOGRAPHIE.items():
+        texte = texte.replace(fin, ascii_voisin)
+    return texte
 
 
 def _jetons_de_chaine(source):
@@ -73,7 +81,7 @@ def reparer_typographie(chemin_original, candidat):
         original = pathlib.Path(chemin_original).read_text(encoding="utf-8")
         attendues = {}
         for t in _jetons_de_chaine(original):
-            if FINE in t.string or INSECABLE in t.string:
+            if any(c in t.string for c in TYPOGRAPHIE):
                 attendues.setdefault(_normaliser(t.string), t.string)
         if not attendues:
             return candidat, 0

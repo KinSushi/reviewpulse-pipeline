@@ -39,6 +39,12 @@ Tests associés
     La preuve est l’exécution réelle dans le conteneur Airflow, consignée dans ``docs/evidence``.
 
 Décision appliquée ici : ADR 0017 — Airflow sur PostgreSQL, pour que le planificateur survive à l'accès concurrent.
+
+Pourquoi
+    Automatiser la chaîne pour que les données restent fraîches sans intervention manuelle, et pour que le modèle soit réentraîné périodiquement. Le DAG quotidien garantit que la zone gold est reconstruite après chaque score, et le DAG hebdomadaire maintient le modèle à jour.
+
+Limites connues
+    Pas de test unitaire (Airflow absent de l'environnement du projet, ADR 0013). Les alertes écrivent dans le journal d'Airflow, pas dans un canal externe. Le court-circuit de dérive ne déclenche le réentraînement que si le rapport de drift est lisible et lève une alerte. La tâche gold dépend de score pour que le test dbt ``assert_every_review_is_scored`` passe.
 """
 
 import json
@@ -54,11 +60,16 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 logger = logging.getLogger(__name__)
 
 # Chemin de l’interpréteur du projet ReviewPulse
+# Pourquoi : ExternalPythonOperator exécute le code dans un interpréteur séparé ;
+# cette variable permet de pointer l'environnement du projet sans modifier le code.
 RP_PYTHON = os.environ.get("REVIEWPULSE_PYTHON", "/opt/rp-venv/bin/python")
 
 
 def _run_module(module_name: str) -> None:
     """Charge dynamiquement *module_name* et exécute ``module.main()``.
+
+    Pourquoi : isoler l'exécution du code métier dans un interpréteur distinct,
+    sans dépendre du module ``reviewpulse`` dans le processus Airflow.
 
     Le code de retour de ``module.main()`` doit être 0 ; sinon, une
     ``RuntimeError`` est levée.
@@ -66,10 +77,15 @@ def _run_module(module_name: str) -> None:
     Args
         module_name: Nom complet du module à exécuter (ex. ``reviewpulse.ingest``).
 
+    Returns
+        None
+
     Raises
         RuntimeError: Si le code de retour n’est pas nul.
     """
     import logging
+
+    logging.getLogger(__name__).info("Début de l'exécution de %s.main()", module_name)
 
     try:
         import importlib
@@ -85,6 +101,8 @@ def _run_module(module_name: str) -> None:
         )
         raise RuntimeError(str(exc)) from exc
 
+    logging.getLogger(__name__).info("Fin de l'exécution de %s.main(), code %s", module_name, result)
+
     if result != 0:
         raise RuntimeError(f"{module_name}.main() a renvoyé {result}")
 
@@ -94,8 +112,20 @@ def _run_module_avec_args(module_name: str, argv: list) -> None:
 
     Pourquoi : un module dont ``main`` analyse des arguments ne peut pas lire
     ``sys.argv`` ici — il appartient au processus lancé par Airflow, pas au module.
+
+    Args
+        module_name: Nom complet du module à exécuter.
+        argv: Liste des arguments à transmettre à ``module.main()``.
+
+    Returns
+        None
+
+    Raises
+        RuntimeError: Si le code de retour n’est pas nul.
     """
     import logging
+
+    logging.getLogger(__name__).info("Début de l'exécution de %s.main(%s)", module_name, argv)
 
     try:
         import importlib
@@ -108,6 +138,8 @@ def _run_module_avec_args(module_name: str, argv: list) -> None:
         )
         raise RuntimeError(str(exc)) from exc
 
+    logging.getLogger(__name__).info("Fin de l'exécution de %s.main(%s), code %s", module_name, argv, result)
+
     if result != 0:
         raise RuntimeError(f"{module_name}.main({argv}) a renvoyé {result}")
 
@@ -117,7 +149,19 @@ def _run_module_avec_args(module_name: str, argv: list) -> None:
 # ---------------------------------------------------------------------------
 
 def _alert_on_failure(context: dict) -> None:
-    """Journalise en ERROR lorsqu’une tâche échoue."""
+    """Journalise en ERROR lorsqu’une tâche échoue.
+
+    Pourquoi : callback Airflow ; le journal d'Airflow est le canal d'alerte de la démo.
+
+    Args
+        context: Dictionnaire de contexte fourni par Airflow.
+
+    Returns
+        None
+
+    Raises
+        Aucune
+    """
     ti = context["task_instance"]
     logger.error(
         "ALERTE ReviewPulse : tâche %s en échec (exécution %s, tentative %s)",
@@ -134,7 +178,23 @@ def _alert_on_sla_miss(
     slas,
     blocking_tis,
 ) -> None:
-    """Journalise en ERROR lorsqu’un SLA est dépassé."""
+    """Journalise en ERROR lorsqu’un SLA est dépassé.
+
+    Pourquoi : callback SLA ; le journal d'Airflow est le canal d'alerte de la démo.
+
+    Args
+        dag: Objet DAG concerné.
+        task_list: Liste des tâches en retard.
+        blocking_task_list: Liste des tâches bloquantes.
+        slas: Détails des SLA manqués.
+        blocking_tis: Instances de tâches bloquantes.
+
+    Returns
+        None
+
+    Raises
+        Aucune
+    """
     logger.error(
         "ALERTE ReviewPulse : SLA dépassé pour %s : %s",
         dag.dag_id,
@@ -159,12 +219,26 @@ default_args_daily = {
 def _derive_exige_reentrainement() -> bool:
     """Lit le rapport de drift et renvoie True si une alerte est levée.
 
+    Pourquoi : le court-circuit doit décider sans bloquer le DAG ; en cas d'erreur
+    de lecture, on ne déclenche pas de réentraînement (fail-closed).
+
     La lecture utilise uniquement la bibliothèque standard car l’interpréteur
     Airflow ne possède pas les dépendances du projet (voir ADR 0013).
+
+    Args
+        Aucun
+
+    Returns
+        bool: True si une alerte de dérive est levée, False sinon.
+
+    Raises
+        Aucune (toutes les exceptions sont capturées)
     """
     data_dir = os.environ.get("REVIEWPULSE_DATA_DIR", "/data")
     report_file = Path(data_dir) / "scored" / "drift_report.json"
     import logging
+
+    logging.getLogger(__name__).info("Lecture du rapport de dérive %s", report_file)
 
     try:
         with report_file.open("r") as f:
@@ -173,6 +247,7 @@ def _derive_exige_reentrainement() -> bool:
         if alerte:
             motifs = rapport.get("alerte", {}).get("motifs", [])
             logging.getLogger(__name__).info("Alerte de dérive levée : %s", motifs)
+        logging.getLogger(__name__).info("Décision de réentraînement : %s", bool(alerte))
         return bool(alerte)
     except Exception as exc:
         logging.getLogger(__name__).warning(

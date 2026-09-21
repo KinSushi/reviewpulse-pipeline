@@ -31,12 +31,37 @@ Aucune preuve supplémentaire n’est documentée dans la carte des modules pour
 Tests associés
 --------------
 Tous les tests utilisent la fixture ``data_env`` pour rediriger les constantes de chemin et définir ``REVIEWPULSE_SALT``.
+
+Pourquoi
+-------
+Le module centralise la configuration afin d'éviter la duplication des constantes dans les différents modules et de permettre aux tests d'injecter des valeurs via la fixture ``data_env``.
+
+Ou
+---
+Importé directement par les modules de la chaîne de traitement (ingest, transform, train, score, api, etc.). Les valeurs sont lues au moment de l'accès (`config.X`). Aucun fichier n'est écrit par ce module.
+
+Comment
+-------
+- Lecture des variables d'environnement au moment de l'import grâce à ``os.getenv``.
+- Construction des chemins avec ``pathlib.Path`` pour garantir la portabilité.
+- Conversion des listes d'identifiants et des seuils en structures Python natives.
+- Exposition d'une fonction ``salt()`` qui récupère le secret de salage et lève une exception si absent.
+
+Limites connues
+---------------
+- Le module ne valide pas la présence ou la cohérence des chemins au démarrage ; une mauvaise configuration déclenchera des erreurs au moment de l'utilisation.
+- ``salt()`` ne fournit aucune valeur par défaut ; il faut impérativement définir ``REVIEWPULSE_SALT``.
 """
 
 import os
+import logging
 from pathlib import Path
 
+# Initialise le logger du module
+logger = logging.getLogger(__name__)
+
 # Répertoire de données racine (peut être redéfini via la variable d'environnement)
+# Pourquoi : Le répertoire de données racine peut être redéfini via l'environnement pour supporter différents environnements (local, CI, Airflow).
 DATA_DIR = Path(os.getenv("REVIEWPULSE_DATA_DIR", "data"))
 
 # Sous‑répertoires
@@ -88,6 +113,7 @@ SCORED_FILE = SCORED_DIR / "reviews_scored.parquet"
 SUMMARY_FILE = SCORED_DIR / "daily_summary.parquet"
 
 # Identifiants d'applications Steam
+# Pourquoi : Permet de sélectionner les jeux à analyser ; la liste peut être surchargée via l'environnement.
 APP_IDS = [
     int(x)
     for x in os.getenv("REVIEWPULSE_APP_IDS", "1903340,1086940,2622380").split(",")
@@ -120,13 +146,16 @@ SAMPLE_NATURAL = "natural"
 SAMPLE_NEGATIVE_BOOST = "negative_boost"
 SAMPLE_SOURCES = [SAMPLE_NATURAL, SAMPLE_NEGATIVE_BOOST]
 BOOST_MAX_PAGES = int(os.getenv("REVIEWPULSE_BOOST_MAX_PAGES", "5"))
+# Pourquoi : Le grid de seuils est utilisé pour la recherche du meilleur seuil lors de l'entraînement (ADR 0007).
 THRESHOLD_GRID = [round(0.30 + 0.025 * i, 3) for i in range(21)]  # 0.30 à 0.80
 DEFAULT_DECISION_THRESHOLD = 0.5
 
 # Autres paramètres
 RAW_RETENTION_DAYS = 30
+# Pourquoi : Barrière de promotion du champion (ADR 0008).
 F1_MACRO_MIN = 0.75  # ADR 0008
 RANDOM_STATE = 42
+# Pourquoi : Colonnes à exclure pour des raisons de confidentialité ou de redondance.
 FORBIDDEN_CLEAN_COLUMNS = ["steamid", "personaname", "profile_url", "avatar"]
 
 # Colonnes attendues après nettoyage et leurs types pandas
@@ -168,7 +197,10 @@ def salt() -> bytes:
     -------
     Le sel rend le pseudonyme non réversible par dictionnaire ; la donnée reste une donnée personnelle pseudonymisée (ADR 0004).
     """
+    # Pourquoi : Lecture du secret de salage depuis l'environnement.
     value = os.getenv("REVIEWPULSE_SALT")
     if not value:
+        # logger.error("Variable d'environnement REVIEWPULSE_SALT manquante ou vide")
         raise RuntimeError("Variable d'environnement REVIEWPULSE_SALT manquante ou vide")
+    logger.debug("Sel lu depuis la variable d'environnement")
     return value.encode("utf-8")
