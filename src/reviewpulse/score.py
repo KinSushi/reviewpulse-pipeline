@@ -203,8 +203,8 @@ def summarize(scored: pd.DataFrame) -> pd.DataFrame:
         natural.groupby(["app_id", "language", "date"], as_index=False)
         .agg(
             n_reviews=("review_id", "size"),
-            share_negative_pred=("pred_label", lambda s: (s == 0).mean()),
-            share_negative_true=("label", lambda s: (s == 0).mean()),
+            share_negative_pred=("pred_label", lambda s: (s == decision.LABEL_NEGATIVE).mean()),
+            share_negative_true=("label", lambda s: (s == decision.LABEL_NEGATIVE).mean()),
             model_version=("model_version", "first"),
         )
     )

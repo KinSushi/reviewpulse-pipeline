@@ -295,5 +295,16 @@
     "tests": [
       "tests/test_api.py"
     ]
+  },
+  {
+    "id": "M28",
+    "fichier": "src/reviewpulse/score.py",
+    "avant": "            share_negative_pred=(\"pred_label\", lambda s: (s == decision.LABEL_NEGATIVE).mean()),",
+    "apres": "            share_negative_pred=(\"pred_label\", lambda s: (s == decision.LABEL_POSITIVE).mean()),",
+    "defaut_simule": "La part négative prédite du résumé quotidien compte les avis positifs",
+    "pourquoi_grave": "C'est le chiffre que l'utilisateur lit chaque matin, par jeu et par langue : inversé, le tableau de bord annoncerait 94 % de négatifs pour un jeu qui en a 6 %, et l'équipe remonterait une alerte fausse. Avant le 21/09/2026, aucun test ne vérifiait la valeur de cette colonne, seulement son existence",
+    "tests": [
+      "tests/test_train_score.py"
+    ]
   }
 ]

@@ -104,7 +104,7 @@ sont les contrôles d'arbre — `tools/verifier_journaux.sh` a examiné 207 appe
 a trouvé aucun qui écrive un texte d'avis, un identifiant, le sel ou un DataFrame entier.
 
 Puis `ruff` et la batterie tournent sur une copie jetable du dépôt (`docker run -d --name`,
-jamais `--rm`), et la CI confirme sur un runner neutre : batterie et 27 mutations.
+jamais `--rm`), et la CI confirme sur un runner neutre : batterie et 28 mutations.
 
 ---
 

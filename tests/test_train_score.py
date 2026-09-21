@@ -1,7 +1,7 @@
 # Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 import pytest
 import pandas as pd
-from reviewpulse import train, score, config
+from reviewpulse import train, score, config, decision
 
 
 @pytest.fixture
@@ -144,3 +144,50 @@ def test_ecart_train_test_raisonnable(data_env, labelled_frame):
     assert ecart is not None, f"ecart_train_test manquant : {ecart}"
     # l'écart doit être compris entre -0,05 et 0,35
     assert -0.05 <= ecart < 0.35, f"Écart inattendu (train={f1_train:.3f}, test={f1_test:.3f}) = {ecart:.3f}"
+
+
+def test_summarize_calcule_les_parts_negatives_attendues():
+    """Vérifie que summarize calcule correctement les parts négatives prédites et réelles.
+
+    Pourquoi : la part négative prédite est le chiffre que l'utilisateur lit chaque matin ;
+    si summarize comptait les avis positifs à la place, aucun test ne le voyait -- la mutation
+    M28 le simule. Des parts DIFFERENTES (0.5 et 0.25) sont choisies expres : avec des parts
+    egales, une inversion des deux colonnes passerait.
+    """
+    scored = pd.DataFrame({
+        "review_id": [1, 2, 3, 4],
+        "app_id": [1, 1, 1, 1],
+        "language": ["english", "english", "english", "english"],
+        "created_at": [
+            pd.Timestamp("2026-09-01 10:00", tz="UTC"),
+            pd.Timestamp("2026-09-01 11:00", tz="UTC"),
+            pd.Timestamp("2026-09-01 12:00", tz="UTC"),
+            pd.Timestamp("2026-09-01 13:00", tz="UTC"),
+        ],
+        "pred_label": [
+            decision.LABEL_NEGATIVE,
+            decision.LABEL_NEGATIVE,
+            decision.LABEL_POSITIVE,
+            decision.LABEL_POSITIVE,
+        ],
+        "label": [
+            decision.LABEL_NEGATIVE,
+            decision.LABEL_POSITIVE,
+            decision.LABEL_POSITIVE,
+            decision.LABEL_POSITIVE,
+        ],
+        "model_version": ["7", "7", "7", "7"],
+        "sample_source": [
+            config.SAMPLE_NATURAL,
+            config.SAMPLE_NATURAL,
+            config.SAMPLE_NATURAL,
+            config.SAMPLE_NATURAL,
+        ],
+    })
+
+    summary = score.summarize(scored)
+
+    assert len(summary) == 1, f"Attendu 1 ligne de résumé, obtenu {len(summary)}"
+    assert summary["n_reviews"].iloc[0] == 4, f"Attendu n_reviews=4, obtenu {summary['n_reviews'].iloc[0]}"
+    assert summary["share_negative_pred"].iloc[0] == 0.5, f"Attendu share_negative_pred=0.5, obtenu {summary['share_negative_pred'].iloc[0]}"
+    assert summary["share_negative_true"].iloc[0] == pytest.approx(0.25), f"Attendu share_negative_true=0.25, obtenu {summary['share_negative_true'].iloc[0]}"

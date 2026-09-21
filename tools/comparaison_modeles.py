@@ -471,9 +471,9 @@ def _evaluer_candidat(
 
     preds_final = decision.predict_labels(oof_proba, best_thr)
     f1_macro = float(f1_score(y, preds_final, average="macro"))
-    recall_neg = float(recall_score(y, preds_final, pos_label=0))
-    precision_neg = float(precision_score(y, preds_final, pos_label=0))
-    auc_neg = float(roc_auc_score((y == 0).astype(int), oof_proba))
+    recall_neg = float(recall_score(y, preds_final, pos_label=decision.LABEL_NEGATIVE))
+    precision_neg = float(precision_score(y, preds_final, pos_label=decision.LABEL_NEGATIVE))
+    auc_neg = float(roc_auc_score((y == decision.LABEL_NEGATIVE).astype(int), oof_proba))
 
     mean_train_s = float(sum(durees_entrainement) / len(durees_entrainement))
     latence_ms = (
@@ -691,7 +691,7 @@ def main() -> int:
 
     n_natural = int(len(X))
     n_boost = int(len(boost_df))
-    part_negative = float((y == 0).mean())
+    part_negative = float((y == decision.LABEL_NEGATIVE).mean())
 
     logger.info(
         "Banc lancé sur %d avis naturels et %d avis complémentaires, %d plis",

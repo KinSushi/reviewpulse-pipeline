@@ -433,7 +433,7 @@ def train_and_log(
     y_pred_test = decision.predict_labels(proba_test, decision_threshold)
 
     f1_macro = f1_score(y_test_nat, y_pred_test, average="macro")
-    recall_negative = recall_score(y_test_nat, y_pred_test, pos_label=0)
+    recall_negative = recall_score(y_test_nat, y_pred_test, pos_label=decision.LABEL_NEGATIVE)
     logger.info("F1 macro (test) : %.4f", f1_macro)
     logger.info("Rappel négatifs (test) : %.4f", recall_negative)
 
@@ -442,14 +442,14 @@ def train_and_log(
     y_pred_train = decision.predict_labels(proba_train, decision_threshold)
     f1_macro_train = f1_score(y_train_nat, y_pred_train, average="macro")
     ecart_train_test = f1_macro_train - f1_macro
-    precision_negative = precision_score(y_test_nat, y_pred_test, pos_label=0)
-    roc_auc = roc_auc_score((y_test_nat == 0).astype(int), proba_test)
+    precision_negative = precision_score(y_test_nat, y_pred_test, pos_label=decision.LABEL_NEGATIVE)
+    roc_auc = roc_auc_score((y_test_nat == decision.LABEL_NEGATIVE).astype(int), proba_test)
     logger.info("Écart F1 train-test : %.4f", ecart_train_test)
     logger.info("ROC AUC : %.4f", roc_auc)
 
     n_train = int(len(y_train_full))
     n_test = int(len(y_test_nat))
-    negative_share = float((y_test_nat == 0).mean())
+    negative_share = float((y_test_nat == decision.LABEL_NEGATIVE).mean())
 
     # Signature du modèle (sans input_example)
     # Pourquoi : avec un input_example, MLflow valide l'exemple par son chemin générique,

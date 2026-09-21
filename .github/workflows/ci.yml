@@ -52,6 +52,10 @@ jobs:
       # elle fait echouer l'integration, en le nommant.
       - name: Droit d'auteur — chaque fichier porte la mention
         run: sh tools/copyright.sh verifier
+      # L'ADR 0009 fait de decision.py la seule definition de la convention d'etiquettes : aucune
+      # etiquette ne s'ecrit en dur ailleurs. Le 21/09/2026, un balayage en avait trouve onze.
+      - name: Convention — aucune étiquette en dur hors de decision.py
+        run: sh tools/verifier_convention.sh
       - name: Run tests
         env:
           REVIEWPULSE_SALT: ci-salt

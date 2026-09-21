@@ -73,7 +73,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from reviewpulse import config
+from reviewpulse import config, decision
 
 # Pourquoi : centraliser les logs du module pour faciliter le suivi et le filtrage.
 logger = logging.getLogger(__name__)
@@ -209,7 +209,7 @@ def check_clean(df: pd.DataFrame) -> list[str]:
         if natural_df.empty:
             errors.append("Aucun avis naturel disponible pour le calcul de la part de négatifs")
         else:
-            negative_share = (natural_df["label"] == 0).mean()
+            negative_share = (natural_df["label"] == decision.LABEL_NEGATIVE).mean()
             # Pourquoi : seuils définis par l'ADR 0007 pour éviter des parts extrêmes.
             if not (0.005 <= negative_share <= 0.95):
                 errors.append(

@@ -1,6 +1,6 @@
 # Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: documentation portes journaux chiffres comparaison copyright help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
+.PHONY: documentation portes journaux chiffres comparaison copyright convention help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -119,6 +119,10 @@ chiffres:
 copyright:
 	sh tools/copyright.sh apposer
 	sh tools/copyright.sh verifier
+
+## Aucune etiquette de classe ecrite en dur hors de decision.py (ADR 0009)
+convention:
+	sh tools/verifier_convention.sh
 
 comparaison:
 	python tools/comparaison_modeles.py --sortie docs/evidence/comparaison_modeles.md

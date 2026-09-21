@@ -91,10 +91,10 @@ Sur un test cent pour cent naturel, tenu à l'écart : F1 macro 0,803, AUC 0,940
 0,650. Le rappel, c'est le chiffre qui compte pour l'utilisateur : la part des vrais avis négatifs
 qu'on retrouve.
 
-Mais un chiffre seul ne vaut rien. Voici comment je sais que ça marche. Cent quarante-huit tests
-automatisés, verts. Vingt-sept tests inverses : j'injecte un défaut volontaire — je supprime la
+Mais un chiffre seul ne vaut rien. Voici comment je sais que ça marche. Cent quarante-neuf tests
+automatisés, verts. Vingt-huit tests inverses : j'injecte un défaut volontaire — je supprime la
 pseudonymisation, j'inverse la convention de décision, je retire la barrière de promotion — et je
-vérifie qu'un test nommé le détecte. Vingt-sept sur vingt-sept, en un seul passage, sur un runner
+vérifie qu'un test nommé le détecte. Vingt-huit sur vingt-huit, en un seul passage, sur un runner
 d'intégration continue, pas sur ma machine. Deux entraînements successifs donnent le même F1 à la
 seizième décimale : le code est déterministe, la seule source de variation est l'ingestion en direct.
 Et la barrière de promotion a été éprouvée dans les deux sens le même jour : elle a promu un modèle
