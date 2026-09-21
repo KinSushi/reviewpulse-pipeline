@@ -110,6 +110,13 @@ services:
       REVIEWPULSE_API_URL: http://api:8000
     volumes:
       - ./data:/data
+      # Meme raison que pour l'API et Airflow (registre R46) : l'ecriture d'une image ne se termine
+      # jamais sur ce disque, donc un changement de code ne doit pas dependre d'une reconstruction.
+      # Defaut constate le 21/09/2026 : ce service ne montait QUE les donnees ; il servait donc le
+      # tableau de bord fige dans l'image, pas celui du depot -- le code premium et la mention de
+      # droit d'auteur n'apparaissaient pas a l'ecran. On monte le script et le paquet, en lecture seule.
+      - ./dashboard:/app/dashboard:ro
+      - ./src/reviewpulse:/app/src/reviewpulse:ro
     # L'image partagée vérifie l'API sur :8000 ; ce conteneur fait tourner Streamlit sur :8501.
     # Sans cette surcharge, le tableau de bord serait déclaré « unhealthy » à tort (constaté le 16/09/2026).
     healthcheck:

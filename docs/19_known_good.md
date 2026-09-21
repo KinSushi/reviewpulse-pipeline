@@ -392,7 +392,7 @@ des modèles, sans qu'une ligne de logique ait bougé — et c'est prouvé à ch
 | 1 — portes | `tools/tester_portes.sh` : équivalence, citations, journaux, non-appauvrissement | **18 verdicts sur 18** |
 | 1 — documents | `verifier_documentation.sh`, `verifier_chiffres.sh`, `verifier_justifications.py` | 0 lien mort, 0 signature d'outil, **0 contradiction** sur 18 documents, 30 décisions justifiées |
 | 1 — journaux | `tools/verifier_journaux.sh`, contrôle d'arbre | **207 appels, 0 fuite, 0 f-string** |
-| 2 — imports | API et tableau de bord **redémarrés** sur le code premium ; Airflow le monte | `/health` : version 5, seuil 0,775 |
+| 2 — imports | API **redémarrée** sur le code premium ; Airflow le monte. **Rectifié à 7 h 12** : le tableau de bord, lui, ne montait que les données et servait le code figé dans l'image — l'entrée d'origine disait à tort qu'il tournait sur le code premium. Montages ajoutés, conteneur recréé sans reconstruire d'image | `/health` : version 5, seuil 0,775 ; tableau de bord relu dans un navigateur : mention de droit d'auteur visible, version 5, seuil 0,775 |
 | 3 — exécution | DAG quotidien `premium-20260921-0048` | **9 tâches : 8 vertes, 1 sautée par conception**, 34 min 50 s ; puis l'exécution **planifiée** s'est lancée seule |
 | 4 — test avant | batterie en CI, sur `main` | **144 tests verts** |
 | 4 — test avant | pile déployée, `tools/forward_test.py` depuis le réseau de la pile | **16 contrôles sur 16** : 8 974 lignes scorées en version 5, 31 instantanés Iceberg |
@@ -404,7 +404,7 @@ des modèles, sans qu'une ligne de logique ait bougé — et c'est prouvé à ch
 périmés remis à l'heure, captures réelles — et le choix du modèle est devenu une décision mesurée
 (ADR 0030 : neuf familles, règle écrite avant les résultats).
 
-**Sept défauts trouvés en y arrivant** — la moitié par une capture ou par la lecture du dépôt, pas
+**Huit défauts trouvés en y arrivant** — la moitié par une capture ou par la lecture du dépôt, pas
 par un test :
 1. Le README annonçait 26 mutations, douze décisions, quatre points d'accès, et décrivait la chaîne
    en v1. `verifier_chiffres.sh` refuse désormais un total qui contredit le dépôt.
@@ -419,6 +419,9 @@ par un test :
    `sys.modules`. Refusée : elle aurait fait mentir la session de tests entière.
 7. La Model Card et la diapositive 15 portaient encore le seuil 0,75 ; l'index des ADR ignorait
    l'ADR 0029.
+8. **Le tableau de bord servait le code de l'image, pas celui du dépôt** : son service ne montait que
+   les données. Trouvé en cherchant à l'écran une mention que le code portait et que la page
+   n'affichait pas — encore une fois par les yeux, pas par un test.
 
 **Ce qui reste hors de cet état** : la vidéo (R03), la répétition chronométrée (R05), la suppression
 de l'ancien dépôt (R02), la sixième présentation (R51) ; deux outils de contrôle non portés au
