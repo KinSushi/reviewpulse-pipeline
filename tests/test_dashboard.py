@@ -120,3 +120,13 @@ def test_dashboard_missing_files_shows_message(data_env, labelled_frame, app_tes
     # ``AppTest`` capture les messages via les attributs ``info``, ``warning`` et ``error``.
     messages = list(app_test.info) + list(app_test.warning) + list(app_test.error)
     assert messages, "Aucun message n’a été affiché alors que les fichiers étaient manquants"
+
+
+def test_dashboard_porte_la_mention_de_droit_d_auteur(data_env, labelled_frame, app_test):
+    """
+    Le tableau de bord doit afficher la mention de droit d'auteur Sovralys LLC dans une légende.
+    """
+    _prepare_artifacts(labelled_frame)
+
+    app_test.run()
+    assert any("Sovralys LLC" in c.value for c in app_test.caption), "La mention de droit d'auteur Sovralys LLC est absente des légendes"

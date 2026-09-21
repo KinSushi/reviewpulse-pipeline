@@ -84,6 +84,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from reviewpulse import __author__, __copyright__
 from reviewpulse import config
 from reviewpulse import decision
 from reviewpulse import explain
@@ -92,7 +93,13 @@ from reviewpulse import explain
 logger = logging.getLogger(__name__)
 
 # Instance FastAPI unique pour l’ensemble du service
-app = FastAPI(title="ReviewPulse API")
+# Pourquoi : la page de documentation interactive est ce qu'un jury ouvre en premier ; elle porte la mention
+# de droit d'auteur et le nom de l'auteur, lus dans le paquet et non recopiés ici.
+app = FastAPI(
+    title="ReviewPulse API",
+    description=__copyright__,
+    contact={"name": __author__},
+)
 
 # --- Mesure de latence (ADR 0029) ---
 # La consigne du Demo Day exige de suivre « latency, accuracy, and drift » et

@@ -43,7 +43,7 @@ import os
 import requests
 import pandas as pd
 import streamlit as st
-from reviewpulse import config, decision
+from reviewpulse import __copyright__, config, decision
 
 logger = logging.getLogger(__name__)
 
@@ -439,6 +439,8 @@ def main() -> int:
             else:
                 st.write("Aucun terme.")
 
+    # Pourquoi : la mention de droit d'auteur figure au pied de l'ecran servi, comme en tete de chaque fichier.
+    st.caption(__copyright__)
     logger.info("Fin du tableau de bord")
     return 0
 

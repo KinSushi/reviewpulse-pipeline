@@ -101,3 +101,8 @@ __all__ = ["config"]
 # Alternative écartée : récupération dynamique via importlib.metadata – dépendance
 # supplémentaire non requise et complexité accrue pour les tests.
 __version__ = "0.1.0"
+
+# Pourquoi : l'auteur et la mention de droit d'auteur vivent ICI pour tout ce qui s'execute -- la page de
+# documentation de l'API et le pied du tableau de bord les lisent, au lieu de les recopier chacun.
+__author__ = "KinSushi · Enzo · Sovralys LLC"
+__copyright__ = "Copyright © 2026 · Auteur — " + __author__
