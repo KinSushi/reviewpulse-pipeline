@@ -72,6 +72,8 @@ Classer un avis en positif ou négatif est une tâche de tri supervisée, sur un
 
 **En service** : TF-IDF caractères (2, 5) + régression logistique · F1 macro **0,8027** · AUC **0,940** · rappel des négatifs **0,650** · précision 0,633 · seuil de décision **0,775**, appris par validation croisée et non fixé à 0,5.
 
+![Registre MLflow : la version 5 porte l'alias champion ; la version 6, refusée par la barrière, reste challenger](docs/captures/mlflow_modele.png)
+
 Le modèle est suivi dans **MLflow** : alias `champion` et `challenger`, **barrière de promotion** automatique, éprouvée dans les deux sens le même jour — elle a promu un modèle meilleur et refusé un modèle moins bon. Deux entraînements successifs donnent le même F1 à la seizième décimale : le code est déterministe, la seule source de variation est l'ingestion. → [Model Card](docs/12_model_card.md) · [réglage des hyperparamètres](docs/evidence/reglage_hyperparametres.md).
 
 ## 5. Ce que l'utilisateur obtient
@@ -138,7 +140,7 @@ docker/ · docker-compose.yml · Makefile
 docs/                charte, architecture, 29 ADR, Model Card, preuves, supports de soutenance
 ```
 
-Chaque module dit en tête **quoi, pourquoi, où, comment**, journalise ses étapes avec leurs chiffres, et commente ses choix avec l'alternative écartée. La carte d'ensemble : [`docs/06_carte_des_modules.md`](docs/06_carte_des_modules.md).
+Chaque module dit en tête **quoi, pourquoi, où, comment**, journalise ses étapes avec leurs chiffres, et commente ses choix avec l'alternative écartée. Ce texte a été ajouté sans toucher à la logique, et c'est prouvé : chaque fichier a franchi cinq portes mécaniques (syntaxe, citations ni perdues ni inventées, explication non appauvrie, **arbre syntaxique identique**, original conservé), elles-mêmes éprouvées par dix-huit témoins ([`tools/tester_portes.sh`](tools/tester_portes.sh)) ; un contrôle d'arbre garantit qu'aucun journal n'écrit un texte d'avis, un identifiant ou le sel ([`tools/verifier_journaux.sh`](tools/verifier_journaux.sh)). La carte d'ensemble : [`docs/06_carte_des_modules.md`](docs/06_carte_des_modules.md).
 
 ## 9. Décisions d'architecture
 

@@ -63,19 +63,45 @@ compilation, tests, et retours de la machine. Les contrôles employés à ce jou
 `tools/verifier_documentation.sh` et la phase de lint de `tools/campagne_preuves.sh`.
 
 Quand un agent réécrit un module entier — c'est le cas de l'enrichissement du code, R66 — le
-résultat passe par `tools/appliquer_enrichissement.sh`, qui enchaîne quatre portes et ne remplace
-l'original qu'après la dernière :
+résultat passe par `tools/appliquer_enrichissement.sh`, qui enchaîne **cinq portes** et ne
+remplace l'original qu'après la dernière :
 
-1. le rendu est du Python valide (`ast.parse`), et l'erreur de syntaxe est rendue en clair ;
-2. **rien n'est perdu** : `tools/citations_perdues.sh` refuse toute version d'où a disparu une
-   citation d'ADR, de test ou de registre présente dans l'original — le 20/09/2026, le banc a
-   réécrit la docstring de `transform.py` en oubliant ses trois tests associés, et la porte
-   d'équivalence, qui ignore les docstrings, ne l'aurait pas vu ;
-3. **la logique est inchangée** : `tools/verifier_equivalence.sh` compare les arbres syntaxiques
-   après avoir retiré docstrings et appels de journal (`logger`, `_logger`, `log`, `LOGGER`) ; un
-   `print` n'est pas retiré, parce qu'il change la sortie observable ;
-4. l'original est copié dans la quarantaine datée et inscrit au journal avant le remplacement,
+1. **syntaxe** : le rendu est du Python valide (`ast.parse`), et l'erreur est rendue en clair ;
+2. **citations** : `tools/citations_perdues.sh` refuse une version d'où a disparu une citation
+   d'ADR, de test ou de registre — le 20/09/2026, la docstring réécrite de `transform.py` avait
+   perdu ses trois tests associés — et refuse aussi une citation **inventée** : un ADR, un test
+   ou une entrée de registre qui n'existe pas dans le dépôt ;
+3. **non-appauvrissement** : `tools/explication_appauvrie.sh` refuse une version qui explique
+   moins que celle qu'elle remplace — un journal retiré, des « Pourquoi » effacés, un fichier
+   fondu. Le 21/09/2026, des arbitres chargés de corriger des commentaires ont rendu des modules
+   amaigris ou coupés au milieu d'une docstring ;
+4. **équivalence** : `tools/verifier_equivalence.sh` compare les arbres syntaxiques après avoir
+   retiré docstrings et appels de journal. Quatre tolérances, chacune avec le refus voisin :
+   les noms de journal usuels ; l'ordre interne du bloc d'imports de tête ; `except X as exc`
+   quand le nom ne sert qu'au journal ; `if <condition> : <journal seul>` quand la condition est
+   sans effet de bord. Un `print`, une variable, une instruction déplacée restent des refus ;
+5. **quarantaine** : l'original est copié, daté et inscrit au journal avant le remplacement,
    et un lot rejoué ne recopie rien (`cmp`).
 
-Puis `ruff` et la batterie tournent dans l'image de dev sur une copie jetable du dépôt
-(`docker run -d --name`, jamais `--rm`), et la CI confirme sur un runner neutre.
+Avant la porte d'équivalence, une **réparation typographique** rend au candidat les espaces fines
+insécables, traits d'union insécables et apostrophes courbes des chaînes de l'original : un
+module entier ne se perd plus pour un caractère.
+
+**Les portes sont elles-mêmes éprouvées** : `tools/tester_portes.sh` fabrique dix-huit témoins et
+exige de chaque porte le verdict attendu, dans les deux sens. Il tourne en intégration continue
+avant la batterie. Une porte qui n'a jamais refusé ne prouve rien.
+
+**Trois rôles, trois familles de modèles** — aucun auteur ne juge son propre travail :
+
+| Rôle | Ce qu'il fait | Ce que la nuit du 20 au 21/09 a mesuré |
+|---|---|---|
+| **Auteur** | porte un module au standard, sans toucher à la logique | 19 modules de production sur 19 appliqués ; 9 rendus refusés en route, chacun renvoyé avec le motif exact |
+| **Relecteur** (autre famille) | cherche ce que les ajouts disent de faux, d'inventé, de creux ou de dangereux | 435 constats sur 14 modules, dont **plus de la moitié faux** : 19 « fuites » signalées sur des journaux qui n'écrivent que des comptes |
+| **Arbitre** (troisième famille) | tranche chaque constat **par le code**, puis corrige | 3 modules améliorés ; 9 rendus refusés par les portes, amaigris ou tronqués |
+
+La leçon : un relecteur automatique produit du **signal**, jamais une preuve. Ce qui tranche, ce
+sont les contrôles d'arbre — `tools/verifier_journaux.sh` a examiné 207 appels de journal et n'en
+a trouvé aucun qui écrive un texte d'avis, un identifiant, le sel ou un DataFrame entier.
+
+Puis `ruff` et la batterie tournent sur une copie jetable du dépôt (`docker run -d --name`,
+jamais `--rm`), et la CI confirme sur un runner neutre : batterie et 27 mutations.
