@@ -56,6 +56,10 @@ jobs:
       # etiquette ne s'ecrit en dur ailleurs. Le 21/09/2026, un balayage en avait trouve onze.
       - name: Convention — aucune étiquette en dur hors de decision.py
         run: sh tools/verifier_convention.sh
+      # Les presentations sont des archives : une seule partie XML mal formee et PowerPoint refuse
+      # d'ouvrir le fichier, sans que python-pptx ni une lecture de texte ne le voient (21/09/2026).
+      - name: Présentations — chaque partie XML bien formée
+        run: sh tools/verifier_presentations.sh
       - name: Run tests
         env:
           REVIEWPULSE_SALT: ci-salt

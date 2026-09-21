@@ -82,6 +82,7 @@ phase "portes" "${BUDGET_COMPILE}" sh tools/tester_portes.sh
 phase "journaux" "${BUDGET_COMPILE}" sh tools/verifier_journaux.sh
 phase "chiffres" "${BUDGET_COMPILE}" sh tools/verifier_chiffres.sh
 phase "convention" "${BUDGET_COMPILE}" sh tools/verifier_convention.sh
+phase "presentations" "${BUDGET_COMPILE}" sh tools/verifier_presentations.sh
 phase "droit d'auteur" "${BUDGET_COMPILE}" sh tools/copyright.sh verifier
 
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt

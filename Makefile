@@ -1,6 +1,6 @@
 # Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 ## Aide (cible par défaut, liste toutes les cibles avec une courte description)
-.PHONY: documentation portes journaux chiffres comparaison copyright convention prevol help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
+.PHONY: documentation portes journaux chiffres comparaison copyright convention prevol presentations help install lint test ingest transform quality train score pipeline api dashboard up jobs airflow down reverse forward evidence gx spark gold drift rollback snapshots diagrams sauvegarde-mlflow restaure-mlflow justifications briques campagne charge pipeline-gele
 
 # Le hash du commit est transmis aux outils de preuve pour que les rapports soient traçables
 REVIEWPULSE_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo inconnu)
@@ -127,6 +127,10 @@ convention:
 ## Controle avant vol de la demonstration : pile levee, rechauffee et coherente ? A lancer 15 min avant de passer
 prevol:
 	sh tools/prevol_demo.sh
+
+## Chaque presentation du depot s'ouvrira : XML bien forme, relations et diapositives coherentes
+presentations:
+	sh tools/verifier_presentations.sh
 
 comparaison:
 	python tools/comparaison_modeles.py --sortie docs/evidence/comparaison_modeles.md

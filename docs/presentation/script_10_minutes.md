@@ -49,7 +49,7 @@ Les affirmations du discours ont été confrontées à la pile réelle le même 
 
 ## Ce qu'il reste à faire avant le jour J
 
-1. Ouvrir la présentation et vérifier qu'aucun texte ne déborde (contrôle visuel, non automatisable ici).
+1. ~~Ouvrir la présentation et vérifier qu'aucun texte ne déborde~~ — fait le 21/09/2026 : les neuf diapositives ont été exportées en images par PowerPoint et relues une par une ; deux rendus sont dans `docs/captures/diapositives/`. Le support se reconstruit par `construire_demo_day.ps1.txt` (à renommer en `.ps1`), qui dessine chaque forme.
 2. Répéter une fois en conditions réelles, chronomètre en main.
 3. Enregistrer la vidéo de secours.
 

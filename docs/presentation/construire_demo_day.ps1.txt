@@ -1,0 +1,245 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
+# Construit le support du Demo Day en pilotant PowerPoint : la page de titre et la page « Questions »
+# viennent du gabarit Jedha ; les sept diapositives de contenu sont dessinées ici, avec la charte du
+# gabarit (Inter / Manrope, 0E3449, 55575A, FF7047, C3FFFC) et un texte qui TIENT dans la page.
+#
+# Pourquoi : le 21/09/2026, l'export en images du support construit par substitution de texte a montré
+# ce qu'aucun contrôle textuel ne voyait -- une image « Customer churn » du projet Telco sur la page de
+# titre, un tableau Telco en image sous le modèle, un titre chevauché, des boîtes qui débordent, une
+# dernière diapositive coupée et périmée. Dessiner les diapositives, c'est maîtriser chaque forme.
+#
+# Comment : powershell -ExecutionPolicy Bypass -File .\construire_demo_day.ps1
+#           Lit le support courant (pour la page de titre, la page Questions et le logo), écrit une
+#           copie _v2, la réouvre, l'exporte en images. Ne touche ni au dépôt ni au fichier source.
+param(
+    [string]$Source = 'D:\ReviewPulse_work\session_scratch\supports_valides\ReviewPulse_DemoDay.pptx',
+    [string]$Sortie = 'D:\ReviewPulse_work\session_scratch\supports_valides\ReviewPulse_DemoDay_v2.pptx',
+    [string]$Images = 'D:\ReviewPulse_work\session_scratch\diapos_demo_day_v2'
+)
+$ErrorActionPreference = 'Stop'
+
+# --- Charte ---------------------------------------------------------------------------------------
+function Couleur([string]$hex) { [int]('0x' + $hex.Substring(4, 2)) * 65536 + [int]('0x' + $hex.Substring(2, 2)) * 256 + [int]('0x' + $hex.Substring(0, 2)) }
+$ENCRE  = Couleur '0E3449'   # titres
+$GRIS   = Couleur '55575A'   # corps -- pas $TEXTE : PowerShell ignore la casse, et $texte est un parametre
+$ACCENT = Couleur 'FF7047'   # bordure des cartes, mots-clés
+$MENTHE = Couleur 'C3FFFC'   # bandeau bas du gabarit, fond des cartes de chiffres
+$BLANC  = Couleur 'FFFFFF'
+$POLICE_TITRE = 'Inter SemiBold'
+$POLICE_TEXTE = 'Manrope'
+$msoTrue = -1; $msoFalse = 0
+$ppLayoutBlank = 12
+
+function Texte($slide, [double]$x, [double]$y, [double]$w, [double]$h, [string]$texte, [double]$taille, [bool]$gras = $false, [int]$couleur = $GRIS, [string]$police = $POLICE_TEXTE, [int]$align = 1) {
+    $f = $slide.Shapes.AddTextbox(1, $x, $y, $w, $h)
+    $f.TextFrame.WordWrap = $msoTrue
+    $f.TextFrame.AutoSize = 0
+    $f.TextFrame.MarginLeft = 4; $f.TextFrame.MarginRight = 4; $f.TextFrame.MarginTop = 2; $f.TextFrame.MarginBottom = 2
+    $r = $f.TextFrame.TextRange
+    $r.Text = $texte
+    $r.Font.Name = $police; $r.Font.Size = $taille; $r.Font.Bold = $(if ($gras) { $msoTrue } else { $msoFalse }); $r.Font.Color.RGB = $couleur
+    $r.ParagraphFormat.Alignment = $align
+    $r.ParagraphFormat.SpaceWithin = 1.05
+    return $f
+}
+function Titre($slide, [string]$texte) {
+    Texte $slide 90 22 594 40 $texte 24 $true $ENCRE $POLICE_TITRE | Out-Null
+}
+function Carte($slide, [double]$x, [double]$y, [double]$w, [double]$h, [string]$entete, [string[]]$lignes, [double]$taille = 11) {
+    $c = $slide.Shapes.AddShape(5, $x, $y, $w, $h)   # rectangle arrondi
+    $c.Fill.ForeColor.RGB = $BLANC; $c.Line.ForeColor.RGB = $ACCENT; $c.Line.Weight = 0.75
+    $c.Adjustments.Item(1) = 0.06
+    $c.TextFrame.MarginLeft = 8; $c.TextFrame.MarginRight = 8; $c.TextFrame.MarginTop = 5; $c.TextFrame.MarginBottom = 5
+    $c.TextFrame.WordWrap = $msoTrue; $c.TextFrame.AutoSize = 0
+    $c.TextFrame.VerticalAnchor = 1
+    $r = $c.TextFrame.TextRange
+    $r.Text = (@($entete) + $lignes) -join "`r"
+    $r.Font.Name = $POLICE_TEXTE; $r.Font.Size = $taille; $r.Font.Color.RGB = $GRIS
+    $r.ParagraphFormat.Alignment = 1; $r.ParagraphFormat.SpaceWithin = 1.05; $r.ParagraphFormat.SpaceBefore = 2
+    $t = $r.Paragraphs(1); $t.Font.Bold = $msoTrue; $t.Font.Color.RGB = $ENCRE; $t.Font.Size = $taille + 1
+    return $c
+}
+function Puces($slide, [double]$x, [double]$y, [double]$w, [double]$h, [string[]]$lignes, [double]$taille = 11.5) {
+    $f = Texte $slide $x $y $w $h ($lignes -join "`r") $taille $false $GRIS
+    $r = $f.TextFrame.TextRange
+    $r.ParagraphFormat.Bullet.Visible = $msoTrue
+    $r.ParagraphFormat.Bullet.Character = 8226
+    $r.ParagraphFormat.Bullet.Font.Color.RGB = $ACCENT
+    $r.ParagraphFormat.SpaceBefore = 4
+    $r.IndentLevel = 1
+    $f.TextFrame.Ruler.Levels(1).FirstMargin = 0; $f.TextFrame.Ruler.Levels(1).LeftMargin = 14
+    return $f
+}
+function SousTitre($slide, [string]$texte, [double]$y = 66) {
+    Texte $slide 36 $y 648 22 $texte 13 $true $GRIS | Out-Null
+}
+function Chiffre($slide, [double]$x, [double]$y, [double]$w, [string]$valeur, [string]$libelle) {
+    $c = $slide.Shapes.AddShape(5, $x, $y, $w, 62)
+    $c.Fill.ForeColor.RGB = $MENTHE; $c.Line.Visible = $msoFalse; $c.Adjustments.Item(1) = 0.1
+    $c.TextFrame.MarginTop = 3; $c.TextFrame.MarginBottom = 3; $c.TextFrame.WordWrap = $msoTrue; $c.TextFrame.AutoSize = 0
+    $r = $c.TextFrame.TextRange
+    $r.Text = $valeur + "`r" + $libelle
+    $r.ParagraphFormat.Alignment = 2
+    $r.Font.Name = $POLICE_TEXTE; $r.Font.Color.RGB = $ENCRE
+    $r.Paragraphs(1).Font.Size = 20; $r.Paragraphs(1).Font.Bold = $msoTrue; $r.Paragraphs(1).Font.Name = $POLICE_TITRE
+    $r.Paragraphs(2).Font.Size = 9.5; $r.Paragraphs(2).Font.Color.RGB = $GRIS
+}
+function Bandeau($slide) {
+    # Le liseré menthe du bas de page, comme dans le gabarit.
+    $b = $slide.Shapes.AddShape(1, 0, 385, 720, 20); $b.Fill.ForeColor.RGB = $MENTHE; $b.Line.Visible = $msoFalse
+}
+function Logo($slide, $modele) {
+    # Le petit logo Jedha en haut à gauche : copié depuis une diapositive de contenu du gabarit.
+    $modele.Copy(); $p = $slide.Shapes.Paste(); $p.Left = 36; $p.Top = 26; $p.Width = 45; $p.Height = 30
+}
+
+# --- Construction ----------------------------------------------------------------------------------
+$dejaOuvert = [bool](Get-Process POWERPNT -ErrorAction SilentlyContinue)
+$pp = New-Object -ComObject PowerPoint.Application
+try {
+    $pres = $pp.Presentations.Open($Source, 0, 0, 0)
+    # Le logo vit dans la diapositive 3 du support courant (forme « Google Shape;73;p15 »).
+    $logo = $null
+    foreach ($s in $pres.Slides.Item(3).Shapes) { if ($s.Type -eq 13 -and $s.Width -lt 60) { $logo = $s } }
+    if (-not $logo) { throw "logo introuvable sur la diapositive 3" }
+
+    # Les sept diapositives de contenu (2 à 8) sont reconstruites : on les ajoute vierges après la 8,
+    # puis on supprime les anciennes -- la page de titre (1) et « Questions » (9) restent du gabarit.
+    $nouvelles = @()
+    for ($k = 0; $k -lt 7; $k++) { $nouvelles += $pres.Slides.Add(9 + $k, $ppLayoutBlank) }
+
+    # 1. Sommaire
+    $s = $nouvelles[0]; Logo $s $logo; Titre $s 'Sommaire'
+    Texte $s 36 74 300 22 'Projet individuel — Enzo · cohorte dal-ft-18' 12 $false $GRIS | Out-Null
+    Puces $s 60 108 600 250 @(
+        '1.  Problème métier et décision servie',
+        '2.  Les données réelles',
+        '3.  La chaîne de bout en bout',
+        '4.  Le modèle, et pourquoi pas un autre',
+        '5.  Résultats et preuves',
+        '6.  Démonstration en direct',
+        '7.  Industrialisation, et ce que je construirais ensuite') 15 | Out-Null
+    Bandeau $s
+
+    # 2. Problématique
+    $s = $nouvelles[1]; Logo $s $logo; Titre $s '1.  Problématique'
+    Carte $s 36 74 320 118 'Problème métier' @('Des centaines d''avis chaque jour, dans plusieurs langues,', 'lus à la main — ou pas du tout.', 'Quand un patch casse quelque chose, la note visible', 'baisse pendant des jours avant qu''on comprenne pourquoi.') 11 | Out-Null
+    Carte $s 364 74 320 118 'Objectif métier' @('Remonter chaque matin les avis négatifs qui comptent,', 'par jeu et par langue, avec la raison.') 11 | Out-Null
+    Carte $s 36 204 320 118 'Utilisateur' @('La personne responsable de la communauté', 'et du live-ops. Sa décision, chaque matin :', 'quels retours remonter aux développeurs, en priorité.') 11 | Out-Null
+    Carte $s 364 204 320 118 'Ce que « utile » veut dire — écrit avant le code' @('Part négative prédite par jeu et par langue,', 'avis à lire en premier, termes qui pèsent.', 'Seuil de mise en service : F1 macro ≥ 0,75.') 11 | Out-Null
+    Texte $s 36 336 648 30 'La charte fixe l''utilisateur, la décision, le coût et le hors-périmètre : une chaîne sans décision servie est un exercice, pas un produit.' 10.5 $false $GRIS | Out-Null
+    Bandeau $s
+
+    # 3. Les données
+    $s = $nouvelles[2]; Logo $s $logo; Titre $s '2.  Les données réelles'
+    SousTitre $s 'API publique des avis Steam — plus de 9 000 lignes brutes, 3 jeux, anglais et français'
+    $etapes = @('1. Zone brute inchangée', '2. Dédoublonnage, nettoyage du BBCode', '3. Pseudonymisation HMAC salée', '4. Contrôles bloquants', '5. Great Expectations')
+    for ($i = 0; $i -lt 5; $i++) {
+        $c = $s.Shapes.AddShape(5, 36 + $i * 131, 96, 122, 52); $c.Fill.ForeColor.RGB = $BLANC; $c.Line.ForeColor.RGB = $ACCENT; $c.Line.Weight = 0.75; $c.Adjustments.Item(1) = 0.08
+        $c.TextFrame.WordWrap = $msoTrue; $c.TextFrame.AutoSize = 0; $c.TextFrame.MarginLeft = 5; $c.TextFrame.MarginRight = 5
+        $r = $c.TextFrame.TextRange; $r.Text = $etapes[$i]; $r.Font.Name = $POLICE_TEXTE; $r.Font.Size = 10; $r.Font.Bold = $msoTrue; $r.Font.Color.RGB = $ENCRE; $r.ParagraphFormat.Alignment = 2
+    }
+    Texte $s 36 156 648 20 'Confidentialité, dès la zone propre' 12.5 $true $ENCRE | Out-Null
+    Puces $s 36 178 648 120 @(
+        'steamid → pseudonymisé par HMAC-SHA256 salé : un identifiant court se casse par dictionnaire, le sel est un secret obligatoire',
+        'personaname, profile_url, avatar → supprimés : aucun identifiant direct ne sort de la zone propre',
+        'Flux complémentaire d''avis négatifs → entraînement seulement, jamais au test',
+        'Idempotence : un second passage n''écrit aucun doublon (manifeste d''identifiants)',
+        'Zone silver Iceberg : un instantané par écriture, chacun restaurable') 10.5 | Out-Null
+    Bandeau $s
+
+    # 4. La chaîne
+    $s = $nouvelles[3]; Logo $s $logo; Titre $s '3.  La chaîne de bout en bout'
+    SousTitre $s 'Un DAG Airflow quotidien, neuf tâches — exécuté en réel, puis lancé seul par le planificateur'
+    $chaine = @(
+        @('Ingestion', 'idempotente, API Steam'), @('Silver', 'PySpark + Iceberg'), @('Porte de qualité', 'Great Expectations, bloquante'),
+        @('Score', 'champion MLflow'), @('Dérive', 'PSI, alerte hors journal'), @('Gold', 'dbt + DuckDB, 30 tests'), @('Porte silver / gold', '4 suites, 29 attentes'))
+    for ($i = 0; $i -lt 7; $i++) {
+        $x = 36 + $i * 93
+        $c = $s.Shapes.AddShape(5, $x, 104, 86, 58); $c.Fill.ForeColor.RGB = $BLANC; $c.Line.ForeColor.RGB = $ACCENT; $c.Line.Weight = 0.75; $c.Adjustments.Item(1) = 0.08
+        $c.TextFrame.WordWrap = $msoTrue; $c.TextFrame.AutoSize = 0; $c.TextFrame.MarginLeft = 3; $c.TextFrame.MarginRight = 3
+        $r = $c.TextFrame.TextRange; $r.Text = $chaine[$i][0] + "`r" + $chaine[$i][1]; $r.Font.Name = $POLICE_TEXTE; $r.Font.Color.RGB = $GRIS; $r.ParagraphFormat.Alignment = 2
+        $r.Paragraphs(1).Font.Bold = $msoTrue; $r.Paragraphs(1).Font.Size = 9.5; $r.Paragraphs(1).Font.Color.RGB = $ENCRE; $r.Paragraphs(2).Font.Size = 8
+        if ($i -lt 6) { $a = $s.Shapes.AddLine($x + 86, 133, $x + 93, 133); $a.Line.ForeColor.RGB = $ACCENT; $a.Line.Weight = 1.25; $a.Line.EndArrowheadStyle = 3 }
+    }
+    Texte $s 36 170 648 18 'Puis la branche de réentraînement, qui ne se déclenche que si la dérive dépasse le seuil — sautée par conception le 21/09.' 10 $false $GRIS | Out-Null
+    Texte $s 36 198 648 20 'Pourquoi ces choix' 12.5 $true $ENCRE | Out-Null
+    Puces $s 36 220 648 120 @(
+        'Spark pour la zone silver : la brique du programme, et pandas reste la référence de comparaison dans les tests — ADR 0014',
+        'dbt pour la zone gold : le seul endroit où le travail est de la modélisation SQL, où un contrat compte plus que du code',
+        'DuckDB plutôt qu''un entrepôt géré : la démonstration ne dépend d''aucun compte externe — ADR 0013',
+        'Chaque décision est écrite dans un ADR, avec la mesure qui l''a motivée et l''alternative écartée') 10.5 | Out-Null
+    Bandeau $s
+
+    # 5. Le modèle
+    $s = $nouvelles[4]; Logo $s $logo; Titre $s '4.  Le modèle — et pourquoi pas un autre'
+    Texte $s 36 66 648 34 'Classer un avis en positif ou négatif est un tri supervisé sur un texte court, déjà étiqueté par la plateforme : un classifieur linéaire le résout, s''explique terme par terme, se réentraîne en secondes. Un LLM ajouterait latence, coût et approximation.' 10.5 $false $GRIS | Out-Null
+    Texte $s 36 106 320 20 'Variantes mesurées' 12.5 $true $ENCRE | Out-Null
+    Puces $s 36 128 320 110 @('Mots, 1 à 2 grammes : F1 macro 0,735 — refusé', 'Régularisation ajustée : 0,756', 'Caractères, 2 à 5 grammes : 0,759, puis 0,797 avec le flux négatif, puis 0,803 après réglage → retenu', 'Seuil appris par validation croisée : 0,775, pas 0,5') 10.5 | Out-Null
+    Texte $s 364 106 320 20 'Un autre modèle ferait-il mieux ? Mesuré' 12.5 $true $ENCRE | Out-Null
+    $t = $s.Shapes.AddTable(6, 3, 364, 130, 320, 118)
+    $cellules = @(@('Candidat', 'F1 macro', 'Explication'), @('Régression logistique (en service)', '0,812', 'exacte'), @('SVM linéaire calibrée', '0,807', 'perdue'), @('XGBoost — coût × 23', '0,735', 'perdue'), @('Forêt aléatoire', '0,719', 'perdue'), @('Bayes naïf', '0,668', 'exacte'))
+    for ($i = 1; $i -le 6; $i++) { for ($j = 1; $j -le 3; $j++) {
+        $cell = $t.Table.Cell($i, $j); $r = $cell.Shape.TextFrame.TextRange; $r.Text = $cellules[$i - 1][$j - 1]
+        $r.Font.Name = $POLICE_TEXTE; $r.Font.Size = 9; $r.Font.Color.RGB = $(if ($i -eq 1) { $BLANC } else { $GRIS }); $r.Font.Bold = $(if ($i -le 2) { $msoTrue } else { $msoFalse })
+        $cell.Shape.Fill.ForeColor.RGB = $(if ($i -eq 1) { $ENCRE } elseif ($i -eq 2) { $MENTHE } else { $BLANC })
+        $cell.Shape.TextFrame.MarginTop = 1; $cell.Shape.TextFrame.MarginBottom = 1
+    } }
+    $t.Table.Columns(1).Width = 176; $t.Table.Columns(2).Width = 62; $t.Table.Columns(3).Width = 82
+    Texte $s 36 258 648 44 'Neuf candidats, les mêmes plis, le flux complémentaire à l''entraînement seulement ; règle de décision écrite avant de lire les résultats. L''écart avec la SVM (0,004) est sous l''écart-type des plis (0,017) : à gain égal, le modèle explicable l''emporte. Les arbres sont à quatre écarts-types. Aucun transformeur mesuré — c''est dit, avec son prix. ADR 0006, 0007, 0030.' 10 $false $GRIS | Out-Null
+    Bandeau $s
+
+    # 6. Résultats et preuves
+    $s = $nouvelles[5]; Logo $s $logo; Titre $s '5.  Résultats et preuves'
+    SousTitre $s 'TF-IDF caractères (2, 5) + régression logistique — sur un test 100 % naturel tenu à l''écart'
+    Chiffre $s 36 96 118 '0,803' 'F1 macro' ; Chiffre $s 166 96 118 '0,940' 'AUC' ; Chiffre $s 296 96 118 '0,650' 'rappel des négatifs' ; Chiffre $s 426 96 118 '0,775' 'seuil appris' ; Chiffre $s 556 96 128 '≥ 0,75' 'barrière de promotion'
+    Texte $s 36 170 648 20 'Comment je sais que ça marche' 12.5 $true $ENCRE | Out-Null
+    Puces $s 36 192 648 150 @(
+        '149 tests automatisés verts, en intégration continue',
+        '28 tests inverses : un défaut volontaire est injecté, un test nommé doit le détecter — 28 sur 28, en un seul passage, sur un runner GitHub',
+        '16 contrôles sur 16 sur la pile déployée ; DAG quotidien exécuté en réel, 9 tâches',
+        'Deux entraînements successifs donnent le même F1 à la seizième décimale : le code est déterministe',
+        'La barrière de promotion a été éprouvée dans les deux sens : elle a promu un modèle meilleur et refusé un modèle moins bon — ADR 0008') 10.5 | Out-Null
+    Bandeau $s
+
+    # 7. Industrialisation et suite
+    $s = $nouvelles[6]; Logo $s $logo; Titre $s '6.  Industrialisation, et la suite'
+    Texte $s 36 66 320 20 'Ce qui tourne sans moi' 12.5 $true $ENCRE | Out-Null
+    Puces $s 36 88 320 150 @(
+        'DAG Airflow quotidien, 9 tâches, PostgreSQL ; l''exécution planifiée s''est lancée seule',
+        'Dépôt public, CI verte : tests, portes, 28 mutations à chaque envoi',
+        'Dérive mesurée à chaque passage, alerte écrite hors du journal, réentraînement déclenché sur seuil',
+        'Retour arrière outillé : alias MLflow pour le modèle, instantané Iceberg pour les données',
+        'Essai de charge : 300 requêtes, 0 % d''erreur, p99 925 ms à chaud — 5,9 s au premier appel à froid') 10 | Out-Null
+    Texte $s 364 66 320 20 'Ce qui manque — dit comme un manque' 12.5 $true $ACCENT | Out-Null
+    Puces $s 364 88 320 150 @(
+        'La mesure de biais par langue et par jeu : l''AI Act la demande, je ne l''ai pas — ADR 0021',
+        'Kafka pour le temps réel, stockage objet S3, Terraform',
+        'Kubernetes : écarté pour la démonstration, décrit comme cible — ADR 0012',
+        'Un transformeur, non mesuré : des centaines de Mo dans l''image et une explication approchée',
+        'Chaque manque est écrit dans un ADR, avec sa condition de révision') 10 | Out-Null
+    Texte $s 36 250 648 20 'Ce que le projet sert au-delà' 12.5 $true $ENCRE | Out-Null
+    Texte $s 36 272 648 60 'Ce projet couvre un bloc de certification, le quatrième de l''Architecte IA. Pour les autres, ce sont les briques qui circulent — orchestration, porte de qualité, registre de modèles, réversibilité — et chaque bloc garde son projet imposé. 31 décisions écrites, ADR 0001 à 0031. Le piège serait de prétendre qu''un projet couvre tout : il n''en couvre qu''un, et il outille les autres.' 10.5 $false $GRIS | Out-Null
+    Bandeau $s
+
+    # Supprimer les sept anciennes diapositives de contenu (2 à 8), en partant de la fin.
+    for ($k = 8; $k -ge 2; $k--) { $pres.Slides.Item($k).Delete() }
+    # Retirer l'illustration Telco de la page de titre (la plus grande image de la diapositive 1).
+    $grande = $null
+    foreach ($f in $pres.Slides.Item(1).Shapes) { if ($f.Type -eq 13 -and ($null -eq $grande -or $f.Width -gt $grande.Width)) { $grande = $f } }
+    if ($grande -and $grande.Width -gt 200) { $grande.Delete() }
+
+    if (Test-Path $Sortie) { Remove-Item -LiteralPath $Sortie -Confirm:$false }
+    $pres.SaveCopyAs($Sortie)
+    $pres.Close()
+    "écrit : $Sortie"
+    $v = $pp.Presentations.Open($Sortie, -1, 0, 0)
+    "réouvert : {0} diapositives" -f $v.Slides.Count
+    if (Test-Path $Images) { Get-ChildItem $Images -Filter *.PNG | Remove-Item -Confirm:$false } else { New-Item -ItemType Directory -Force $Images | Out-Null }
+    $v.SaveAs($Images, 18)
+    $v.Close()
+    "images : " + (Get-ChildItem $Images -Filter *.PNG | Measure-Object).Count
+} finally {
+    if (-not $dejaOuvert) { $pp.Quit() }
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($pp)
+}
