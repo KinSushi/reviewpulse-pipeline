@@ -3,6 +3,12 @@
 Priorisation : **P1** indispensable au Demo Day · **P2** fort gain pour un bloc · **P3** confort. État : ✅ fait · 🔄 en cours · ⬜ à faire · ⛔ bloqué.
 Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 
+> **Lecture au 20/09/2026.** Tout ce qui est **P1 pour le Demo Day** est fait, sauf ce qui dépend d'Enzo : la vidéo
+> (S4-4), la répétition, et le gel par étiquette `v1.0-demoday` prévu le 24/09 (S4-7). Les lignes **P2** encore ouvertes
+> — Kafka, MinIO, Terraform, FinOps — et la section « par bloc » **ne font pas partie du projet du Demo Day** : ce sont
+> des coupes écrites, chacune motivée par un ADR, et la matière des blocs de certification, qui gardent chacun leur
+> propre projet. « A written cut is a decision, a silent one is missing work. »
+
 ## Sprint 0 — 16/09 (fait)
 
 | # | Tâche | Critère | État |
@@ -44,11 +50,11 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 
 | # | Tâche | Critère | Prio | État |
 |---|---|---|---|---|
-| S3-1 | Great Expectations sur silver et gold ; porte de qualité | AIA 3 C3.4 | P1 | ⬜ |
+| S3-1 | Great Expectations sur silver et gold ; porte de qualité | AIA 3 C3.4 | P1 | ✅ |
 | S3-2 | Plan de monitoring écrit (`docs/14_plan_monitoring.md`, 18/09) : signaux, seuils, réactions, huit éléments à construire nommés. module `drift.py` et `tests/test_drift.py` écrits le 18/09 (indice de stabilité de population, dérive des prédictions, rapport JSON) — **jamais exécutés**. Restent l'alerte, la tâche Airflow et le déclenchement du réentraînement | AIA 4 C4.4, ind. 3.2-3.3 | P1 | 🔄 |
 | S3-3 | **Model Card** écrite (`docs/12_model_card.md`, 18/09) : chiffres contrôlés un à un contre le README, la charte et les ADR ; hyperparamètres vérifiés dans `train.py`. explicabilité : module `explain.py` et `tests/test_explain.py` écrits le 18/09 (termes globaux, contributions locales exactes, lot vectorisé) — **jamais exécutés**, la batterie demande Docker ; reste à les brancher sur le tableau de bord | AIA 4 C4.6, C4.8 | P1 | 🔄 |
 | S3-4 | Déploiement progressif champion / challenger : ADR 0016 rédigé le 18/09 (part de trafic par `REVIEWPULSE_CHALLENGER_TRAFFIC`, tirage déterministe par hachage, réponse indiquant la version). **Proposé, non implémenté** | AIA 4 ind. 3.1 | P2 | 🔄 |
-| S3-5 | CI : Java, Spark, dbt ; entraînement continu | AIA 4 ind. 1.1 | P1 | ⬜ |
+| S3-5 | CI : Java, Spark, dbt ; entraînement continu | AIA 4 ind. 1.1 | P1 | ✅ |
 | S3-6 | Recréer le dépôt GitHub propre ; secret ; workflow planifié vert | livraison | P1 | ⛔ Enzo |
 
 ## Sprint 4 — 23 et 24/09
@@ -58,8 +64,8 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 | S4-1 | **MinIO** (S3) pour bronze et Iceberg | CDSD 1, AIA 2 C2.5 | P2 | ⬜ |
 | S4-2 | **Terraform** cible AWS (S3 KMS, IAM, secrets) + `validate`, `plan`, scan | AIA 2 C2.4, ind. 4.3 | P2 | ⬜ |
 | S4-3 | FinOps et GreenOps : mesure CPU, mémoire, durée par tâche | AIA 3 ind. 6.2, AIA 4 C4.5 | P2 | ⬜ |
-| S4-4 | Vidéo de la solution en production | AIA 4 livrable | P1 | ⬜ |
-| S4-5 | Slides sur le gabarit Jedha (ou Telco), script de 10 min, questions | Demo Day J3 | P1 | ⬜ |
+| S4-4 | Vidéo de la solution en production | AIA 4 livrable | P1 | ⛔ |
+| S4-5 | Slides sur le gabarit Jedha (ou Telco), script de 10 min, questions | Demo Day J3 | P1 | ✅ |
 | S4-6 | Note d'orientation technologique écrite (`docs/13_note_orientation.md`, 18/09) : options essayées et mesurées, latence, sécurité, veille ; chiffres contrôlés contre les ADR. Reste à citer la bibliothèque KOS et les sources de veille externes | AIA 4 livrable | P1 | 🔄 |
 | S4-7 | Gel : tag `v1.0-demoday` | livraison | P1 | ⬜ |
 

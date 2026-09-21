@@ -30,7 +30,7 @@ Intégration des mutations **M23** et **M24** : relâchement de la borne d’une
 
 ## Preuves
 
-- Les **28 attentes** sont vertes sur les données réelles.  
+- Les **29 attentes** sont vertes sur les données réelles.  
 - Deux valeurs du mart sont volontairement cassées : part de négatifs à **1,7** et un jour à zéro avis, ce qui rend le verdict faux et fait échouer les deux attentes correspondantes.  
 - **Sept tests unitaires** verts, dont celui qui vérifie qu’une table conforme passe.  
 - Le DAG montre la tâche `gx_lake` bloquante et le nombre total de tâches à neuf.  

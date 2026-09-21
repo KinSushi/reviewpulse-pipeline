@@ -18,7 +18,7 @@ Les sources Mermaid vivent dans `diagrams/src/`.
 | propre | Parquet, fichier unique réécrit à chaque exécution | `spark_silver.py`, par `transform.write_clean` (ADR 0003, 0004, 0014) | Contrôles qualité bloquants (`quality.check_clean`, ADR 0005) ; schéma fixe (`CLEAN_COLUMNS`). |
 | silver | Tables Iceberg `silver.reviews` et `silver.predictions` | `spark_silver.py` pour la première, `score.py` pour la seconde (ADR 0014) | Chaque écriture crée un instantané restaurable ; la validation du schéma refuse toute évolution silencieuse (ADR 0014). |
 | scorée | Parquet `reviews_scored.parquet` et `daily_summary.parquet`, plus `drift_report.json` et les alertes datées | `score.py` et `drift.py` (ADR 0007, 0015) | Le résumé quotidien ne retient que le flux naturel ; le rapport de dérive porte son verdict et ses seuils (ADR 0015). |
-| gold | Base DuckDB unique | `gold.py`, par dbt (ADR 0020) | Contrats et tests dbt, puis 28 attentes Great Expectations sur `main.fct_review_predictions` et `main.mart_sentiment_daily` ; toute violation arrête le DAG (ADR 0005, 0020). |
+| gold | Base DuckDB unique | `gold.py`, par dbt (ADR 0020) | Contrats et tests dbt, puis 29 attentes Great Expectations sur `main.fct_review_predictions` et `main.mart_sentiment_daily` ; toute violation arrête le DAG (ADR 0005, 0020). |
 
 ## Les choix, et leur justification
 | Choix | Pourquoi, mesure à l’appui | Alternative écartée | Decision |
@@ -42,7 +42,7 @@ Les sources Mermaid vivent dans `diagrams/src/`.
 | Airflow sur PostgreSQL | Migration résout le verrouillage SQLite (planificateur survit aux requêtes concurrentes, 19/09/2026) | Garder SQLite, CeleryExecutor | ADR 0017 |
 | Reproductibilité : empreintes, traçabilité, sauvegarde | Trois entraînements identiques à la 16ᵉ décimale, empreinte SHA‑256 du jeu de données, sauvegarde MLflow (19/09/2026) | Étiquette seule, sauvegarde SQLite uniquement, restauration directe sur le volume en service | ADR 0018 |
 | Explicabilité linéaire exacte | Contribution exacte = TF‑IDF × coefficient, test de somme égale à la décision (mutations M21 détectées) | SHAP, LIME, aucune explicabilité | ADR 0019 |
-| Porte de qualité étendue aux zones silver et gold | 28 attentes Great Expectations, 2 valeurs cassées provoquent l’échec du DAG (tests verts, 19/09/2026) | Étendre `expectations.py`, se contenter des tests dbt, contrôle non bloquant | ADR 0020 |
+| Porte de qualité étendue aux zones silver et gold | 29 attentes Great Expectations, 2 valeurs cassées provoquent l’échec du DAG (tests verts, 19/09/2026) | Étendre `expectations.py`, se contenter des tests dbt, contrôle non bloquant | ADR 0020 |
 
 ## Ce que l'architecture garantit
 **Traçabilité** – Chaque ingestion crée un manifeste listant les identifiants (ADR 0002). Chaque run MLflow enregistre l’empreinte SHA‑256 du jeu de données et le commit Git (ADR 0018). Les snapshots Iceberg offrent une historique immuable des tables silver.

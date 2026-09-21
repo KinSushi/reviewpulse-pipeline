@@ -67,7 +67,7 @@ docker compose --profile airflow up -d --force-recreate airflow
 Pour vérifier sans jamais afficher le sel :
 `docker exec reviewpulse-airflow-1 sh -c 'echo ${#REVIEWPULSE_SALT}'` — la longueur suffit.
 
-**Pour reprendre, dans l'ordre :** lire `19_known_good.md` — le dernier état sain est `KG-2026-09-19-g` —, puis `16_registre_suivi.md`, puis le plan unique. Les chiffres attendus y sont : **125 tests**, **26 mutations sur 26**, **16 contrôles**, **9 tâches** au DAG, et une charge à 0 % d'erreur et p99 925 ms. La campagne se relance par `make campagne`, en montant `/tmp` en mémoire (`--tmpfs /tmp:size=3g`), sans quoi le journal du disque virtuel devient le goulot. Tout écart se traite comme un défaut réel, jamais comme un test à ajuster.
+**Pour reprendre, dans l'ordre :** lire `19_known_good.md` — le dernier état sain est `KG-2026-09-20-c` —, puis `16_registre_suivi.md`, puis le plan unique. Les chiffres attendus y sont : **125 tests**, **26 mutations sur 26**, **16 contrôles**, **9 tâches** au DAG, et une charge à 0 % d'erreur et p99 925 ms. La campagne se relance par `make campagne`, en montant `/tmp` en mémoire (`--tmpfs /tmp:size=3g`), sans quoi le journal du disque virtuel devient le goulot. Tout écart se traite comme un défaut réel, jamais comme un test à ajuster.
 
 Derniers commits : `2677865`, `aa19cd6`, `67b9b28`, `642bfa3`, `0f0ca64`, `40f8a36`, `823a0a1`, `a1fd98f`. Historique sans ligne de paternité automatique — le contrôle mécanique vit désormais dans `tools/verifier_documentation.sh`, qui refuse tout fichier suivi ou tout commit portant une signature d'outil.
 
