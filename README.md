@@ -159,14 +159,14 @@ tests/               148 tests ; tests/reverse/ : les 27 mutations
 tools/               campagne de preuves, test de la pile, essai de charge, contrôles de cohérence
 docker/ · docker-compose.yml · Makefile
 .github/workflows/   ci.yml (tests, lint, mutations) · pipeline.yml (chaîne entière, planifiée)
-docs/                charte, architecture, 30 ADR, Model Card, preuves, supports de soutenance
+docs/                charte, architecture, 31 ADR, Model Card, preuves, supports de soutenance
 ```
 
 Chaque module dit en tête **quoi, pourquoi, où, comment**, journalise ses étapes avec leurs chiffres, et commente ses choix avec l'alternative écartée. Ce texte a été ajouté sans toucher à la logique, et c'est prouvé : chaque fichier a franchi cinq portes mécaniques (syntaxe, citations ni perdues ni inventées, explication non appauvrie, **arbre syntaxique identique**, original conservé), elles-mêmes éprouvées par dix-huit témoins ([`tools/tester_portes.sh`](tools/tester_portes.sh)) ; un contrôle d'arbre garantit qu'aucun journal n'écrit un texte d'avis, un identifiant ou le sel ([`tools/verifier_journaux.sh`](tools/verifier_journaux.sh)). La carte d'ensemble : [`docs/06_carte_des_modules.md`](docs/06_carte_des_modules.md).
 
 ## 9. Décisions d'architecture
 
-Trente décisions sont écrites ([index](docs/adr/README.md)), chacune avec la mesure qui l'a motivée et l'alternative écartée. Les plus structurantes :
+Trente et une décisions sont écrites ([index](docs/adr/README.md)), chacune avec la mesure qui l'a motivée et l'alternative écartée. Les plus structurantes :
 
 | Décision | En une ligne |
 |---|---|

@@ -67,7 +67,7 @@ programme, et parce que pandas reste la référence de comparaison dans mes test
 divergent, c'est un défaut. dbt pour la zone gold parce que c'est le seul endroit où le travail est de
 la modélisation SQL, et où un contrat compte plus que du code. DuckDB plutôt qu'un entrepôt géré parce
 que la démonstration ne doit dépendre d'aucun compte externe. Chaque décision de ce genre est écrite
-dans un ADR — il y en a trente — avec la mesure qui l'a motivée et l'alternative écartée.
+dans un ADR — il y en a trente et une — avec la mesure qui l'a motivée et l'alternative écartée.
 
 ## 3:50 — Diapositive 14 · Le modèle, et le choix ML ou LLM
 

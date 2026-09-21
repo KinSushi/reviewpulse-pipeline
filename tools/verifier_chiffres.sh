@@ -49,7 +49,7 @@ decisions = len([p for p in pathlib.Path("docs/adr").glob("[0-9][0-9][0-9][0-9]-
 
 EN_LETTRES = {
     "douze": 12, "treize": 13, "quatorze": 14, "quinze": 15, "seize": 16, "vingt": 20,
-    "vingt-quatre": 24, "vingt-six": 26, "vingt-sept": 27, "vingt-huit": 28, "vingt-neuf": 29,
+    "trente et une": 31, "trente et un": 31, "trente-deux": 32, "vingt-quatre": 24, "vingt-six": 26, "vingt-sept": 27, "vingt-huit": 28, "vingt-neuf": 29,
     "trente": 30,
 }
 NOMBRE = r"([0-9]+|" + "|".join(sorted(EN_LETTRES, key=len, reverse=True)) + r")"

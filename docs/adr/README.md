@@ -34,6 +34,7 @@ Chaque décision structurante du projet est écrite ici, **avec la mesure ou le 
 | [0028](0028-conduite-du-backlog.md) | Conduite du backlog : un registre à critère de fin et à preuve, plutôt que des sprints | Acceptée |
 | [0029](0029-surveillance-de-la-latence.md) | Surveillance de la latence : `/metrics` en mémoire, décidé par arbitrage entre trois familles de modèles | Acceptée |
 | [0030](0030-choix-de-la-famille-de-modele.md) | Régression logistique plutôt qu'une autre famille : neuf candidats mesurés, règle écrite avant les résultats | Acceptée |
+| [0031](0031-strategie-de-branches.md) | Une seule ligne principale, alimentée par une branche de travail validée en CI ; avance rapide seulement | Acceptée |
 
 ---
 

@@ -186,6 +186,9 @@ Le modèle est un TF‑IDF suivi d’une régression logistique, donc chaque ter
 **Pourquoi avez‑vous étendu la porte de qualité aux zones silver et gold au lieu de simplement renforcer les tests dbt ?**  
 Nous avons créé `expectations_lake.py` avec 29 attentes — 8, 7, 7 et 7, mesurées en exécution réelle le 20/09/2026 couvrant `silver.reviews`, `silver.predictions`, les faits gold et le mart quotidien, et ajouté la tâche `gx_lake` bloquante dans le DAG quotidien, portant le DAG à neuf tâches. Étendre `expectations.py` a été rejeté pour le risque de perturber une porte déjà stable à quelques jours de la soutenance, et se contenter des tests dbt a été écarté car ils ne bloquent pas la chaîne. → ADR 0020.
 
+**Quelle est votre stratégie de branches ?**
+Une seule ligne principale, `main`, à l'historique linéaire — 130 commits, aucun commit de fusion. Le travail se fait sur une branche de travail ; chaque envoi y déclenche l'intégration continue — lint, portes, batterie, 27 mutations — et `main` n'avance que par avance rapide sur un commit que la CI a **déjà** validé. La règle a été mesurée la nuit du 20 au 21/09 : quatre passages rouges sur la branche de travail, pour trois causes, et **aucun n'a atteint `main`** pendant que le dépôt était lu. GitFlow a été écarté : un seul développeur, une seule version à livrer. Une protection de branche GitHub rendrait la règle mécanique ; c'est un réglage de compte, proposé et non imposé. → ADR 0031.
+
 ## Ce que vous feriez ensuite
 
 - Suite Great Expectations avec rapport HTML (cours du 21/09).

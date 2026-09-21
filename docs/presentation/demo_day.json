@@ -137,7 +137,7 @@
    "10": "Kafka pour le temps réel, stockage objet compatible S3, infrastructure en Terraform",
    "11": "Cible Kubernetes, déjà documentée : une image par rôle, `KubernetesPodOperator` (ADR 0012, 0013)",
    "12": "Ce que le projet sert au-delà",
-   "13": "Socle de briques réemployables — 30 décisions écrites, ADR 0001 à 0030. Chaque bloc garde son projet imposé : ce sont les briques qui circulent, pas le projet"
+   "13": "Socle de briques réemployables — 31 décisions écrites, ADR 0001 à 0031. Chaque bloc garde son projet imposé : ce sont les briques qui circulent, pas le projet"
   },
   "18": {
    "0": "Questions ?"
