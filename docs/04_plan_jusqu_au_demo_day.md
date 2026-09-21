@@ -38,3 +38,7 @@ Si l'API Steam ne répond pas le jour J, le pipeline tourne sur la zone brute d�
 
 - Présentation seul ou en équipe ; heure de passage.
 - Les trois questions de `03_matrice_reemploi_blocs.md`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

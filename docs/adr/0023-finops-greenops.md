@@ -48,3 +48,7 @@ Le projet ne possède aucune métrique de coût monétaire, ni de mesure d’én
 * L’absence de mesures énergétiques crée un gap : il faudra planifier l’acquisition d’un dispositif de mesure d’énergie.  
 * Un futur passage à un déploiement réparti devra être accompagné d’une nouvelle série d’indicateurs (latence réseau, utilisation CPU par nœud, coût matériel).  
 * Le projet reste conforme au référentiel AIA 4 tout en restant réaliste quant aux données disponibles.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

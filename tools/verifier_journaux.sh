@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Refuse un appel de journal qui ecrirait une donnee, ou qui formate sa chaine trop tot.
 #
 # Quoi     : parcourt l'arbre syntaxique des fichiers Python donnes (par defaut : src, dags,

@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_verifier_justifications.py
 Batterie de tests unitaires pour les fonctions ``citations`` et ``lire_adrs``
 du module ``tools.verifier_justifications``.

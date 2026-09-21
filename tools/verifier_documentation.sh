@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Verifie que la documentation se tient : chaque document numerote est cite par le README,
 # et aucun lien relatif ne pointe dans le vide.
 #
@@ -62,6 +63,18 @@ else:
         elif p.is_dir():
             fichiers += [str(q) for q in p.rglob("*") if q.is_file() and ".git" not in q.parts]
 for f in fichiers:
+    # Une presentation est une archive : une signature logee dans ses proprietes ou dans une
+    # diapositive echapperait a une lecture de texte. On ouvre l archive et on lit ses parties.
+    if f.lower().endswith((".pptx", ".docx", ".xlsx")):
+        try:
+            import zipfile
+            z = zipfile.ZipFile(f)
+            t = " ".join(z.read(n).decode("utf-8", errors="ignore") for n in z.namelist() if n.endswith((".xml", ".rels")))
+        except Exception:
+            continue
+        if motif.search(t):
+            touches.append("FICHIER : " + f)
+        continue
     try:
         t = pathlib.Path(f).read_text(encoding="utf-8", errors="ignore")
     except Exception:

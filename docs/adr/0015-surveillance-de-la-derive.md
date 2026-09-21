@@ -45,3 +45,7 @@ Le modèle est réentraîné chaque semaine et promu uniquement si le F1 macro d
 - Mesure du 19/09/2026 sur les données réelles, flux naturel seul (6 386 lignes sur 8 640) : `text_len` 0,036 (*stable*), `language` 3,098 et `app_id` 0,332 — informatifs. La fenêtre ancienne est à 85 % francophone, la récente à 91 % anglophone : c’est le plan de collecte, pas la population. Seule la part hors bornes, 10,13 %, lève l’alerte, et le fichier `scored/alertes/derive_20260919-153751.json` a bien été écrit.
 - `airflow tasks list reviewpulse_daily` rend **huit tâches**, `derive_exige_reentrainement` et `declencher_reentrainement` comprises, sans erreur d’import.
 - Le plan de monitoring (docs/14_plan_monitoring.md) décrit les signaux de dérive qui seront couverts par cette décision.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

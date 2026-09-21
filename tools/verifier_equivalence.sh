@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Prouve qu'un enrichissement de code n'a rien change au comportement.
 #
 # Quoi     : compare deux versions d'un module Python apres avoir retire ce qui n'execute

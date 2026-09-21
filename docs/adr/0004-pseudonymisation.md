@@ -32,3 +32,7 @@ L'API renvoie `steamid` (identifiant stable), `personaname`, `profile_url` et `a
 - 16/09/2026 : job lancé **sans sel** → code de sortie 1, message explicite, **zone propre non modifiée** (date de modification identique).
 - Tests : `test_transform_quality.py` (pseudonyme sur 64 hexadécimaux, stable, colonnes interdites absentes, sel absent refusé) ; contrôle F3 de `tools/forward_test.py`.
 - Référence : RGPD, considérant 26 et article 4.5 (la donnée pseudonymisée reste une donnée personnelle) ; base légale envisagée : intérêt légitime (art. 6.1.f), à valider par le DPO.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

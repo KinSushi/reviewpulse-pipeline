@@ -26,3 +26,7 @@ Le poste de développement est en Python 3.14, mal supporté par MLflow, Spark e
 - Trois services « healthy » après correction du contrôle de santé du tableau de bord (il interrogeait le port de l'API).
 - Parcours utilisateur réel dans un navigateur : saisie d'un avis dans le tableau de bord → API de conteneur à conteneur → « negative (97,90 %, seuil 0,75) ».
 - Défauts trouvés en déploiement et corrigés : installation du paquet dans l'image Airflow (disposition `src/` aplatie, filtre `-e .` inopérant), URL de l'API codée en dur dans le tableau de bord.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

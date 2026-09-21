@@ -161,3 +161,7 @@ Ordre d'exécution de la chaîne : **ingest → transform (+ quality) → train 
 
 - **`tools/appliquer_enrichissement.sh`** enchaîne cinq portes avant de remplacer un fichier rendu par un modèle : syntaxe ; `tools/citations_perdues.sh` (aucune citation perdue ni inventée) ; `tools/explication_appauvrie.sh` (la nouvelle version n'explique pas moins) ; `tools/verifier_equivalence.sh` (arbre syntaxique identique, docstrings et journaux retirés) ; copie de l'original en quarantaine.
 - **`tools/tester_portes.sh`** éprouve ces portes par dix-huit témoins, chaque tolérance avec le refus voisin ; **`tools/verifier_journaux.sh`** refuse qu'un journal écrive un texte d'avis, un identifiant, le sel ou un DataFrame ; **`tools/verifier_chiffres.sh`** refuse qu'un document tourné vers le jury contredise le dépôt ; **`tools/lint_conteneur.sh`** passe `ruff` dans l'image de dev avant un envoi. Détail et mesures : `docs/23_standard_agents.md`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

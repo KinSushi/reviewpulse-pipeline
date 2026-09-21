@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """
 Script autonome de création d'une présentation PowerPoint à partir d'un gabarit,
 défini par un fichier de spécification JSON.

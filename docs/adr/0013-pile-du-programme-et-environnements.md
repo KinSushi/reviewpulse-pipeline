@@ -47,3 +47,7 @@ Mesures du 16/09/2026 :
 - 54 tests réussis sous MLflow 3.16 (16/09/2026).
 - Image Airflow : Airflow 2.10.3 avec SQLAlchemy 1.4.54 ; projet avec MLflow 3.16.0, PySpark 4.2.0, SQLAlchemy 2.0.54.
 - Job réel sous MLflow 3 : 19 nouveaux avis, version 6 entraînée (F1 0,793) et non promue, score avec le champion version 2.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

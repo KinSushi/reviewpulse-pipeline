@@ -38,3 +38,7 @@ Restaurer la ligne `USER airflow` dans le Dockerfile.
 - Survie du planificateur avec PostgreSQL le 19/09/2026 lors d’une exécution concurrente.  
 - Service `airflow-db` fonctionnel avec le contrôle de santé configuré.  
 - Rétablissement du `USER airflow` a résolu la boucle du conteneur.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

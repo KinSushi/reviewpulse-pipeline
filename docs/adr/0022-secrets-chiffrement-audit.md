@@ -47,3 +47,7 @@ Dans le dépôt :
 - Le trafic interne reste en clair ; le risque est limité à la machine locale. Une évolution vers plusieurs machines nécessitera la mise en place de TLS interne.  
 - L’absence de journaux d’audit signifie qu’il n’y a pas de traçabilité des lectures/écritures de données ; cela devra être ajouté dès que le projet supportera plusieurs acteurs ou sera exposé à des exigences de conformité.  
 - La décision sera réévaluée dès que l’une des conditions suivantes sera remplie : ajout d’un deuxième environnement, multiplication des utilisateurs, besoin de rotation du sel, ou exigences réglementaires imposant l’audit.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

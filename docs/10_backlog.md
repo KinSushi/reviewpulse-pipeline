@@ -82,3 +82,7 @@ Chaque ligne cite le critère qu'elle sert (voir `08_exigences_par_bloc.md`).
 | A-7 | AIA 1 | Spotify : dossier + présentation | pilote de gouvernance ReviewPulse | ⬜ |
 | A-8 | AIA 2 + AIA 3 | Stripe + Fraud Detection : application « paiements » | PostgreSQL, CDC, Kafka, Airflow, MLflow, Terraform | ⬜ |
 | A-9 | CDSD 6 | Final Project | dépôt bancaire | voir S2-1 |
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

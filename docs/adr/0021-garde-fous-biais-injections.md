@@ -37,3 +37,7 @@ Condition de retour : dès que les ressources (temps de développement ou aide
 * **Ce qui est coûté** : l’absence de mesures de biais expose le projet à un risque de discrimination non détectée entre les langues et les jeux, et constitue une non‑conformité au référentiel AIA 4 tant que la situation n’est pas rectifiée.  
 * **Ce qui n’est pas coûté** : aucune dégradation des performances de prédiction, aucune surcharge de calcul, aucune modification du code existant n’est requise pour le moment.  
 * **Plan d’action** : la documentation de cette absence constitue le garde‑fou administratif requis ; le retour à l’implémentation sera déclenché dès que les ressources seront allouées, conformément à la condition de retour définie ci‑dessus.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

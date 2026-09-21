@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 import pytest
 import pandas as pd
 from reviewpulse import train, score, config

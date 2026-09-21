@@ -65,3 +65,7 @@ Les sources Mermaid vivent dans `diagrams/src/`.
 
 ## Le modele est une boite remplacable
 Le contrat d’entrée (zone propre, colonnes, types, pseudonymes) et le contrat de sortie (probabilité négative, seuil, métriques) ne changent pas quand le modèle évolue. Cette stabilité rend la chaîne ré‑employable pour d’autres blocs CDSD ou AIA. Voir le détail du matriçage de réemploi dans `03_matrice_reemploi_blocs.md`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

@@ -57,3 +57,7 @@ MLflow ou via une requête interne.
 * **Impact sur la charge** : l’ajout d’un enregistrement MLflow est léger comparé aux appels de calcul déjà effectués.
 * **Maintenance** : la logique de persistance repose sur les fonctions existantes du module `explain.py`; aucune nouvelle dépendance n’est introduite.
 * **Audit** : les équipes de conformité peuvent interroger le store MLflow pour obtenir, pour tout avis, la version du modèle, les contributions et le moment de la génération, sans devoir recomposer l’ensemble du pipeline.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

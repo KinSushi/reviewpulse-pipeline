@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_dashboard.py
 
 Tests d’intégration du tableau de bord Streamlit.

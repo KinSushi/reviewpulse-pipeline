@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- OÙ : dbt/models/marts/dim_date.sql (couche marts, table).
 -- QUOI : dimension calendrier, une ligne par jour où au moins un avis a été publié.
 -- COMMENT : dates distinctes de stg_reviews, attributs extraits par DuckDB (isodow : 1 = lundi).

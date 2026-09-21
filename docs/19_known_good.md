@@ -428,3 +428,7 @@ de la chaîne.
 **Comment y revenir** : `git checkout <ce commit>` ; la batterie, les mutations et les portes se
 rejouent sur GitHub par `ci.yml`, la chaîne entière par `pipeline.yml`, le banc des modèles par
 `comparaison.yml`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

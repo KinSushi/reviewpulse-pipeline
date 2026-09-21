@@ -286,3 +286,7 @@ Je mesurais l'avancement à mon registre et à la CI, jamais à ce que voit un l
 jour ne prouve pas qu'un dépôt est présentable : il faut l'ouvrir dans un navigateur et le lire
 comme un inconnu, chasser les chiffres périmés, et **regarder les écrans** — c'est une capture qui
 a trouvé le modèle périmé du tableau de bord et l'interface morte d'Airflow, pas un test.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

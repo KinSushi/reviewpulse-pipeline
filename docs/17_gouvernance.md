@@ -87,3 +87,7 @@ Le pilote montre déjà : zone brute immuable (9 271 lignes brutes), pseudon
 - Mesures d’accessibilité conformes aux standards.  
 - Documentation de formation et de conduite du changement.  
 - Analyse de ROI ou de valeur métier pour le comité de direction.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

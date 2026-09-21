@@ -73,3 +73,7 @@ est annoncé comme tel — un jury pardonne un manque annoncé, jamais un manque
 3. Une même chaîne d'industrialisation peut-elle porter deux modèles différents devant deux jurys distincts (AIA 4 et CDSD 5) ?
 
 Tant qu'elles restent sans réponse, **on construit quand même** : la chaîne est indispensable au bloc 4 de l'AIA dans tous les cas.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

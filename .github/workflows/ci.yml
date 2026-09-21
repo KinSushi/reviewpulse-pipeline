@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 name: ci
 on:
   push:
@@ -44,6 +45,10 @@ jobs:
       # les documents tournes vers le jury doivent etre ceux du depot, et aucune case n'y reste ouverte.
       - name: Chiffres — les documents ne contredisent pas le dépôt
         run: sh tools/verifier_chiffres.sh
+      # La mention de droit d'auteur est apposee par un outil et verifiee ici : un fichier cree sans
+      # elle fait echouer l'integration, en le nommant.
+      - name: Droit d'auteur — chaque fichier porte la mention
+        run: sh tools/copyright.sh verifier
       - name: Run tests
         env:
           REVIEWPULSE_SALT: ci-salt

@@ -105,3 +105,7 @@ a trouvé aucun qui écrive un texte d'avis, un identifiant, le sel ou un DataFr
 
 Puis `ruff` et la batterie tournent sur une copie jetable du dépôt (`docker run -d --name`,
 jamais `--rm`), et la CI confirme sur un runner neutre : batterie et 27 mutations.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

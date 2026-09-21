@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Eprouve les portes elles-memes : une porte qui n'a jamais refuse ne prouve rien.
 #
 # Quoi     : fabrique de petits fichiers temoins et exige de chaque porte le verdict attendu --

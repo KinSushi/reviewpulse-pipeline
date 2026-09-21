@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Contexte de construction Docker : seuls les fichiers copiés par les Dockerfiles sont utiles.
 # Pourquoi : sans ce fichier, tout le dépôt (lac de données, dépôt git, documentation, sauvegardes)
 # était envoyé au moteur à chaque construction.

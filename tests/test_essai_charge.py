@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_essai_charge.py
 Batterie de tests unitaires pour le module ``tools.essai_charge``.
 """

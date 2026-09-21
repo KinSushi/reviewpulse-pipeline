@@ -1,3 +1,4 @@
+// Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 // Pourquoi ce script existe -- un navigateur sans interface lance avec --screenshot photographie Streamlit avant que le websocket n'ait livre les donnees (trois captures vides le 20/09/2026)
 // ici on attend le rendu reel : reseau calme, puis un delai fixe, puis la photo.
 // Ce script capture deux pages distinctes pour verification visuelle.

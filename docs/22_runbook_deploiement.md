@@ -97,3 +97,7 @@ Il décrit, pas à pas, le déploiement complet sur une machine locale.
 - Gestion du disque USB externe au niveau du système d’exploitation.  
 - Intégration continue / déploiement continu (CI/CD) externe au dépôt.  
 - Monitoring avancé (alertes, tableaux de bord externes).  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

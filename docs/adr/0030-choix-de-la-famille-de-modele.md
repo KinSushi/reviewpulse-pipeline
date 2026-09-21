@@ -106,3 +106,7 @@ coûte, pas le classifieur. Changer de modèle n'achèterait donc aucune latence
 - Condition de révision : un candidat qui satisferait la règle sur le lac complet, ou un besoin
   métier qui ferait passer le rappel avant l'explication — la décision serait alors à reprendre
   avec Enzo, chiffres, coût et perte à l'appui.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

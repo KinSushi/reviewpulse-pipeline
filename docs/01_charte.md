@@ -30,3 +30,7 @@ Durée de conservation de la zone brute : 30 jours. Base légale à discuter : i
 **Hors périmètre, écrit.** Réponses automatiques aux joueurs · langues autres que l'anglais et le français · détection de thèmes par LLM (piste « J+1 ») · modèle profond (réservé au bloc 4 du CDSD, en octobre, dans la même chaîne).
 
 **Livrables.** Dépôt GitHub · diagramme d'architecture · une exécution de bout en bout avec un chiffre de qualité · démo en direct de 10 minutes.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

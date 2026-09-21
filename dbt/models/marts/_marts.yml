@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # OÙ : dbt/models/marts/_marts.yml
 # QUOI : contrats et tests du schéma en étoile (dim_game, dim_date, fct_review_predictions)
 #        et de l'indicateur métier mart_sentiment_daily.

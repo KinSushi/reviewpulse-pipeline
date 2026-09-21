@@ -38,3 +38,7 @@ Dans ReviewPulse :
 - **Risque réduit** pour le Demo Day : aucune modification d’infrastructure ne peut interrompre le pipeline existant.  
 - **Travail futur** : l’ajout d’un magasin de documents pourra être planifié après le Demo Day, avec des tests d’intégration et une migration contrôlée.  
 - **Leçon de méthode** : *une exigence qui dort dans un fichier n’existe pas tant qu’un outil ne la réclame pas* (mise en évidence par l’erreur du 19/09/2026 et corrigée par `make briques`).  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

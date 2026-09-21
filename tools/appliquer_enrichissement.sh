@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Applique un lot d'enrichissements de code, un module a la fois, derriere la porte
 # d'equivalence -- jamais sans elle.
 #

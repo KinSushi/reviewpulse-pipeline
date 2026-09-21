@@ -33,3 +33,7 @@ Cette décision devra être revue si le modèle devient un réseau profond, pré
 Un test vérifie que la somme des contributions égale la fonction de décision.  
 La charte promettait « les termes qui pèsent dans la prédiction » ; la promesse est tenue.  
 La mutation M21, qui inverse le signe des coefficients de la classe négative, est détectée par la batterie de tests.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

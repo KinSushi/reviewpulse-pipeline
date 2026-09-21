@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Delegue une tache au banc de modeles gratuits, standard du projet inclus.
 #
 # Quoi     : enveloppe nexus_agent.py en y injectant toujours tools/standard_agent.txt

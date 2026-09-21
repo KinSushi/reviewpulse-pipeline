@@ -205,3 +205,7 @@ Dit comme des manques, pas comme un plan :
 [`00_sources/`](docs/00_sources/) · [`01_charte.md`](docs/01_charte.md) · [`02_architecture.md`](docs/02_architecture.md) · [`03_matrice_reemploi_blocs.md`](docs/03_matrice_reemploi_blocs.md) · [`04_plan_jusqu_au_demo_day.md`](docs/04_plan_jusqu_au_demo_day.md) · [`05_conformite_demo_day.md`](docs/05_conformite_demo_day.md) · [`06_carte_des_modules.md`](docs/06_carte_des_modules.md) · [`07_questions_jury.md`](docs/07_questions_jury.md) · [`08_exigences_par_bloc.md`](docs/08_exigences_par_bloc.md) · [`09_journal_de_bord.md`](docs/09_journal_de_bord.md) · [`10_backlog.md`](docs/10_backlog.md) · [`11_reprise.md`](docs/11_reprise.md) · [`12_model_card.md`](docs/12_model_card.md) · [`13_note_orientation.md`](docs/13_note_orientation.md) · [`14_plan_monitoring.md`](docs/14_plan_monitoring.md) · [`15_reversibilite.md`](docs/15_reversibilite.md) · [`16_registre_suivi.md`](docs/16_registre_suivi.md) · [`17_gouvernance.md`](docs/17_gouvernance.md) · [`18_briques_exigees.md`](docs/18_briques_exigees.md) · [`19_known_good.md`](docs/19_known_good.md) · [`20_rapport_donnees.md`](docs/20_rapport_donnees.md) · [`21_guide_api.md`](docs/21_guide_api.md) · [`22_runbook_deploiement.md`](docs/22_runbook_deploiement.md) · [`23_standard_agents.md`](docs/23_standard_agents.md)
 
 </details>
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

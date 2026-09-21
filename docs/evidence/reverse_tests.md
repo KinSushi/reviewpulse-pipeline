@@ -34,3 +34,7 @@ Témoin : 88 passed in 1355.98s (0:22:35)
 | M26 | Le rapport de bascule affirme que l'ancienne version était déjà la nouvelle | Toute trace du retour arrière devient fausse : le journal et la sortie de commande diraient qu'il ne s'est rien passé | TUEE | 1 failed, 2 passed in 0.91s | tests/test_rollback.py::test_basculer_deplace_alias_et_renvoie_anciennes_nouvelles_versions | tests/test_rollback.py |
 
 **Total** : 26 – **TUEES** : 24 – **SURVIVANTES** : 2 – **OBSOLETES** : 0
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

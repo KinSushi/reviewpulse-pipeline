@@ -83,3 +83,7 @@ v2** : la chaîne d'abord. Si le jury interroge le réglage, la réponse tient e
 L'état détaillé de chaque sujet, avec son critère de fin et sa preuve, vit dans
 [`16_registre_suivi.md`](16_registre_suivi.md) ; le dernier état prouvé de bout en bout, dans
 [`19_known_good.md`](19_known_good.md).
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

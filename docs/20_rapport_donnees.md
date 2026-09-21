@@ -46,3 +46,7 @@ Après le nettoyage, les textes (`review_text`) sont vectorisés par TF‑IDF 
 Le jeu est limité à trois titres Steam et à deux langues ; il ne représente donc pas l’ensemble de la communauté Steam ni les avis multilingues au-delà de l’anglais et du français. La période de collecte (jusqu’au 19/09/2026) ne couvre pas les évolutions récentes du comportement des joueurs. De plus, les avis ne sont soumis qu’aux utilisateurs qui choisissent de publier un commentaire, introduisant un **biais de sélection** : les opinions extrêmes sont sur‑représentées, ce qui peut fausser l’estimation de la satisfaction moyenne. Ces limites doivent être prises en compte lors de l’interprétation des performances du modèle.
 
 *Toutes les affirmations techniques sont directement tirées des fichiers : `src/reviewpulse/ingest.py`, `src/reviewpulse/transform.py` et `src/reviewpulse/config.py`.*
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

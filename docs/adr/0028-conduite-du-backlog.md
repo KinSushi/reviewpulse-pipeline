@@ -56,3 +56,7 @@ Par conséquent, la méthode réellement employée est conservée : le backlog
 
 * **Quand la décision devra être revue**  
   - Dès l’arrivée d’une deuxième personne (ou plus) impliquée dans le développement, la coordination et l’engagement collectif deviendront pertinents. À ce moment‑là, l’introduction d’un cadre de sprint pourra être ré‑évaluée.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

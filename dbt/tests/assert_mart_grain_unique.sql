@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- Path: dbt/tests/assert_mart_grain_unique.sql
 -- Description: Vérifie l'unicité du grain (app_id, language, review_date) dans la table mart_sentiment_daily.
 -- How: Sélectionne les combinaisons qui apparaissent plus d'une fois (COUNT(*) > 1). Le test échoue si le résultat n'est pas vide.

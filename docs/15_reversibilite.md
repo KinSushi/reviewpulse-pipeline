@@ -23,3 +23,7 @@ Chaque couche du système possède son propre mécanisme de retour arrière. Auc
 - Sauvegarde du registre MLflow hors du volume Docker (ex. export vers un stockage persistant).
 
 *Document rédigé le 19/09/2026*.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

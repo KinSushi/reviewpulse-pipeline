@@ -215,3 +215,7 @@ espaces fines insécables qu'une recopie approximative fait échouer.
 - `Stripe`
 - `Stripe Business Case`
 - `Tinder`
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

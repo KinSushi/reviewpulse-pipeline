@@ -92,3 +92,7 @@
 * **Pas de contrôle de la latence du pipeline Spark** – les temps d’exécution Spark ne sont pas mesurés ni alertés.
 
 *Plan rédigé le 18/09/2026*
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

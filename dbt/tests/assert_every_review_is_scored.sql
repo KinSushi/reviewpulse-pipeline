@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- Location: dbt/tests/assert_every_review_is_scored.sql
 -- What: Vérifie que chaque avis présent dans `stg_reviews` a bien été scoré et figure dans `stg_predictions`.
 -- How: Sélectionne les `review_id` de `stg_reviews` qui n’apparaissent pas dans `stg_predictions`.

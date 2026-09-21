@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Passe `ruff` sur tout l'arbre, dans l'image de dev, AVANT un envoi -- sans rien installer sur l'hote.
 #
 # Quoi     : lance `ruff check` sur src, tests, dags, dashboard et tools dans un conteneur

@@ -48,3 +48,7 @@ Chaque option a été mise en œuvre, mesurée (performance, qualité, conformit
 - Analyse détaillée de la conformité juridique au-delà des principes généraux.
 
 *Note rédigée le 18/09/2026*
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

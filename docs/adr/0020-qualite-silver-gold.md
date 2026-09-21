@@ -35,3 +35,7 @@ Intégration des mutations **M23** et **M24** : relâchement de la borne d’une
 - **Sept tests unitaires** verts, dont celui qui vérifie qu’une table conforme passe.  
 - Le DAG montre la tâche `gx_lake` bloquante et le nombre total de tâches à neuf.  
 - Mutations **M23** et **M24** appliquées comme décrit.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

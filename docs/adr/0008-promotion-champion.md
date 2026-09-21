@@ -40,3 +40,7 @@ Le réentraînement est automatique (DAG hebdomadaire). Un modèle moins bon ne 
 - Version 3, mêmes données : **F1 identique** → non promue (reproductibilité et règle « strictement supérieur »).
 - Version 5 (DAG hebdomadaire, données enrichies, F1 0,798) : non promue, la version 2 reste servie.
 - Tests : `test_train_score.py`, `test_artifacts_location.py` (503) ; contrôle M1 de `tools/forward_test.py`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

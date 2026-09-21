@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # dbt/profiles.yml
 # OÙ : dans le répertoire dbt du projet ReviewPulse
 # QUOI : définit le profil de connexion DuckDB pour l'environnement de production

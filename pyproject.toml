@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"

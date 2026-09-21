@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Refuse une version d'un module qui explique MOINS que celle qu'elle remplace.
 #
 # Quoi     : compare deux versions d'un fichier Python sur trois mesures -- le nombre d'appels de

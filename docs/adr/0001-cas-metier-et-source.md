@@ -29,3 +29,7 @@ Aider une équipe *community & live-ops* à lire en priorité les avis négatifs
 ## Preuves
 
 Relevé du 16/09/2026 : l'API répond sans clé ; 23 172 à 504 467 avis par jeu et par langue ; noms des jeux non vérifiés (la route `appdetails` n'a pas renvoyé de JSON).
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

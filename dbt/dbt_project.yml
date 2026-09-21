@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # OÙ: dbt/dbt_project.yml
 # QUOI: configuration du projet dbt ReviewPulse
 # COMMENT: définit le profil, les chemins, les modèles, les seeds et les variables globales

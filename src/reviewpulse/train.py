@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """Rôle
     Entraîner, mesurer, enregistrer le modèle de classification de sentiment et, si les critères sont remplis, promouvoir la version.
 

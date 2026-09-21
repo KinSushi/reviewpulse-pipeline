@@ -34,3 +34,7 @@ La variante retenue a le **meilleur rappel des négatifs** (la métrique métier
 
 - Explicabilité : les 20 termes les plus négatifs et positifs sont enregistrés à chaque entraînement (`artifacts/top_terms.json`).
 - Plafond constaté à environ 0,76 de F1 sur la seule distribution naturelle : traité par l'ADR 0007.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

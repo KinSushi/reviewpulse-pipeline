@@ -33,3 +33,7 @@ Une reconstruction dans un mois produit la même image. Toute métrique est ratt
 - Le téléchargement de `python:3.11-slim` le 19/09 a produit exactement l’empreinte épinglée.  
 - L’archive de sauvegarde fait 15 Mo, contient 277 Mo d’artefacts, et la restauration a relu les versions 1 à 4 ainsi que l’alias `champion`.  
 - La cible `pipeline-gele` rejoue la chaîne sans nouvelle ingestion.  
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

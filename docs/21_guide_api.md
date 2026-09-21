@@ -219,3 +219,7 @@ Ces contraintes sont codées dans les modèles Pydantic et les paramètres FastA
 - **Limitation de débit** : aucun rate‑limiting n’est appliqué.  
 - **Versionnement d’URL** : les chemins restent fixes (`/health`, `/predict`, `/explain`, `/insights`).  
 - **Journalisation des avis** : les textes soumis ne sont jamais enregistrés, seules les exceptions sont loggées.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

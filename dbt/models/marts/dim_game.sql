@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- OÙ : dbt/models/marts/dim_game.sql (couche marts, table).
 -- QUOI : dimension des jeux suivis (identifiant Steam, nom).
 -- COMMENT : copie du seed games.csv, versionné dans le dépôt.

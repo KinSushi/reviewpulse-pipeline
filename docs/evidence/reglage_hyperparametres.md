@@ -87,3 +87,7 @@ généralisation plus fiable.
 sous-apprentissage, alors que c'est un critère transverse du référentiel CDSD. L'écart est
 désormais journalisé dans chaque run MLflow (`f1_macro_train`), mais rien ne se déclenche s'il
 dérive. Sujet **R53**.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

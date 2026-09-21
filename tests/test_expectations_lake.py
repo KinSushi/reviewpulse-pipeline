@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_expectations_lake.py
 Batterie de tests unitaires pour les attentes Great Expectations
 définies dans ``reviewpulse.expectations_lake``.

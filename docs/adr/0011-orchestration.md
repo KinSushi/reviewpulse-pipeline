@@ -29,3 +29,7 @@ L'énoncé exige qu'une partie de la chaîne s'exécute seule (Airflow, cron ou 
 
 - Premier essai : `PermissionError` sur `state/` et `clean/` (Airflow en uid 50000, fichiers créés en uid 1000). Corrigé par l'uid aligné.
 - Ensuite : trois exécutions de `reviewpulse_daily` et une de `reviewpulse_weekly_train` **réussies** (ingestion, transformation, score en environ 60 s ; entraînement et score en environ 90 s).
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

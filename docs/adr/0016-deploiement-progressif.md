@@ -34,3 +34,7 @@ Le programme AIA 4 impose un déploiement progressif (tests A/B ou canari) afin 
 
 - Décision **proposée**, aucune implémentation ni mesure à ce jour.
 - Aucun test automatisé ou métrique de production disponible pour valider le comportement.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

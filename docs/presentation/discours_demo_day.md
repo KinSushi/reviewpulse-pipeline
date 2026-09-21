@@ -137,3 +137,7 @@ serait de prétendre qu'un projet couvre tout ; il n'en couvre qu'un, et il outi
 Je résume la promesse : chaque matin, les avis négatifs qui comptent, triés, avec la raison — et une
 chaîne dont chaque pièce a été mise en défaut volontairement pour prouver qu'elle tient. Je suis prêt
 pour vos questions.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

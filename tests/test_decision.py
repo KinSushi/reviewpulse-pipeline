@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # tests/test_decision.py
 """
 Tests unitaires du module ``decision`` et de son intégration avec le pipeline

@@ -222,3 +222,7 @@ Lit `SCORED_FILE` et `SUMMARY_FILE`. Filtres : jeu, langue. Indicateurs : nombre
 ## Tests — `tests/`
 
 Aucun accès réseau : `requests.Session` remplacée par un faux objet. Chaque test utilise `tmp_path` et `monkeypatch` pour rediriger `config.DATA_DIR`, `RAW_DIR`, `CLEAN_DIR`, `SCORED_DIR`, `STATE_DIR` et les fichiers dérivés. MLflow pointe vers `sqlite:///<tmp_path>/mlflow.db`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

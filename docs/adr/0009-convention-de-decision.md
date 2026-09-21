@@ -24,3 +24,7 @@ Un module unique, `reviewpulse/decision.py`, détient la convention : `LABEL_NEG
 
 - Recherche du 16/09/2026 : aucune comparaison au seuil hors de `decision.py`.
 - Tests : `test_decision.py` (convention, ordre des classes, **test de sens de bout en bout**) ; contrôles A2 et F4 de `tools/forward_test.py` ; mutation « inversion du seuil » dans `tests/reverse/mutations.json`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

@@ -42,3 +42,7 @@ F1 macro hors-plis au seuil retenu : 0,802.
 ## Preuves
 
 Tests : `test_boost.py` (flux séparés, priorité naturelle, taille du test naturel, seuil dans la grille, résumé limité au naturel) ; contrôles F4 et F5 de `tools/forward_test.py`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

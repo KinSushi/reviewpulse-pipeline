@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 import pandas as pd
 
 from reviewpulse import config, ingest, transform, quality, train, score

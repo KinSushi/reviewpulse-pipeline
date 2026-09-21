@@ -164,3 +164,7 @@ seuil 0,775** (lu dans le fichier scoré), `/health` rend `{"model_version": "5"
 **Ce que ce passage a trouvé.** Le serveur web d'Airflow était mort depuis la panne de disque du
 20/09 — processus zombie, planificateur vivant. Un planificateur qui tourne ne prouve pas que
 l'interface répond : à vérifier la veille de la démonstration.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

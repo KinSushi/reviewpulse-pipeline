@@ -20,3 +20,7 @@
 | Max (ms) | 1125.84 |
 
 Cette mesure a été réalisée sur une seule machine ; elle ne garantit pas le comportement d’un déploiement réparti sur plusieurs nœuds ou sous des conditions réseau différentes.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

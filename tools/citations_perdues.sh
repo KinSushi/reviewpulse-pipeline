@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Refuse un enrichissement qui perd une citation de l'original, ou qui en invente une.
 #
 # Quoi     : compare les citations d'ADR (`ADR 0004`), de tests (`test_boost.py`) et d'entrees du

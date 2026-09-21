@@ -179,3 +179,7 @@ l'état dégradé qui a suivi, si.
 4. **Auditer ce que rend le banc gratuit.** Contrôle mécanique des noms de fichiers et des
    chiffres non fournis : sur onze livrables produits ce soir, zéro invention — mais c'est le
    contrôle qui le prouve, pas la confiance.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

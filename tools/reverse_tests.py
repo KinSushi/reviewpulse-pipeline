@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tools/reverse_tests.py
 Où : module exécutable placé sous le répertoire ``tools`` du projet ReviewPulse.
 Quoi : exécute la batterie de « mutations » décrites dans

@@ -32,3 +32,7 @@ L'énoncé exige un dépôt **brut et inchangé** avant toute transformation, et
 - 16/09/2026, exécution réelle : 6 000 avis au premier passage, **0** au second ; 6 000 identifiants distincts pour 6 000 lignes.
 - Défaut trouvé en exécution réelle et corrigé : le dossier du manifeste n'était pas créé, le lot brut était écrit mais pas le manifeste, et le second passage réécrivait les 1 000 mêmes avis. Test de non-régression : `tests/test_fresh_dirs.py`.
 - Tests : `test_ingest.py`, `test_fresh_dirs.py`, `test_boost.py`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

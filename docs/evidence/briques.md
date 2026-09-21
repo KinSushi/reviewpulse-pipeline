@@ -121,3 +121,7 @@ Aucun problème.
 | traçabilité | partielle | `docs/17_gouvernance.md` couvre la notion ; relecture ligne à ligne contre le code, R08 |
 | veille réglementaire et technologique | partielle | `docs/17_gouvernance.md` couvre la notion ; relecture ligne à ligne contre le code, R08 |
 | éthique et biais | partielle | `docs/17_gouvernance.md` couvre la notion ; relecture ligne à ligne contre le code, R08 |
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

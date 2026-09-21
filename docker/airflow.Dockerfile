@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Image Airflow de ReviewPulse.
 #
 # Deux environnements Python dans la même image, volontairement séparés :

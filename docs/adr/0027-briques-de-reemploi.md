@@ -44,3 +44,7 @@ Une démonstration de résilience (consommateur arrêté puis relancé, rattrapa
 - Le **déploiement public** sera réalisé en réutilisant le workflow de publication Hugging Face Space déjà existant ; aucune nouvelle infrastructure ne sera créée.  
 - Aucun outil absent de la machine ne sera installé, respectant la contrainte de ne rien promettre qui ne puisse être exécuté.  
 - Le focus reste sur le bloc AIA 4, support déclaré, avec les livrables déjà prévus (CI/CD, monitoring, vidéo, etc.), garantissant que la soutenance du 25/09/2026 se déroule avec les éléments déjà disponibles.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

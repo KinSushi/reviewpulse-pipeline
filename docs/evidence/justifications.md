@@ -40,3 +40,7 @@
 * Citations dans le code : 120
 * Citations dans les questions‑réponses : 69
 * Citations dans les diapositives : 74
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

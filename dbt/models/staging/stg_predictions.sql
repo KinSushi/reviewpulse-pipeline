@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- OÙ : dbt/models/staging/stg_predictions.sql (couche staging, vue).
 -- QUOI : les prédictions du modèle champion, une ligne par avis.
 -- COMMENT : lecture directe de la table Iceberg silver.predictions ; le module reviewpulse.gold

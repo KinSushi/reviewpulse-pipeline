@@ -42,3 +42,7 @@ Le programme de la Lead enseigne PySpark (module Big Data, exercice sur des donn
 
 - `tests/test_spark_silver.py` : équivalence stricte (doublons, deux flux, BBCode, textes vides, espaces Unicode) ; écriture, historique, dernière version lue ; schéma incompatible refusé.
 - Exécution réelle du 16/09/2026 : **équivalence stricte sur 8 231 lignes** (5 977 naturelles, 2 254 complémentaires) ; `spark_silver.main()` en 5,3 s ; table `silver.reviews` écrite.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_comparaison_modeles.py
 Batterie de tests unitaires pour le module ``tools.comparaison_modeles``.
 """

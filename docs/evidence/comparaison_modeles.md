@@ -57,3 +57,7 @@ Deux limites à dire avec les chiffres :
 - le modèle en service a été **réglé** (12 points, 20/09/2026), les autres candidats sont à des réglages
   raisonnables mais **non optimisés**. Un écart faible en leur défaveur ne prouverait donc rien — et c'est
   pourquoi la décision (ADR 0030) ne s'appuie que sur les écarts qui dépassent l'écart-type des plis.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

@@ -41,3 +41,7 @@ Trois defauts corriges a l'audit :
 ## Comment cette decision a ete prise
 
 Deux familles de modeles ont redige la decision independamment et ont diverge — l'une concluait qu'il fallait instrumenter, l'autre qu'il fallait assumer l'absence par ecrit. Une troisieme famille a arbitre, avec pour consigne de s'appuyer sur les faits et non sur une preference. Elle a tranche pour l'instrumentation, en demandant de reprendre trois apports de l'option perdante. L'orchestrateur a verifie les faits et corrige trois defauts du code produit. C'est la premiere decision du projet prise ainsi.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

@@ -21,3 +21,7 @@ pandas, avec une zone propre en un seul fichier Parquet réécrit atomiquement �
 
 - Temps de transformation de l'ordre de la seconde.
 - **Seuil de bascule** : au-delà d'environ 10 millions d'avis ou d'une mémoire insuffisante, passer en PySpark (lecture par partition) ou pousser le brut dans un entrepôt et transformer en dbt. Le contrat d'entrée et de sortie (`CLEAN_COLUMNS`) ne change pas.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

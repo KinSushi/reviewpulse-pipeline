@@ -121,3 +121,7 @@ Mise à jour : 19/09/2026, 23 h 15. Batterie **125 verte**, mutations **26 sur 2
 2. **Après** : repasser sur le registre entier, pas seulement sur la ligne traitée.
 3. Un sujet ne se ferme qu'en déplaçant sa ligne vers la table des sujets fermés, **avec sa preuve**.
 4. Le plan détaillé vit à part, hors du dépôt ; ce registre est la liste de ce qui reste dû.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

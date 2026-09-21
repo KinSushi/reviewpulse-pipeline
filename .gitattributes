@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Fins de ligne LF partout : le projet s'exécute dans des conteneurs Linux et sur GitHub Actions.
 # Un Makefile ou un script shell en CRLF (réglage core.autocrlf de Windows) casse sous Linux.
 * text=auto eol=lf

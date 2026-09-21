@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """tests/test_expectations.py
 Rôle
     Vérifie le comportement de la suite Great Expectations définie dans

@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Refuse qu'un document tourne vers le jury contredise le depot, ou annonce comme restant un
 # travail fait.
 #

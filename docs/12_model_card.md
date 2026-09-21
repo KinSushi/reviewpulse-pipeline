@@ -68,3 +68,7 @@
   - README (`README.md`).
 
 *Les mesures citées datent du 16/09/2026.*
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

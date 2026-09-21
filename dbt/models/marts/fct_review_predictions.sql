@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- OÙ : dbt/models/marts/fct_review_predictions.sql (couche marts, table de faits).
 -- QUOI : un avis et sa prédiction ; grain = review_id.
 -- COMMENT : jointure interne avis × prédictions ; le test assert_every_review_is_scored garantit

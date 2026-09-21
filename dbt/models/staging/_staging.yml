@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # OÙ : dbt/models/staging/_staging.yml
 # QUOI : contrats (types imposés) et tests des deux vues de staging.
 # COMMENT : contract.enforced fait échouer la construction si une colonne manque ou change de type ;

@@ -121,3 +121,7 @@ Emplacement : `Dossier-Jedha/03-plateforme/depots-coaching/` ; liens dans `Jedha
 - Les énoncés détaillés de Kayak, Tinder, Steam, AT&T et Getaround (parcours `full-stack-full-time`).
 - La page « Fonctionnement de la certification ».
 - Le cahier de cas Spotify (PDF à télécharger depuis Julie).
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

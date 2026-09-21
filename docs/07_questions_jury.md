@@ -253,3 +253,7 @@ Nous reconnaissons que les briques MinIO, Kafka, Terraform et le workflow de dé
 
 **Pourquoi n'utilisez‑vous pas de sprints pour piloter le backlog alors que cela semble standard ?**
 Nous reconnaissons que l’absence de sprints peut donner l’impression d’un manque de structure, mais le choix repose sur le fait que le projet ReviewPulse est mené par une seule personne, sans équipe ni parties prenantes à synchroniser. Les fonctions principales d’un sprint – **coordination** et **engagement collectif** – sont donc sans objet, et les cérémonies n’apportent aucune valeur ajoutée supplémentaire à notre registre de suivi, qui garantit la traçabilité et la preuve de chaque sujet. Nous continuons à piloter le backlog via le registre, en fonction de notre disponibilité. Si une deuxième personne rejoint le projet, nous réévaluerons alors l’introduction d’un cadre de sprint. → ADR 0028.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

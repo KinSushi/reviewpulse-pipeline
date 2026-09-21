@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- dbt/models/marts/mart_sentiment_daily.sql
 -- OÙ : dans le répertoire `models/marts/` du projet ReviewPulse
 -- QUOI : agrégat quotidien du sentiment des avis (échantillon naturel) par application, langue et date

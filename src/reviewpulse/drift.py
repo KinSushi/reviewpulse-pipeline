@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """reviewpulse.drift
 ===================
 

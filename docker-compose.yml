@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # docker-compose.yml – configuration des services ReviewPulse
 # Décisions appliquées ici : ADR 0012 (déploiement par Docker Compose),
 # ADR 0017 (base PostgreSQL pour Airflow), ADR 0018 (images épinglées par empreinte).

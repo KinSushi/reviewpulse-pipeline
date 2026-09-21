@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # Campagne de preuves ReviewPulse — batterie puis tests inverses, en série.
 #
 # Quoi     : enchaîne compilation, batterie complète et tests inverses, chaque phase
@@ -80,6 +81,7 @@ phase "documentation" "${BUDGET_COMPILE}" sh tools/verifier_documentation.sh
 phase "portes" "${BUDGET_COMPILE}" sh tools/tester_portes.sh
 phase "journaux" "${BUDGET_COMPILE}" sh tools/verifier_journaux.sh
 phase "chiffres" "${BUDGET_COMPILE}" sh tools/verifier_chiffres.sh
+phase "droit d'auteur" "${BUDGET_COMPILE}" sh tools/copyright.sh verifier
 
 # La batterie tourne sur une copie neuve : un test qui écrirait dans le dépôt
 # fausserait la mesure suivante.

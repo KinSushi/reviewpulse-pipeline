@@ -46,3 +46,7 @@
 - **Extensibilité** : si un besoin d’historisation apparaît (ex. renommage de jeux), il faudra introduire de nouvelles colonnes et ré‑écrire les modèles ; cela pourra être planifié dans un futur ADR.  
 - **Tableau de bord** : aucune modification nécessaire ; les métriques quotidiennes (`mart_sentiment_daily`) continuent de s’appuyer sur les mêmes clés.  
 - **Coût** : zéro coût de développement et de maintenance supplémentaire aujourd’hui.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

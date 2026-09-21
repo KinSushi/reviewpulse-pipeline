@@ -1,3 +1,4 @@
+-- Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 -- File: tests/assert_shares_and_probas_in_range.sql
 -- Location: tests/
 -- What: Vérifie que les parts et probabilités sont bien dans l’intervalle [0, 1].

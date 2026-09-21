@@ -25,3 +25,7 @@ MLflow crée lui-même un dossier `./mlruns` **vide** dès qu'il ouvre une base 
 
 - API relancée dans un **autre conteneur et un autre dossier courant** : `/health` 200, prédictions correctes.
 - Tests : `test_artifacts_location.py` (entraînement et service dans deux dossiers différents, aucun fichier écrit, 503 sans modèle), `test_fresh_dirs.py`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

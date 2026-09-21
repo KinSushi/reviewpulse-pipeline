@@ -30,3 +30,7 @@ Construction : `tools/construire_slides.py` — le fichier se régénère à l'i
 1. Ouvrir la présentation et vérifier qu'aucun texte ne déborde (contrôle visuel, non automatisable ici).
 2. Répéter une fois en conditions réelles, chronomètre en main.
 3. Enregistrer la vidéo de secours.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*

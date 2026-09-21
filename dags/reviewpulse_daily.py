@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 """Rôle
     Automatiser la chaîne de traitement ReviewPulse :
     quotidien : ingest → spark_silver → gx_validate → score → gold (dbt) ;

@@ -1,3 +1,4 @@
+# Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC
 # OÙ: dbt/seeds/_seeds.yml
 # QUOI: seed « games » listant les jeux suivis, avec app_id et game_name.
 # COMMENT: chargé par `dbt seed` (inclus dans `dbt build`) ; noms relevés sur l'API Steam appdetails le 17/09/2026.

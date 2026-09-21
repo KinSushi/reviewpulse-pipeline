@@ -24,3 +24,7 @@ L'énoncé exige « au moins un test de qualité ». Une donnée fausse qui atte
 ## Preuves
 
 Tests : `test_transform_quality.py`, `test_boost.py` ; contrôle F2 de `tools/forward_test.py` sur la zone propre réelle ; tests inverses : `tests/reverse/mutations.json`.
+
+---
+
+*Copyright © 2026 · Auteur — KinSushi · Enzo · Sovralys LLC*
