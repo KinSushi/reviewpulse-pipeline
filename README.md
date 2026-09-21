@@ -51,7 +51,7 @@ Le même code tourne aussi hors Airflow (`make pipeline`), dans un conteneur (`m
 |---|---|
 | **Source** | API publique des avis Steam — des données **réelles**, avec leur désordre |
 | **Périmètre** | 3 jeux (*Clair Obscur: Expedition 33*, *Baldur's Gate 3*, *ELDEN RING NIGHTREIGN*), anglais et français |
-| **Volume** | 9 410 lignes brutes ; 9 % d'avis négatifs dans la distribution naturelle |
+| **Volume** | plus de 9 600 lignes brutes au 21/09/2026, et le DAG en ajoute chaque jour ; 9 % d'avis négatifs dans la distribution naturelle |
 | **Zone brute** | immuable : jamais modifiée, tout peut être rejoué depuis elle |
 | **Données personnelles** | l'identifiant Steam est pseudonymisé par HMAC-SHA256 **salé** (un hachage simple d'un identifiant court se casse par dictionnaire) ; pseudonyme, URL de profil et avatar sont supprimés dès la zone propre ; le sel est un secret obligatoire, sans valeur par défaut — sans lui, la chaîne refuse de démarrer |
 | **Flux complémentaire** | des avis négatifs supplémentaires servent à l'**entraînement seulement**, jamais au test : le modèle n'est pas mesuré sur une distribution gonflée |

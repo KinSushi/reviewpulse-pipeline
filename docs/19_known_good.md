@@ -379,3 +379,52 @@ de l'ancien dépôt (R02), la sixième présentation (R51). Aucun n'est un défa
 
 **Comment y revenir** : `git checkout <ce commit>` ; la chaîne se rejoue sur GitHub par
 `gh workflow run pipeline.yml`, sans dépendre du disque externe.
+
+## KG-2026-09-21-a — `KNOWN_GOOD`
+
+**Commit** : celui de cette entrée · **Date** : 21/09/2026, 4 h 45. Premier état sain **avec le code
+premium** : dix-neuf modules de production et cinq outils documentés, journalisés et commentés par
+des modèles, sans qu'une ligne de logique ait bougé — et c'est prouvé à chaque niveau.
+
+| Niveau | Preuve | Résultat |
+|---|---|---|
+| 1 — compilation, lint | `compileall` ; `ruff` en conteneur (`tools/lint_conteneur.sh`) puis en CI | code 0 |
+| 1 — portes | `tools/tester_portes.sh` : équivalence, citations, journaux, non-appauvrissement | **18 verdicts sur 18** |
+| 1 — documents | `verifier_documentation.sh`, `verifier_chiffres.sh`, `verifier_justifications.py` | 0 lien mort, 0 signature d'outil, **0 contradiction** sur 18 documents, 30 décisions justifiées |
+| 1 — journaux | `tools/verifier_journaux.sh`, contrôle d'arbre | **207 appels, 0 fuite, 0 f-string** |
+| 2 — imports | API et tableau de bord **redémarrés** sur le code premium ; Airflow le monte | `/health` : version 5, seuil 0,775 |
+| 3 — exécution | DAG quotidien `premium-20260921-0048` | **9 tâches : 8 vertes, 1 sautée par conception**, 34 min 50 s ; puis l'exécution **planifiée** s'est lancée seule |
+| 4 — test avant | batterie en CI, sur `main` | **144 tests verts** |
+| 4 — test avant | pile déployée, `tools/forward_test.py` depuis le réseau de la pile | **16 contrôles sur 16** : 8 974 lignes scorées en version 5, 31 instantanés Iceberg |
+| 5 — test inverse | campagne inverse en CI | **27 mutations sur 27**, avec le code premium |
+| 6 — machine | captures réelles par Chromium piloté | API, registre MLflow (champion 5, challenger 6 refusé), tableau de bord en version 5 |
+| 7 — non-régression | CI verte sur la branche de travail puis sur `main` à chaque étape de la nuit | une seule CI rouge non triviale, et elle avait raison (voir défaut 4) |
+
+**Ce qui distingue cet état** : le dépôt a été relu **comme un lecteur** — README refait, documents
+périmés remis à l'heure, captures réelles — et le choix du modèle est devenu une décision mesurée
+(ADR 0030 : neuf familles, règle écrite avant les résultats).
+
+**Sept défauts trouvés en y arrivant** — la moitié par une capture ou par la lecture du dépôt, pas
+par un test :
+1. Le README annonçait 26 mutations, douze décisions, quatre points d'accès, et décrivait la chaîne
+   en v1. `verifier_chiffres.sh` refuse désormais un total qui contredit le dépôt.
+2. La grille de conformité du 16/09 laissait ouvertes des cases pour du travail fait.
+3. **Le tableau de bord affichait la version 2 du modèle** : scores antérieurs à la promotion de la
+   version 5. Trouvé par la première capture réelle ; corrigé par le passage du DAG.
+4. Un arbitre a rendu un `rollback.py` avec un `except … as exc` sans emploi : cinq portes locales
+   franchies, **CI rouge** (`ruff` F841). Retour à la version validée ; `ruff` tourne maintenant
+   avant l'envoi.
+5. **Le serveur web d'Airflow était mort** depuis la panne de disque du 20/09, planificateur vivant.
+6. Une batterie rendue par un modèle remplaçait tout le paquet `reviewpulse` par des faux dans
+   `sys.modules`. Refusée : elle aurait fait mentir la session de tests entière.
+7. La Model Card et la diapositive 15 portaient encore le seuil 0,75 ; l'index des ADR ignorait
+   l'ADR 0029.
+
+**Ce qui reste hors de cet état** : la vidéo (R03), la répétition chronométrée (R05), la suppression
+de l'ancien dépôt (R02), la sixième présentation (R51) ; deux outils de contrôle non portés au
+standard (R66) ; le banc de comparaison à rejouer sur le lac complet (R74). Aucun n'est un défaut
+de la chaîne.
+
+**Comment y revenir** : `git checkout <ce commit>` ; la batterie, les mutations et les portes se
+rejouent sur GitHub par `ci.yml`, la chaîne entière par `pipeline.yml`, le banc des modèles par
+`comparaison.yml`.

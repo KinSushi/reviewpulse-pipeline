@@ -36,7 +36,7 @@ exercice technique, pas un produit. La charte, c'est la boussole des trois jours
 
 ## 1:40 — Diapositive 6 · Les données réelles
 
-Les données sont réelles, collectées par l'API publique de Steam : 9 410 lignes brutes, trois jeux,
+Les données sont réelles, collectées par l'API publique de Steam : plus de neuf mille lignes brutes, trois jeux,
 anglais et français. Je ne les ai pas fabriquées, et c'est volontaire : la consigne dit « real data,
 or the project is a toy » — et le désordre des vraies données est justement ce qui oblige les
 transformations à faire un vrai travail.
@@ -59,7 +59,7 @@ j'ai moi-même gonflée.
 ## 3:00 — Diapositive 13 · La chaîne de bout en bout
 
 Voici la chaîne. Ingestion idempotente depuis Steam. Zone silver en PySpark et Iceberg : chaque
-écriture crée un instantané, vingt-sept aujourd'hui, chacun restaurable — c'est ma réversibilité sur
+écriture crée un instantané, plus de trente aujourd'hui, chacun restaurable — c'est ma réversibilité sur
 les données. Zone gold en dbt et DuckDB, avec trente tests déclarés dans les contrats.
 
 Pourquoi ces choix, et pas d'autres ? Spark pour la zone silver parce que c'est la brique du

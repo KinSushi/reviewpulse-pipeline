@@ -1,4 +1,4 @@
-# Conformité aux consignes du Demo Day — état au 20/09/2026
+# Conformité aux consignes du Demo Day — état au 21/09/2026
 
 Référence : énoncé *Build a Data Pipeline That Feeds an AI Model*, parcours `lead-data-v2`, relu
 intégralement sur Julie le 20/09/2026 et versé mot pour mot dans
@@ -10,11 +10,11 @@ intégralement sur Julie le 20/09/2026 et versé mot pour mot dans
 
 | # | Exigence, mot pour mot | Réponse de ReviewPulse | Preuve | État |
 |---|---|---|---|---|
-| 1 | « solve a real business case with **real data you found** » | Priorisation des avis négatifs Steam pour une équipe *community & live-ops* ; API publique des avis Steam, 3 jeux, anglais et français | [`01_charte.md`](01_charte.md) ; `config.STEAM_URL` ; 9 410 lignes brutes réelles | ✅ |
-| 2 | « land the data **raw and unchanged** in a first storage zone **before anything touches it** » | JSONL, une ligne = l'objet reçu, partitionné par jeu, langue et date ; **idempotence** par manifeste d'identifiants et écriture atomique | 69 fichiers, 9 410 lignes, 12 manifestes ; `test_ingest.py` (ligne relue = objet reçu) ; second passage réel : 0 nouvel avis ; ADR 0002 | ✅ |
+| 1 | « solve a real business case with **real data you found** » | Priorisation des avis négatifs Steam pour une équipe *community & live-ops* ; API publique des avis Steam, 3 jeux, anglais et français | [`01_charte.md`](01_charte.md) ; `config.STEAM_URL` ; 9 410 lignes brutes réelles comptées le 20/09/2026, et le DAG en ajoute chaque jour | ✅ |
+| 2 | « land the data **raw and unchanged** in a first storage zone **before anything touches it** » | JSONL, une ligne = l'objet reçu, partitionné par jeu, langue et date ; **idempotence** par manifeste d'identifiants et écriture atomique | 69 fichiers, 9 410 lignes, 12 manifestes (comptés le 20/09/2026) ; `test_ingest.py` (ligne relue = objet reçu) ; second passage réel : 0 nouvel avis ; ADR 0002 | ✅ |
 | 3 | « transform […] with **dbt, PySpark, or pandas**, protected by **at least one data quality test** » | PySpark vers une zone silver **Iceberg**, dbt vers une zone gold DuckDB ; Great Expectations en **portes bloquantes** sur les trois zones | 4 suites, 29 attentes, 0 échec ([`evidence/dag_execution_reelle.md`](evidence/dag_execution_reelle.md)) ; 30 tests dbt déclarés ; mutations M17, M23, M24 tuées ; ADR 0005, 0014, 0020 | ✅ |
 | 4 | « an **AI step** that consumes the pipeline output: an ML model tracked with **MLflow** » | TF-IDF caractères + régression logistique ; serveur MLflow, alias `champion` et `challenger`, **barrière de promotion** | champion version 5, F1 macro **0,8027** ; promotion **et** refus constatés le même jour ; ADR 0006, 0008 | ✅ |
-| 5 | « At least one part of the chain must **run on its own** » | DAG Airflow quotidien (**9 tâches**) et hebdomadaire ; workflow GitHub Actions planifié | DAG exécuté en réel le 20/09 : 8 tâches vertes, 1 sautée par conception ; [`pipeline.yml`](../.github/workflows/pipeline.yml) exécuté sur un runner vierge : 5 798 avis collectés, modèle entraîné et promu ; ADR 0011 | ✅ |
+| 5 | « At least one part of the chain must **run on its own** » | DAG Airflow quotidien (**9 tâches**) et hebdomadaire ; workflow GitHub Actions planifié | DAG exécuté en réel le 20/09 puis le 21/09 avec le code premium : 8 tâches vertes, 1 sautée par conception, et l'exécution **planifiée** qui s'est lancée seule juste après ; [`pipeline.yml`](../.github/workflows/pipeline.yml) exécuté sur un runner vierge : 5 798 avis collectés, modèle entraîné et promu ; ADR 0011 | ✅ |
 
 **Les cinq sont tenues.** « Everything else, the domain, the model type, the tools, is your call. »
 
@@ -28,7 +28,7 @@ intégralement sur Julie le 20/09/2026 et versé mot pour mot dans
 | J1 | Ingestion qui remplit la zone brute depuis la source vivante | ✅ |
 | J2 | Une exécution de bout en bout, source → sortie IA | ✅ ingestion → silver → porte de qualité → score → dérive → gold → porte de qualité, dans Airflow et dans GitHub Actions |
 | J2 | **Un chiffre de qualité défendable** | ✅ F1 macro **0,8027** sur un test 100 % naturel tenu à l'écart ; cinq variantes comparées ([`evidence/reglage_hyperparametres.md`](evidence/reglage_hyperparametres.md), ADR 0006 et 0007) |
-| J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ les trois : `docker compose` complet (MLflow, API, tableau de bord, Airflow sur PostgreSQL) ; test automatisé de la pile déployée : **16 contrôles sur 16** |
+| J2 (facultatif) | FastAPI ou Streamlit, Docker | ✅ les trois : `docker compose` complet (MLflow, API, tableau de bord, Airflow sur PostgreSQL) ; test automatisé de la pile déployée : **16 contrôles sur 16**, rejoué le 21/09 sur la pile redémarrée avec le code premium |
 | J3 | **Le dépôt** | ✅ public, intégration continue verte : 144 tests, 27 mutations sur 27 tuées en un seul passage |
 | J3 | **Le diagramme** | ✅ dix schémas, sources Mermaid versionnées |
 | J3 | **La présentation** : 10 min, démonstration en direct, puis 5 min de questions — cas métier, choix ML ou LLM, conception de la chaîne, **« what you would build next »** | ✅ [`presentation/ReviewPulse_DemoDay.pptx`](presentation/ReviewPulse_DemoDay.pptx) sur le gabarit Jedha ; [discours mot pour mot](presentation/discours_demo_day.md) ; [minutage](presentation/script_10_minutes.md) ; la dernière diapositive et la minute 8:00–9:20 nomment les manques un par un |
