@@ -67,7 +67,7 @@ programme, et parce que pandas reste la référence de comparaison dans mes test
 divergent, c'est un défaut. dbt pour la zone gold parce que c'est le seul endroit où le travail est de
 la modélisation SQL, et où un contrat compte plus que du code. DuckDB plutôt qu'un entrepôt géré parce
 que la démonstration ne doit dépendre d'aucun compte externe. Chaque décision de ce genre est écrite
-dans un ADR — il y en a vingt-neuf — avec la mesure qui l'a motivée et l'alternative écartée.
+dans un ADR — il y en a trente — avec la mesure qui l'a motivée et l'alternative écartée.
 
 ## 3:50 — Diapositive 14 · Le modèle, et le choix ML ou LLM
 
@@ -77,12 +77,13 @@ un avis en positif ou négatif est une tâche de tri supervisée, sur un signal 
 se réentraîne en quelques secondes, et ne coûte rien à servir. Un LLM ajouterait de la latence, un
 coût, et une approximation — pour un problème qui n'en a pas besoin.
 
-J'ai mesuré quatre variantes. Des mots en 1 à 2 grammes : F1 macro 0,735, refusé par la barrière.
-Régularisation ajustée : 0,756. Des n-grammes de caractères, de 2 à 5 : 0,759, puis 0,797 avec un
-flux d'avis négatifs en plus, puis 0,803 après un réglage des hyperparamètres — douze points en
-validation croisée. Pourquoi les caractères ? Parce qu'ils sont robustes aux fautes et aux variantes
-d'écriture, fréquentes dans un avis de joueur. Et le seuil de décision n'est pas fixé à 0,5 : il est
-appris par validation croisée, à 0,775.
+J'ai d'abord mesuré des variantes : des mots, F1 macro 0,735, refusé par la barrière ; des n-grammes
+de caractères, robustes aux fautes et à l'argot des joueurs ; un flux d'avis négatifs en plus ; un
+réglage en validation croisée : 0,803. Puis la vraie question — un autre modèle ferait-il mieux ?
+Je l'ai mesuré : neuf candidats, les mêmes plis, et la règle de décision écrite avant de lire les
+résultats. La régression logistique arrive première ; la SVM linéaire fait jeu égal mais perd
+l'explication exacte ; XGBoost et la forêt aléatoire sont à 0,73 et 0,72, pour un entraînement
+jusqu'à vingt-trois fois plus cher. Et le seuil de décision n'est pas 0,5 : il est appris, à 0,775.
 
 ## 4:40 — Diapositive 15 · Résultats et preuves
 

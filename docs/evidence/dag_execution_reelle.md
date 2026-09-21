@@ -131,3 +131,36 @@ du premier chargement du modèle, et elle est tuée par
 C'est ce qu'un témoin doit faire : retirer le mécanisme qu'il protège doit le faire échouer.
 Sans cette mutation, le verrou serait du code qu'on croit utile ; avec elle, il est du code
 dont l'utilité est démontrée.
+
+## DAG quotidien avec le code premium — 21/09/2026
+
+Exécution `premium-20260921-0048`, déclenchée à la main après l'enrichissement des dix-neuf modules
+(docstrings, journaux, commentaires de raisonnement — logique prouvée inchangée). Le conteneur
+Airflow monte le code du dépôt : c'est donc le code premium qui a tourné. **34 min 50 s, succès.**
+
+| Tâche | État | Début (UTC) | Durée |
+|---|---|---|---|
+| `ingest` | success | 05:49:14 | 1 min 47 |
+| `spark_silver` | success | 05:51:05 | 14 min 04 |
+| `gx_validate` | success | 06:05:15 | 3 min 49 |
+| `score` | success | 06:09:11 | 4 min 48 |
+| `drift` | success | 06:14:02 | 3 s |
+| `derive_exige_reentrainement` | success | 06:14:17 | 17 s |
+| `declencher_reentrainement` | **skipped** | 06:14:28 | — par conception : la dérive est sous le seuil |
+| `gold` | success | 06:14:17 | 9 min 23 |
+| `gx_lake` | success | 06:23:43 | 10 s |
+
+**Et la chaîne a tourné seule juste après.** L'exécution planifiée
+`scheduled__2026-09-20T06:00:00+00:00` s'est lancée d'elle-même à 06:24:28 UTC et s'est terminée en
+succès à 06:30:28 — c'est l'exigence n° 5 de la consigne, « at least one part of the chain must run
+on its own », observée et non déclarée.
+
+**Ce que ce passage a corrigé.** La première capture réelle du tableau de bord, dans la nuit,
+affichait « version du modèle 2, seuil 0,750 » alors que le champion était la version 5 : les scores
+sur disque dataient d'avant la promotion. Après le passage : **8 974 lignes scorées, version 5,
+seuil 0,775** (lu dans le fichier scoré), `/health` rend `{"model_version": "5",
+"decision_threshold": 0.775}`, et la capture `docs/captures/tableau_de_bord.png` en témoigne.
+
+**Ce que ce passage a trouvé.** Le serveur web d'Airflow était mort depuis la panne de disque du
+20/09 — processus zombie, planificateur vivant. Un planificateur qui tourne ne prouve pas que
+l'interface répond : à vérifier la veille de la démonstration.

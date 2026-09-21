@@ -32,3 +32,5 @@ Chaque décision structurante du projet est écrite ici, **avec la mesure ou le 
 | [0026](0026-tracing-explicabilite.md) | Tracing : tracer les décisions plutôt que les appels | Acceptée |
 | [0027](0027-briques-de-reemploi.md) | Briques de réemploi : MinIO, Kafka, Terraform, déploiement public, arbitrées une par une | Acceptée |
 | [0028](0028-conduite-du-backlog.md) | Conduite du backlog : un registre à critère de fin et à preuve, plutôt que des sprints | Acceptée |
+| [0029](0029-surveillance-de-la-latence.md) | Surveillance de la latence : `/metrics` en mémoire, décidé par arbitrage entre trois familles de modèles | Acceptée |
+| [0030](0030-choix-de-la-famille-de-modele.md) | Régression logistique plutôt qu'une autre famille : neuf candidats mesurés, règle écrite avant les résultats | Acceptée |

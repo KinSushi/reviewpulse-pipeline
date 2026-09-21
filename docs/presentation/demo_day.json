@@ -91,11 +91,11 @@
    "5": "Mots, régularisation ajustée : 0,756",
    "6": "Caractères, 2 à 5 grammes ",
    "7": "(0,759 puis 0,797 puis 0,803) ",
-   "8": "→ retenu",
-   "9": "Pourquoi les n-grammes de caractères ?",
-   "10": "Robustes aux fautes et aux variantes d'écriture",
-   "11": "Entraînement en quelques secondes, explicable terme par terme",
-   "12": "Seuil de décision appris, et non fixé à 0,5 — ADR 0006, 0007",
+   "8": "→ retenu : robuste aux fautes, explicable terme par terme",
+   "9": "Un autre modèle ferait-il mieux ? Neuf candidats, mêmes plis",
+   "10": "Régression logistique 0,812 · SVM linéaire 0,807 : égalité, sans explication exacte",
+   "11": "XGBoost 0,735 · forêt aléatoire 0,719 — entraînement jusqu'à 23 fois plus cher",
+   "12": "Règle de décision écrite avant les résultats — ADR 0006, 0007, 0030",
    "13": ""
   },
   "15": {
@@ -104,7 +104,7 @@
    "3": "TF-IDF sur caractères et régression logistique, ",
    "4": "class_weight='balanced'",
    "5": "Seuil appris par validation croisée : ",
-   "6": "0,75",
+   "6": "0,775",
    "7": " — barrière de promotion F1 macro ≥ 0,75.",
    "8": "Sur un test 100 % naturel tenu à l'écart :",
    "9": "F1 macro : ",
@@ -137,7 +137,7 @@
    "10": "Kafka pour le temps réel, stockage objet compatible S3, infrastructure en Terraform",
    "11": "Cible Kubernetes, déjà documentée : une image par rôle, `KubernetesPodOperator` (ADR 0012, 0013)",
    "12": "Ce que le projet sert au-delà",
-   "13": "Socle de briques réemployables — 29 décisions écrites, ADR 0001 à 0029. Chaque bloc garde son projet imposé : ce sont les briques qui circulent, pas le projet"
+   "13": "Socle de briques réemployables — 30 décisions écrites, ADR 0001 à 0030. Chaque bloc garde son projet imposé : ce sont les briques qui circulent, pas le projet"
   },
   "18": {
    "0": "Questions ?"

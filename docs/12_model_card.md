@@ -27,15 +27,17 @@
 - **Représentation du texte** : TF-IDF caractères (`analyzer="char_wb"`, n-grammes 2-5, `min_df=2`, `max_features=100 000`, `sublinear_tf=True`).
 - **Algorithme** : régression logistique (`C=10.0`, `class_weight="balanced"`, `max_iter=2000`). `C=10.0` depuis le 20/09/2026, retenu sur mesure : recherche à 12 points, validation croisée à 5 plis, F1 macro 0,7517 contre 0,7437 pour `C=4.0`. La **barrière de promotion a promu** ce modèle (version 5, F1 macro 0,8027) et **refusé** le même jour un modèle réentraîné à `C=4.0` (version 6, 0,7997). Réserve inscrite : l'écart entraînement-test passe de 0,118 à 0,153. Voir `docs/evidence/reglage_hyperparametres.md`.
 - **Fonction de coût** : entropie croisée binaire (perte logistique), minimisée par L-BFGS. Les classes sont repondérées par `class_weight="balanced"` : chaque classe pèse en raison inverse de son effectif, ce qui compense les 9 % d'avis négatifs sans modifier les données. La régularisation est de type L2, d'intensité `C=10.0` (voir ci-dessus).
-- **Seuil de décision** : 0,75. Choisi par validation croisée à 5 plis sur les données d’entraînement naturelles (ADR 0007). Le seuil est stocké dans l’attribut `decision_threshold_` du modèle.
+- **Seuil de décision** : **0,775** pour la version 5 en service (0,75 pour les versions 1 à 4). Choisi par validation croisée à 5 plis sur les données d’entraînement naturelles (ADR 0007). Le seuil est stocké dans l’attribut `decision_threshold_` du modèle : il voyage avec lui.
+- **Pourquoi cette famille de modèles** : neuf candidats de cinq familles ont été mesurés le 21/09/2026 sur les mêmes plis et le même protocole (ADR 0030, `docs/evidence/comparaison_modeles.md`). La régression logistique arrive première (F1 macro hors plis 0,8116) ; la SVM linéaire est à égalité statistique (0,8072, écart inférieur à l'écart-type des plis de 0,017) mais perd l'explication exacte ; XGBoost (0,7345), le gradient boosting sur SVD (0,7360) et la forêt aléatoire (0,7189) sont à quatre ou cinq écarts-types derrière, XGBoost coûtant 23 fois l'entraînement. La règle de décision a été écrite avant de lire les résultats. Aucun transformeur n'a été mesuré.
 
 ## 5. Évaluation
 - **Protocole** : jeu de test 100 % naturel, tenu à l’écart, stratifié.
-- **Métriques mesurées** (mesures du 16/09/2026) :
-  - F1 macro = 0,807 (barrière de promotion ≥ 0,75).
-  - AUC classe négative = 0,948.
-  - Rappel négatif = 0,639.
-  - Précision négative = 0,657.
+- **Métriques du champion en service** (version 5, mesurées le 20/09/2026) :
+  - F1 macro = **0,8027** (barrière de promotion ≥ 0,75).
+  - AUC classe négative = 0,940.
+  - Rappel négatif = 0,650.
+  - Précision négative = 0,633.
+- **Historique** : 0,807 de F1 macro le 16/09/2026 sur le premier registre (AUC 0,948, rappel 0,639, précision 0,657) ; 0,797 le 19/09 sur un jeu élargi par l'ingestion ; chaque run porte l'empreinte de son jeu de données (ADR 0018).
 - **Barrière de promotion** : F1 macro ≥ 0,75 et strictement supérieur au champion en place (ADR 0008).
 
 ## 6. Limites et risques connus

@@ -72,6 +72,24 @@ Classer un avis en positif ou négatif est une tâche de tri supervisée, sur un
 
 **En service** : TF-IDF caractères (2, 5) + régression logistique · F1 macro **0,8027** · AUC **0,940** · rappel des négatifs **0,650** · précision 0,633 · seuil de décision **0,775**, appris par validation croisée et non fixé à 0,5.
 
+### Un autre modèle ferait-il mieux ? Mesuré, pas supposé
+
+Neuf candidats de cinq familles, sur **les mêmes plis**, le flux complémentaire à l'entraînement seulement, le seuil choisi hors plis — le protocole même de l'entraînement. La règle de décision a été écrite **avant** de lire les résultats : on ne change de modèle que pour un gain supérieur à l'écart-type des plis, sans perte de rappel ; à gain égal, le modèle explicable exactement l'emporte.
+
+| Candidat | F1 macro hors plis | Rappel négatifs | Entraînement par pli | Explication exacte |
+|---|---|---|---|---|
+| **Régression logistique, caractères (en service)** | **0,8116** | **0,6955** | 3,7 s | **oui** |
+| SVM linéaire, calibrée | 0,8072 | 0,6795 | 2,9 s | non |
+| SGD | 0,8032 | 0,6731 | 2,5 s | oui |
+| Ridge, calibrée | 0,7985 | 0,6667 | 3,2 s | non |
+| Régression logistique, mots | 0,7847 | 0,6442 | 2,3 s | oui |
+| Gradient boosting sur SVD | 0,7360 | 0,7051 | 10,3 s | non |
+| **XGBoost** | 0,7345 | 0,6346 | **83,5 s** | non |
+| **Forêt aléatoire** | 0,7189 | 0,5192 | 8,9 s | non |
+| Bayes naïf complémentaire | 0,6681 | 0,8494 | 2,5 s | oui |
+
+La SVM linéaire est à **égalité statistique** (écart 0,004 pour un écart-type de 0,017) mais perd l'explication terme par terme ; les modèles à arbres sont à **quatre ou cinq écarts-types derrière** — sur 100 000 n-grammes très creux et quelques milliers de textes courts, une frontière linéaire suffit, et XGBoost coûte 23 fois l'entraînement. Aucun transformeur n'est mesuré : c'est dit, avec son prix. → [ADR 0030](docs/adr/0030-choix-de-la-famille-de-modele.md) · [rapport du banc](docs/evidence/comparaison_modeles.md) · rejouable par `make comparaison` ou le workflow [`comparaison.yml`](.github/workflows/comparaison.yml).
+
 ![Registre MLflow : la version 5 porte l'alias champion ; la version 6, refusée par la barrière, reste challenger](docs/captures/mlflow_modele.png)
 
 Le modèle est suivi dans **MLflow** : alias `champion` et `challenger`, **barrière de promotion** automatique, éprouvée dans les deux sens le même jour — elle a promu un modèle meilleur et refusé un modèle moins bon. Deux entraînements successifs donnent le même F1 à la seizième décimale : le code est déterministe, la seule source de variation est l'ingestion. → [Model Card](docs/12_model_card.md) · [réglage des hyperparamètres](docs/evidence/reglage_hyperparametres.md).
@@ -141,14 +159,14 @@ tests/               144 tests ; tests/reverse/ : les 27 mutations
 tools/               campagne de preuves, test de la pile, essai de charge, contrôles de cohérence
 docker/ · docker-compose.yml · Makefile
 .github/workflows/   ci.yml (tests, lint, mutations) · pipeline.yml (chaîne entière, planifiée)
-docs/                charte, architecture, 29 ADR, Model Card, preuves, supports de soutenance
+docs/                charte, architecture, 30 ADR, Model Card, preuves, supports de soutenance
 ```
 
 Chaque module dit en tête **quoi, pourquoi, où, comment**, journalise ses étapes avec leurs chiffres, et commente ses choix avec l'alternative écartée. Ce texte a été ajouté sans toucher à la logique, et c'est prouvé : chaque fichier a franchi cinq portes mécaniques (syntaxe, citations ni perdues ni inventées, explication non appauvrie, **arbre syntaxique identique**, original conservé), elles-mêmes éprouvées par dix-huit témoins ([`tools/tester_portes.sh`](tools/tester_portes.sh)) ; un contrôle d'arbre garantit qu'aucun journal n'écrit un texte d'avis, un identifiant ou le sel ([`tools/verifier_journaux.sh`](tools/verifier_journaux.sh)). La carte d'ensemble : [`docs/06_carte_des_modules.md`](docs/06_carte_des_modules.md).
 
 ## 9. Décisions d'architecture
 
-Vingt-neuf décisions sont écrites ([index](docs/adr/README.md)), chacune avec la mesure qui l'a motivée et l'alternative écartée. Les plus structurantes :
+Trente décisions sont écrites ([index](docs/adr/README.md)), chacune avec la mesure qui l'a motivée et l'alternative écartée. Les plus structurantes :
 
 | Décision | En une ligne |
 |---|---|
@@ -159,6 +177,7 @@ Vingt-neuf décisions sont écrites ([index](docs/adr/README.md)), chacune avec 
 | [ADR 0014](docs/adr/0014-spark-iceberg-silver.md) — Spark et Iceberg pour la zone silver | chaque écriture est un instantané : la réversibilité des données |
 | [ADR 0019](docs/adr/0019-explicabilite-lineaire.md) — explicabilité exacte | contributions du modèle linéaire plutôt que SHAP ou LIME |
 | [ADR 0029](docs/adr/0029-surveillance-de-la-latence.md) — latence | `/metrics` en mémoire, sans dépendance nouvelle |
+| [ADR 0030](docs/adr/0030-choix-de-la-famille-de-modele.md) — famille de modèle | neuf candidats mesurés sur les mêmes plis ; la régression logistique reste première, XGBoost et la forêt aléatoire à quatre écarts-types derrière |
 
 ## 10. Limites, et ce que je construirais ensuite
 

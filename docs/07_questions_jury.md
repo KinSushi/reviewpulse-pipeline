@@ -81,6 +81,9 @@ C'était le cas avant l'amélioration (précision 0,50) ; c'est maintenant envir
 **Comment expliquez-vous une prédiction ?**
 Modèle linéaire : les 20 termes les plus négatifs et positifs sont enregistrés à chaque entraînement (`artifacts/top_terms.json` dans MLflow).
 
+**Ne peut-on pas obtenir un meilleur score avec un autre modèle — XGBoost, une forêt aléatoire, une SVM ?**
+Je l'ai mesuré plutôt que supposé. Neuf candidats de cinq familles, sur **les mêmes plis** et le protocole même de l'entraînement : le flux complémentaire d'avis négatifs à l'entraînement seulement, le seuil choisi hors plis. Et la règle de décision a été écrite **avant** de lire les résultats : on ne change de modèle que pour un gain supérieur à l'écart-type des plis, sans perte de rappel ; à gain égal, le modèle explicable exactement l'emporte. Résultat : la régression logistique arrive première, F1 macro **0,8116**. La SVM linéaire est à **égalité statistique** — 0,8072, un écart de 0,004 pour un écart-type de 0,017 — mais il faut la calibrer, et l'on perd l'explication terme par terme que la charte promet. **XGBoost : 0,7345**, pour vingt-trois fois le temps d'entraînement ; la **forêt aléatoire : 0,7189** ; le gradient boosting : 0,7360. C'est attendu : cent mille n-grammes très creux pour quelques milliers de textes courts, c'est un espace où une frontière linéaire suffit et où des arbres découpent axe par axe sans rassembler assez de signal. Deux limites que je donne avec les chiffres : les concurrents ne sont pas réglés finement — mais les arbres sont à quatre écarts-types, aucun réglage ne les ramène ; et je n'ai mesuré aucun transformeur, dont je connais le prix : des centaines de Mo dans l'image, une inférence bien plus lente sur processeur, une explication approchée. → ADR 0030, `docs/evidence/comparaison_modeles.md`.
+
 ## Industrialisation
 
 **Que se passe-t-il si le nouveau modèle est moins bon ?**
