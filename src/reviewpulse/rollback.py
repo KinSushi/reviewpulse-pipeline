@@ -3,15 +3,8 @@
 
 Rôle
 ----
-Fournit des outils en ligne de commande pour revenir à une version antérieure
-du modèle MLflow « champion ». Le projet ne possède aucun mécanisme
-automatique de retour en arrière : l'alias ``champion`` ne fait que progresser.
-Ce module permet de :
-
-* lister les versions disponibles avec leurs métadonnées,
-* identifier la version actuellement désignée comme champion,
-* déplacer l'alias ``champion`` vers une version antérieure, en journalisant
-  l'opération.
+Module de rollback manuel pour le modèle MLflow champion. Permet de lister les versions,
+identifier le champion actuel, et déplacer l'alias champion vers une version antérieure.
 
 Place dans la chaîne
 --------------------
@@ -38,10 +31,10 @@ Fonctionnement
   des versions et le champion actuel ; avec ``--vers VERSION`` il effectue la
   bascule.
 
-Le module suit le même style que :pymod:`reviewpulse.score` : typage strict,
-journalisation via le module ``logging`` et utilisation du même client MLflow.
+Le module suit le style du projet : typage strict, journalisation via le module
+``logging`` et utilisation du même client MLflow.
 
-Décision appliquée ici : ADR 0016 — le déploiement progressif passe par l'alias `champion`, et le retour arrière aussi.
+Décision envisagée ici : ADR 0016 — le déploiement progressif passe par l'alias `champion`, et le retour arrière aussi.
 
 Quoi
 ----
@@ -147,7 +140,7 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
     List[Dict[str, Any]]
         Liste de dictionnaires, chacun contenant :
         - version (str) : numéro de version,
-        - creation_timestamp (int) : timestamp (ms depuis epoch) de création,
+        - creation_timestamp (int | float) : timestamp (ms depuis epoch) de création,
         - f1_macro (float | None) : métrique si disponible,
         - ecart_train_test (float | None) : métrique si disponible,
         - aliases (list[str]) : alias pointant sur la version.
@@ -155,14 +148,13 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
 
     Raises
     ------
-    Aucune exception levée explicitement. Les erreurs MLflow sont propagées.
+    MlflowException si l'appel au registre échoue. Les autres erreurs sont propagées.
     """
     client = _client(tracking_uri)
     versions = client.search_model_versions(f"name='{config.MODEL_NAME}'")
     result: List[Dict[str, Any]] = []
 
     for mv in versions:
-        # mv est de type ModelVersion
         version_str = str(mv.version)
         creation_ts = mv.creation_timestamp  # type: ignore[attr-defined]
 
@@ -178,7 +170,7 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
             # Pourquoi : la récupération des métriques est secondaire pour le rollback.
             # Un échec ici ne doit pas bloquer la liste des versions.
             # Alternative écartée : lever une exception (bloquerait l'opérateur).
-            logger.debug("Impossible de récupérer les métriques pour la version %s", version_str)
+            logger.debug("Échec récupération métriques version %s", version_str)
 
         # Alias – l'attribut ``aliases`` existe depuis MLflow 2.0
         aliases: List[str] = getattr(mv, "aliases", [])  # type: ignore[attr-defined]
@@ -193,8 +185,7 @@ def versions_disponibles(tracking_uri: str | None = None) -> List[Dict[str, Any]
             }
         )
 
-    # Pourquoi : tri décroissant pour afficher les versions les plus récentes en premier.
-    # L'opérateur voit d'abord le champion actuel et les versions récentes.
+    # Pourquoi : l'opérateur voit d'abord le champion actuel et les versions récentes.
     # Alternative écartée : tri par numéro de version (ordre non garanti dans MLflow).
     result.sort(key=lambda d: d["creation_timestamp"], reverse=True)
     return result
@@ -204,7 +195,7 @@ def champion_actuel(tracking_uri: str | None = None) -> str | None:
     """
     Retourne la version désignée par l'alias config.ALIAS_CHAMPION.
 
-    Pourquoi : identifier quelle version est actuellement en production avant
+    Pourquoi : identifier quelle version porte l'alias champion avant
     d'effectuer un rollback, et pour afficher l'état actuel à l'opérateur.
 
     Args
@@ -230,15 +221,15 @@ def champion_actuel(tracking_uri: str | None = None) -> str | None:
     except MlflowException:
         # Pourquoi : l'absence d'alias champion est un état valide (premier déploiement).
         # On logue en debug pour tracer sans alerter l'opérateur.
-        logger.debug("Alias %s non trouvé pour le modèle %s", config.ALIAS_CHAMPION, config.MODEL_NAME)
+        logger.debug("Alias champion absent pour le modèle %s", config.MODEL_NAME)
         return None
 
 
 def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optional[str]]:
     """
-    Déplace l'alias ``champion`` vers la version demandée.
+    Déplace l'alias ``champion`` vers la version demandée après vérification.
 
-    Pourquoi : effectuer le rollback de manière atomique et journalisée, en vérifiant
+    Pourquoi : effectuer le rollback de manière journalisée, en vérifiant
     que la version cible existe avant de modifier le registre.
 
     Args
@@ -251,7 +242,7 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
 
     Returns
     -------
-    dict
+    Dict[str, Optional[str]]
         ``{"ancienne": <ancienne_version>, "nouvelle": <version>}``.
 
     Raises
@@ -271,6 +262,7 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
         # Alternative écartée : laisser propaguer MlflowException (message moins explicite).
         raise ValueError(f"La version {version} n'existe pas pour le modèle {config.MODEL_NAME}") from exc
 
+    # Pourquoi : relever l'ancien champion avant de déplacer l'alias pour journalisation.
     ancienne = champion_actuel(tracking_uri)
 
     # Déplacement de l'alias
@@ -281,14 +273,13 @@ def basculer(version: str, tracking_uri: str | None = None) -> Dict[str, Optiona
             version=version,
         )
         logger.info(
-            "Alias %s déplacé de %s vers %s",
+            "Rollback : alias %s déplacé vers version %s",
             config.ALIAS_CHAMPION,
-            ancienne if ancienne is not None else "None",
             version,
         )
     except MlflowException as exc:
-        # Pourquoi : journaliser l'échec avant de propager, pour trace d'audit.
-        logger.error("Échec du déplacement de l'alias %s vers la version %s : %s", config.ALIAS_CHAMPION, version, exc)
+        # Pourquoi : journaliser l'échec pour trace d'audit avant de propager.
+        logger.error("Échec déplacement alias %s vers version %s", config.ALIAS_CHAMPION, version)
         raise
 
     return {"ancienne": ancienne, "nouvelle": version}
@@ -298,7 +289,7 @@ def _afficher_versions(versions: List[Dict[str, Any]]) -> None:
     """
     Affiche de façon lisible la liste des versions retournées par versions_disponibles.
 
-    Pourquoi : présenter les métadonnées des versions dans un format tabulaire lisible
+    Pourquoi : présenter les timestamps et métriques des versions dans un format tabulaire lisible
     pour l'opérateur en ligne de commande.
 
     Args
@@ -319,8 +310,7 @@ def _afficher_versions(versions: List[Dict[str, Any]]) -> None:
     print("-" * 80)
     for v in versions:
         ts = v["creation_timestamp"]
-        # Pourquoi : le registre MLflow rend un horodatage en millisecondes depuis l'époque Unix.
-        # Conversion en datetime UTC pour affichage lisible par l'opérateur.
+        # Conversion du timestamp MLflow (ms) en datetime UTC pour affichage.
         date_str = (
             datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
             if isinstance(ts, (int, float))
@@ -342,11 +332,11 @@ def main() -> int:
     Returns
     -------
     int
-        0 en cas de succès, 1 sinon.
+        0 en cas de succès, 1 en cas d'erreur.
 
     Raises
     ------
-    Aucune exception levée explicitement. Toutes les exceptions sont capturées et logguées.
+    Aucune exception levée explicitement, sauf SystemExit en cas d'erreur.
     """
     logging.basicConfig(
         level=logging.INFO,
@@ -373,9 +363,9 @@ def main() -> int:
             print(f"\nChampion actuel : {champ if champ is not None else 'Aucun'}")
         return 0
     except Exception as exc:  # pragma: no cover
-        # Pourquoi : journaliser l'erreur complète pour diagnostic, puis retourner code d'erreur.
+        # Pourquoi : journaliser toute erreur pour diagnostic avant de retourner un code d'erreur.
         # Alternative écartée : laisser propager (pas de trace dans les logs).
-        logger.exception("Erreur lors de l'exécution du rollback : %s", exc)
+        logger.error("Erreur lors du rollback : %s", exc)
         return 1
 
 

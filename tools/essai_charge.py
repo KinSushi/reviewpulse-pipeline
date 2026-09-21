@@ -27,6 +27,25 @@ Comment ?
   ``ceil(p/100 * n) - 1`` (indice 0‑based).  Cette convention est documentée
   dans le code.
 
+Choix de conception
+--------------------
+- **Bibliothèque standard uniquement** : on évite d’ajouter la dépendance ``requests`` ou ``httpx`` afin de rester compatible avec les environnements minimalistes (exécution CI, conteneurs légers).  
+  *Alternative écartée* : utilisation d’``httpx`` + ``asyncio`` qui aurait introduit une complexité asynchrone non justifiée pour ce script de mesure.  
+- **Méthode *nearest‑rank* pour les percentiles** : choisie pour sa simplicité et sa conformité avec la spécification de l’indicateur AIA 4.  
+  *Alternative écartée* : interpolation linéaire, qui aurait nécessité un traitement supplémentaire et aurait pu introduire des variations de résultats entre exécutions.
+- **Concurrence via ``ThreadPoolExecutor``** : les appels HTTP sont I/O‑bound ; les threads offrent un parallélisme suffisant sans la surcharge d’un processus complet.  
+  *Alternative écartée* : ``ProcessPoolExecutor`` qui aurait augmenté la consommation mémoire sans bénéfice notable.
+
+Limites connues
+---------------
+- La mesure est réalisée sur une seule machine ; elle ne garantit pas le
+  comportement d’un déploiement réparti sur plusieurs nœuds ou sous des
+  conditions réseau différentes.
+- Le point d’accès ``/predict`` accepte uniquement une **liste** de textes de
+  taille 1 à 100 ; le script ne supporte pas l’envoi de listes plus longues.
+- Aucun mécanisme d’ajustement dynamique des seuils d’erreur ou de latence n’est
+  prévu ; les valeurs sont fixées via les arguments de ligne de commande.
+
 """
 
 from __future__ import annotations
@@ -53,9 +72,9 @@ logger = logging.getLogger(__name__)
 
 def verifier_service(base_url: str, delai: float) -> None:
     """
-    Interroge ``{base_url}/health`` et lève ``RuntimeError`` si le service ne répond
-    pas avec le code HTTP 200.
-
+    Vérifie la disponibilité du service via l’endpoint ``/health``.
+    Pourquoi : garantir que la campagne ne démarre pas si le service n’est pas joignable,
+    évitant ainsi une perte de temps et des mesures vides.
     Parameters
     ----------
     base_url : str
@@ -68,6 +87,7 @@ def verifier_service(base_url: str, delai: float) -> None:
     RuntimeError
         Si la connexion échoue ou si le code HTTP n’est pas 200.
     """
+    logger.info("Vérification du service health à %s avec délai %s", base_url, delai)
     url = f"{base_url.rstrip('/')}/health"
     req = urllib.request.Request(url, method="GET")
     try:
@@ -81,7 +101,7 @@ def verifier_service(base_url: str, delai: float) -> None:
                 )
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Impossible de joindre le service à {url} : {exc}") from exc
-
+    logger.info("Service health OK (code 200)")
 
 # --------------------------------------------------------------------------- #
 # 2. Une requête individuelle
@@ -90,7 +110,8 @@ def verifier_service(base_url: str, delai: float) -> None:
 def une_requete(base_url: str, texte: str, delai: float) -> Tuple[bool, float, int | None]:
     """
     Envoie une requête POST vers ``/predict`` et renvoie le succès, la durée et le code HTTP.
-
+    Pourquoi : encapsuler la logique d’appel unique afin de pouvoir la paralléliser
+    et de centraliser la gestion des erreurs réseau.
     Parameters
     ----------
     base_url : str
@@ -128,7 +149,6 @@ def une_requete(base_url: str, texte: str, delai: float) -> Tuple[bool, float, i
         logger.debug("Requête /predict échouée : %s", exc)
         return False, duree, None
 
-
 # --------------------------------------------------------------------------- #
 # 3. Mesure de charge
 # --------------------------------------------------------------------------- #
@@ -136,7 +156,8 @@ def une_requete(base_url: str, texte: str, delai: float) -> Tuple[bool, float, i
 def _calculer_percentile(valeurs: List[float], percentile: float) -> float:
     """
     Retourne le percentile indiqué (0‑100) selon la méthode *nearest‑rank*.
-
+    Pourquoi : fournir une fonction de calcul de percentile fiable et conforme
+    à la spécification AIA 4, réutilisable dans le reste du module.
     La liste ``valeurs`` doit être triée en ordre croissant.
     """
     if not valeurs:
@@ -155,7 +176,8 @@ def mesurer(
 ) -> Dict[str, Any]:
     """
     Lance ``nb_requetes`` requêtes réparties sur ``concurrence`` threads.
-
+    Pourquoi : mesurer le débit, la latence et le taux d’erreur du service sous
+    une charge contrôlée, afin de fournir les métriques requises par l’indicateur AIA 4.
     Parameters
     ----------
     base_url : str
@@ -177,6 +199,11 @@ def mesurer(
     if not textes:
         raise ValueError("La liste de textes d’essai ne doit pas être vide.")
 
+    logger.info(
+        "Lancement de la campagne de mesure : %d requêtes avec %d threads",
+        nb_requetes,
+        concurrence,
+    )
     debut_campagne = time.perf_counter()
     futures = []
     durees: List[float] = []
@@ -211,6 +238,13 @@ def mesurer(
     moyenne = sum(durees_ms) / len(durees_ms) if durees_ms else 0.0
     max_lat = max(durees_ms) if durees_ms else 0.0
 
+    logger.info(
+        "Mesure terminée : débit %.2f req/s, taux d'erreur %.4f, p99 %.2f ms",
+        debit,
+        taux_erreur,
+        p99,
+    )
+
     return {
         "requetes": nb_requetes,
         "succes": succes,
@@ -239,7 +273,8 @@ def rapport_markdown(
 ) -> str:
     """
     Génère le rapport Markdown à partir du dictionnaire de mesures.
-
+    Pourquoi : produire un artefact lisible et versionnable qui sert de preuve
+    d’acquisition de la métrique AIA 4 pour les revues et les audits.
     Le tableau présente les métriques principales, suivi d’une phrase de lecture
     précisant les limites de la mesure (machine unique, pas de déploiement distribué).
     """
@@ -282,6 +317,8 @@ def _obtenir_commit() -> str:
     """
     Retourne le hash court du commit Git, la variable d’environnement
     ``REVIEWPULSE_COMMIT`` ou la chaîne « inconnu ».
+    Pourquoi : fournir un identifiant de version dans le rapport afin de
+    garantir la traçabilité des mesures.
     """
     env = os.getenv("REVIEWPULSE_COMMIT")
     if env:
@@ -299,44 +336,63 @@ def _obtenir_commit() -> str:
 
 
 def main() -> int:
+    """
+    Point d’entrée de l’outil de mesure de charge.
+    Pourquoi : orchestrer les étapes de vérification du service, de campagne
+    de mesure, de génération et d’écriture du rapport, puis retourner un code
+    d’état conforme aux exigences d’intégration continue.
+    """
     parser = argparse.ArgumentParser(
         description="Outil de mesure de charge pour l’API ReviewPulse (indicateur AIA 4)."
     )
+    # Pourquoi : URL par défaut pointant vers l’instance locale de développement.
     parser.add_argument(
         "--url",
         default="http://localhost:8000",
         help="URL de base du service (défaut http://localhost:8000).",
     )
+    # Pourquoi : 10 threads offrent un bon compromis entre charge et consommation
+    # de ressources sur les machines CI standard.
     parser.add_argument(
         "--concurrence",
         type=int,
         default=10,
         help="Nombre de threads simultanés (défaut 10).",
     )
+    # Pourquoi : 200 requêtes permettent d’obtenir des percentiles stables sans
+    # allonger excessivement la durée du test.
     parser.add_argument(
         "--requetes",
         type=int,
         default=200,
         help="Nombre total de requêtes à envoyer (défaut 200).",
     )
+    # Pourquoi : 10 s de timeout couvrent la plupart des latences observées tout en
+    # évitant que des requêtes bloquées n’éternisent le test.
     parser.add_argument(
         "--delai",
         type=float,
         default=10.0,
         help="Timeout en secondes pour chaque requête (défaut 10).",
     )
+    # Pourquoi : seuil d’erreur maximal fixé à 1 % conformément aux exigences de
+    # robustesse du service.
     parser.add_argument(
         "--taux-erreur-max",
         type=float,
         default=0.01,
         help="Seuil maximal de taux d’erreur (défaut 0.01).",
     )
+    # Pourquoi : p99 maximal de 2000 ms correspond à la contrainte de latence
+    # définie dans le référentiel de performance.
     parser.add_argument(
         "--p99-max-ms",
         type=float,
         default=2000.0,
         help="Seuil maximal de latence p99 en millisecondes (défaut 2000).",
     )
+    # Pourquoi : le rapport est stocké dans la zone d’évidence pour être
+    # consultable par les revues et les audits.
     parser.add_argument(
         "--rapport",
         type=Path,
@@ -344,6 +400,8 @@ def main() -> int:
         help="Chemin du fichier de rapport Markdown (défaut docs/evidence/essai_charge.md).",
     )
     args = parser.parse_args()
+
+    logger.info("Démarrage de l'outil avec URL %s", args.url)
 
     # Textes d’essai (environ 10, français et anglais)
     textes_exemple = [
@@ -390,6 +448,7 @@ def main() -> int:
     # Écriture du rapport
     args.rapport.parent.mkdir(parents=True, exist_ok=True)
     args.rapport.write_text(markdown, encoding="utf-8")
+    logger.info("Rapport écrit dans %s", args.rapport)
 
     # Affichage d’un résumé concis
     print("\n".join([
@@ -403,7 +462,15 @@ def main() -> int:
         mesures["taux_erreur"] > args.taux_erreur_max
         or mesures["p99"] > args.p99_max_ms
     ):
+        logger.warning(
+            "Seuil dépassé : taux_erreur %.4f (max %.4f) ou p99 %.2f ms (max %.2f ms)",
+            mesures["taux_erreur"],
+            args.taux_erreur_max,
+            mesures["p99"],
+            args.p99_max_ms,
+        )
         return 1
+    logger.info("Mesure conforme aux seuils définis")
     return 0
 
 

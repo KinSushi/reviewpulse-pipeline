@@ -3,7 +3,7 @@
 #
 # Quoi     : fabrique de petits fichiers temoins et exige de chaque porte le verdict attendu --
 #            `verifier_equivalence.sh` (dix temoins), `citations_perdues.sh` (trois),
-#            `verifier_journaux.sh` (trois). Chaque regle de tolerance a son temoin dans les deux
+#            `verifier_journaux.sh` (trois), `explication_appauvrie.sh` (deux). Chaque regle de tolerance a son temoin dans les deux
 #            sens : le cas qu'elle doit laisser passer, et le cas voisin qu'elle doit refuser.
 # Pourquoi : ces portes decident seules de ce qui entre dans le depot quand un modele reecrit
 #            un module. Elles ont ete assouplies quatre fois le 20 et le 21/09/2026 (noms de
@@ -11,7 +11,7 @@
 #            Chaque assouplissement est un risque : sans temoin du refus voisin, une tolerance
 #            devient un trou. Ce script est la non-regression des portes.
 # Ou       : a la racine du depot ; appele par la campagne de preuves et par la CI.
-# Comment  : sh tools/tester_portes.sh      -- rend 0 si les seize verdicts sont les bons.
+# Comment  : sh tools/tester_portes.sh      -- rend 0 si les dix-huit verdicts sont les bons.
 set -u
 
 T="$(mktemp -d)"
@@ -251,8 +251,42 @@ attendre "journaux : comptes et chemins seulement"                     0 sh "$J"
 attendre "journaux : texte d'avis et DataFrame entiers -> refus"       1 sh "$J" "${T}/journal_fuite.py"
 attendre "journaux : f-string dans l'appel -> refus"                   1 sh "$J" "${T}/journal_fstring.py"
 
+# --- Porte de non-appauvrissement ----------------------------------------------------------
+cat > "${T}/explique.py" <<'EOF'
+import logging
+logger = logging.getLogger(__name__)
+def h(df, seuil):
+    # Pourquoi : le seuil voyage avec le modele, il n'est jamais fixe ici.
+    logger.info("%d lignes a scorer", len(df))
+    # Comment : on filtre avant de trier, le tri etant l'operation couteuse.
+    logger.info("seuil applique : %s", seuil)
+    return df
+EOF
+cat > "${T}/explique_moins.py" <<'EOF'
+import logging
+logger = logging.getLogger(__name__)
+def h(df, seuil):
+    logger.info("%d lignes a scorer", len(df))
+    return df
+EOF
+cat > "${T}/explique_plus.py" <<'EOF'
+import logging
+logger = logging.getLogger(__name__)
+def h(df, seuil):
+    # Pourquoi : le seuil voyage avec le modele, il n'est jamais fixe ici.
+    logger.info("%d lignes a scorer", len(df))
+    # Comment : on filtre avant de trier, le tri etant l'operation couteuse.
+    logger.info("seuil applique : %s", seuil)
+    # Pourquoi : on rend le meme objet, l'appelant decide de la copie.
+    logger.debug("rendu sans copie")
+    return df
+EOF
+A="tools/explication_appauvrie.sh"
+attendre "explication : journaux et raisonnement retires -> refus"     1 sh "$A" "${T}/explique.py" "${T}/explique_moins.py"
+attendre "explication : version qui explique davantage"                0 sh "$A" "${T}/explique.py" "${T}/explique_plus.py"
+
 if [ "${echecs}" -eq 0 ]; then
-    echo "Portes : seize verdicts sur seize conformes."
+    echo "Portes : dix-huit verdicts sur dix-huit conformes."
     exit 0
 fi
 echo "Portes : ${echecs} verdict(s) non conforme(s) -- une porte ne juge plus comme elle le doit."

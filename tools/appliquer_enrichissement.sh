@@ -13,6 +13,7 @@
 #            supprime, tout se deplace avec une trace.
 # Ou       : s'execute a la racine du depot.
 # Comment  : sh tools/appliquer_enrichissement.sh <sortie.jsonl>
+#            Cinq portes : syntaxe, citations, non-appauvrissement, equivalence, quarantaine.
 #            Rend 0 si chaque tache a ete appliquee ou refusee proprement, 1 si une extraction
 #            a echoue. Le lint et les tests se passent ensuite, sur la vague entiere.
 # Piege    : sous Git Bash, `/tmp` n'est pas le meme dossier pour le shell et pour le Python
@@ -172,6 +173,14 @@ while IFS="$(printf '\t')" read -r statut nom cible tmp; do
                 :
             else
                 echo "REFUS      ${nom} : citations fautives -- ${perdu}"
+                continue
+            fi
+            # Porte de non-appauvrissement : la nouvelle version ne peut pas expliquer moins que
+            # celle qu'elle remplace (journaux retires, raisonnement efface, fichier fondu).
+            if appauvri="$(sh tools/explication_appauvrie.sh "${cible}" "${tmp}")"; then
+                :
+            else
+                echo "REFUS      ${nom} : explication appauvrie -- ${appauvri}"
                 continue
             fi
             if sh tools/verifier_equivalence.sh "${cible}" "${tmp}" > "${TRAVAIL}/eq_${nom}.txt" 2>&1; then

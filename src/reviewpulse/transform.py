@@ -20,10 +20,10 @@
 **Choix de conception**
     - Utilisation de pandas (ADR 0003).
     - Pseudonymisation HMAC salée, sel obligatoire (ADR 0004).
-    - Contrôles qualité exécutés avant l’écriture (ADR 0005).
+    - Contrôles qualité exécutés avant l'écriture (ADR 0005).
 
 **Preuves**
-    - 16/09/2026 : exécution sans sel entraîne l’arrêt du pipeline et aucune modification de la zone propre.
+    - 16/09/2026 : exécution sans sel entraîne l'arrêt du pipeline et aucune modification de la zone propre.
 
 **Tests associés**
     - ``test_transform_quality.py``
@@ -60,13 +60,13 @@ def _extract_partition_info(file_path: Path) -> tuple[int, str, str]:
         d'un fichier JSONL de la zone brute.
 
     Pourquoi :
-        Centralise la logique d’extraction pour garantir la même interprétation dans :func:`load_raw` et faciliter les tests.
+        Centralise la logique d'extraction pour garantir la même interprétation dans :func:`load_raw` et faciliter les tests.
 
     Args:
         file_path: Chemin complet du fichier *.jsonl*.
 
     Returns:
-        Tuple contenant ``app_id`` (int), ``language`` (str) et ``sample_source`` (str).
+        DataFrame de tous les enregistrements dont le JSON a pu être parsé, avec les colonnes de partition ajoutées. Les lignes au JSON invalide sont ignorées et journalisées.
 
     Raises:
         RuntimeError: Si ``app_id`` ou ``language`` ne peuvent être extraits.
@@ -76,6 +76,7 @@ def _extract_partition_info(file_path: Path) -> tuple[int, str, str]:
     sample_match = _RE_SAMPLE.search(str(file_path))
 
     if not app_match or not lang_match:
+        # Pourquoi : un fichier mal nommé ne doit pas arrêter la collecte ; on journalise et on passe.
         raise RuntimeError(f"Impossible d'extraire les partitions du chemin : {file_path}")
 
     app_id = int(app_match.group(1))
@@ -107,9 +108,8 @@ def load_raw(raw_dir: Optional[Path] = None) -> pd.DataFrame:
             utilise ``config.RAW_DIR``.
 
     Returns:
-        DataFrame contenant toutes les lignes valides avec les colonnes
-        ``app_id``, ``language_partition`` et ``sample_source`` ajoutées.
-        Retourne un DataFrame vide si aucun enregistrement n’est trouvé.
+        DataFrame de tous les enregistrements dont le JSON a pu être parsé, avec les colonnes de partition ajoutées. Les lignes au JSON invalide sont ignorées et journalisées.
+        Retourne un DataFrame vide si aucun enregistrement n'est trouvé.
     """
     raw_dir = raw_dir or config.RAW_DIR
     raw_dir = Path(raw_dir)
@@ -121,6 +121,7 @@ def load_raw(raw_dir: Optional[Path] = None) -> pd.DataFrame:
         try:
             app_id, language, sample_source = _extract_partition_info(file_path)
         except RuntimeError as exc:
+            # Pourquoi : un fichier mal nommé ne doit pas arrêter la collecte ; on journalise et on passe.
             _logger.error(str(exc))
             continue
 
@@ -134,6 +135,7 @@ def load_raw(raw_dir: Optional[Path] = None) -> pd.DataFrame:
                 try:
                     obj = json.loads(line)
                 except json.JSONDecodeError:
+                    # Pourquoi : une ligne corrompue n'invalide pas le lot ; un warning suffit.
                     _logger.warning("Ligne JSON invalide dans %s", file_path)
                     continue
                 obj["app_id"] = app_id
@@ -225,8 +227,7 @@ def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
         config.SAMPLE_NEGATIVE_BOOST: 1,
     }
     df["_priority"] = df["sample_source"].map(priority_map).fillna(1).astype("int64")
-    # Pourquoi : le dédoublonnage se fait par ``review_id`` en gardant la ligne de
-    # priorité la plus faible ; à priorité égale, la mise à jour la plus récente l'emporte.
+    # Pourquoi : l'ordre du tri (priorité flux naturel, sinon updated_at DESC) reflète ADR 0005 ; drop_duplicates avec keep="first" garde la première occurrence du groupe, donc la plus prioritaire après tri.
     df = df.sort_values(["_priority", "timestamp_updated"], ascending=[True, False])
     df = df.drop_duplicates(subset="review_id", keep="first")
     df = df.drop(columns=["_priority"])
@@ -235,9 +236,11 @@ def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
     df["review_text"] = df["review"].apply(_clean_text)
 
     # suppression des lignes où le texte devient vide
+    # Pourquoi : un avis sans texte ne peut pas être vectorisé ; on l'écarte en amont de la qualité.
     df = df[df["review_text"] != ""]
 
     # label
+    # Pourquoi : le double cast force dtype=bool puis int64 ; decision.py attend 0/1.
     df["label"] = df["voted_up"].astype(bool).astype("int64")
 
     # dates
@@ -261,19 +264,23 @@ def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
         steamid = ""
         if isinstance(author, dict):
             steamid = str(author.get("steamid", ""))
+        # Pourquoi : si author.steamid est absent, on hache la chaîne vide ; quality.assert_quality détectera la collision sur author_pseudo.
         return hmac.new(salt, steamid.encode(), hashlib.sha256).hexdigest()
 
     df["author_pseudo"] = df["author"].apply(_hash_steamid)
 
     # langue : utilise la partition si disponible
     if "language_partition" in df.columns:
+        # Pourquoi : la partition est l'autorité de regroupement ; le champ `language` de l'API est libre et peut diverger.
         df["language"] = df["language_partition"]
     elif "language" in df.columns:
         df["language"] = df["language"]
     else:
+        # Pourquoi : on conserve la ligne pour permettre à quality.assert_quality de diagnostiquer l'absence de partition plutôt que de masquer le défaut.
         df["language"] = None
 
     # longueur du texte
+    # Pourquoi : uniformité avec CLEAN_COLUMNS ; le schéma prime sur l'optimisation mémoire.
     df["text_len"] = df["review_text"].str.len().astype("int64")
 
     # sélection et ordre des colonnes selon la spécification
@@ -287,6 +294,7 @@ def clean(raw: pd.DataFrame, salt: bytes) -> pd.DataFrame:
     # vérification des colonnes interdites
     for forbidden in config.FORBIDDEN_CLEAN_COLUMNS:
         if forbidden in clean_df.columns:
+            # Pourquoi : RuntimeError ici = erreur de programmation (colonne attendue comme absente apparait) ; quality.DataQualityError concerne les valeurs.
             raise RuntimeError(f"Colonne interdite présente après nettoyage : {forbidden}")
 
     _logger.info(
@@ -317,10 +325,12 @@ def write_clean(df: pd.DataFrame, path: Optional[Path] = None) -> Path:
     path = path or config.CLEAN_FILE
     path = Path(path)
 
+    # Pourquoi : parents=True crée les dossiers intermédiaires ; exist_ok=True permet les réexécutions idempotentes.
     path.parent.mkdir(parents=True, exist_ok=True)
 
     # Pourquoi : écriture atomique par fichier temporaire puis remplacement ;
     # l'alternative (écriture directe) exposerait un Parquet incomplet en cas d'arrêt brutal.
+    # Pourquoi : with_suffix conserve l'extension .parquet (sinon os.replace renommerait en .tmp et perdrait le type).
     tmp_path = path.with_suffix(".tmp.parquet")
     df.to_parquet(tmp_path, engine="pyarrow")
     os.replace(tmp_path, path)
@@ -347,7 +357,7 @@ def purge_raw(
             Par défaut ``config.RAW_DIR``.
         retention_days: Nombre de jours à conserver. Par défaut
             ``config.RAW_RETENTION_DAYS``.
-        today: Date de référence pour le calcul du seuil. Permet l’injection
+        today: Date de référence pour le calcul du seuil. Permet l'injection
             en tests ; sinon ``datetime.date.today()``.
 
     Returns:
@@ -356,11 +366,13 @@ def purge_raw(
     raw_dir = raw_dir or config.RAW_DIR
     raw_dir = Path(raw_dir)
 
+    # Pourquoi : absence du dossier = premier lancement ou environnement neuf ; ce n'est pas une erreur.
     if not raw_dir.is_dir():
         return 0
 
     retention_days = retention_days if retention_days is not None else config.RAW_RETENTION_DAYS
     today = today or datetime.date.today()
+    # Pourquoi : on purge par jour calendaire pour rester stable vis-à-vis des fuseaux et des DST.
     cutoff = today - datetime.timedelta(days=retention_days)
 
     _logger.info("Purge des partitions brutes anterieures a %s dans %s", cutoff, raw_dir)
@@ -374,9 +386,11 @@ def purge_raw(
         if not match:
             continue
         dir_date = datetime.datetime.strptime(match.group(1), "%Y-%m-%d").date()
+        # Pourquoi : on conserve la partition du jour exact (<, pas <=) pour qu'une réexécution le même jour ne perde pas sa propre entrée.
         if dir_date < cutoff:
             files = list(dt_dir.rglob("*"))
             removed_files += len(files)
+            # Pourquoi : zone brute = données reproductibles depuis l'API ; une suppression est rattrapable par réexécution de ingest.
             shutil.rmtree(dt_dir)
             _logger.info("Partition brute supprimee : %s (%d fichiers)", dt_dir, len(files))
 
@@ -391,7 +405,7 @@ def main() -> int:
         Ordonne les étapes de transformation et arrête le pipeline si la qualité n'est pas atteinte.
 
     Pourquoi :
-        Fournit un point d’entrée unique exploitable par Airflow et les tests d’intégration.
+        Fournit un point d'entrée unique exploitable par Airflow et les tests d'intégration.
 
     Returns:
         Code de sortie du pipeline (0 = succès, 1 = échec).

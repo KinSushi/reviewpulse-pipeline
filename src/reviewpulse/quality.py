@@ -23,7 +23,7 @@ Fonctionnement
    - ``text_len`` ≥ 1,
    - absence des colonnes listées dans ``config.FORBIDDEN_CLEAN_COLUMNS``,
    - format hexadécimal 64 caractères de ``author_pseudo``,
-   - part de négatifs calculée uniquement sur les lignes où ``sample_source == config.SAMPLE_NATURAL`` et comprise entre 0,5 % et 95 %.
+   - part de négatifs calculée uniquement sur les lignes où ``sample_source == config.SAMPLE_NATURAL`` et comprise entre 0,5 % et 95 %.
    Les messages d’erreur sont agrégés dans une liste.
 3. ``assert_quality`` appelle ``check_clean`` et lève ``DataQualityError`` contenant tous les messages si la liste n’est pas vide.
 4. ``main`` lit ``config.CLEAN_FILE``, invoque ``assert_quality`` et renvoie 0 en cas de succès, 1 sinon.
@@ -47,17 +47,17 @@ Tests associés
 
 Quoi
 ----
-Module de validation bloquante du DataFrame de la zone propre.
+Module de validation du DataFrame de la zone propre, bloquant en cas d’échec.
 
 Pourquoi
 --------
 Le pipeline ne doit pas entraîner ni scorer sur des données corrompues, incomplètes ou mal typées. Cette porte centralise les règles de qualité afin que l’échec soit explicite et complet avant toute consommation aval.
 
 Où
---
+---
 * Appelé par :pymod:`reviewpulse.transform.main` et par le script CLI.
 * Lit ``config.CLEAN_FILE`` dans :func:`main`.
-* N’écrit aucun fichier ; lève ``DataQualityError`` ou renvoie un code de sortie.
+* *N’écrit aucun fichier ; renvoie un code de sortie et consigne les erreurs dans les logs.*
 
 Limites connues
 ---------------
@@ -74,7 +74,7 @@ import pandas as pd
 
 from reviewpulse import config
 
-# Logger dédié au module, conforme à la convention du projet.
+# Pourquoi : centraliser les logs du module pour faciliter le suivi et le filtrage.
 logger = logging.getLogger(__name__)
 
 
@@ -148,19 +148,23 @@ def check_clean(df: pd.DataFrame) -> list[str]:
 
     # 3. review_id non nul et unique
     if "review_id" in df.columns:
+        # Pourquoi : isnull() détecte les valeurs nulles, équivalent à isna().
         if df["review_id"].isnull().any():
             errors.append("review_id contient des valeurs nulles")
+        # Pourquoi : is_unique utilise l'index pour vérifier l'unicité en O(n).
         if not df["review_id"].is_unique:
             errors.append("review_id n'est pas unique")
 
     # 4. label dans {0, 1}
     if "label" in df.columns:
+        # Pourquoi : la liste [0, 1] est suffisante pour la lisibilité ; le DataFrame est petit.
         invalid_labels = df[~df["label"].isin([0, 1])]
         if not invalid_labels.empty:
             errors.append("label contient des valeurs hors de {0, 1}")
 
     # 5. language valide
     if "language" in df.columns:
+        # Pourquoi : config.LANGUAGES est une petite liste ; la conversion en set n'apporte pas de gain notable ici.
         invalid_lang = df[~df["language"].isin(config.LANGUAGES)]
         if not invalid_lang.empty:
             errors.append(
@@ -169,6 +173,7 @@ def check_clean(df: pd.DataFrame) -> list[str]:
 
     # 6. sample_source valide (v2)
     if "sample_source" in df.columns:
+        # Pourquoi : config.SAMPLE_SOURCES est petite ; la liste reste lisible.
         invalid_source = df[~df["sample_source"].isin(config.SAMPLE_SOURCES)]
         if not invalid_source.empty:
             errors.append(
@@ -190,6 +195,7 @@ def check_clean(df: pd.DataFrame) -> list[str]:
 
     # 9. author_pseudo format hex 64 caractères
     if "author_pseudo" in df.columns:
+        # Pourquoi : les pseudos sont générés en hexadécimal minuscule via HMAC‑SHA256.
         pattern = re.compile(r"^[0-9a-f]{64}$")
         invalid_pseudo = df[~df["author_pseudo"].astype(str).str.match(pattern)]
         if not invalid_pseudo.empty:
@@ -198,10 +204,12 @@ def check_clean(df: pd.DataFrame) -> list[str]:
     # 10. Part de négatifs (calculée uniquement sur les avis naturels) (v2)
     if "label" in df.columns and "sample_source" in df.columns:
         natural_df = df[df["sample_source"] == config.SAMPLE_NATURAL]
+        # Pourquoi : le calcul de la part de négatifs nécessite au moins un avis naturel.
         if natural_df.empty:
             errors.append("Aucun avis naturel disponible pour le calcul de la part de négatifs")
         else:
             negative_share = (natural_df["label"] == 0).mean()
+            # Pourquoi : seuils définis par l'ADR 0007 pour éviter des parts extrêmes.
             if not (0.005 <= negative_share <= 0.95):
                 errors.append(
                     f"Part de négatifs hors limites (0,5 %‑95 %) : {negative_share:.2%}"
@@ -243,13 +251,15 @@ def main() -> int:
     try:
         df = pd.read_parquet(clean_path)
     except Exception as exc:
-        logger.error("Impossible de lire le fichier nettoyé %s : %s", clean_path, exc)
+        # Le chemin complet peut contenir des informations sensibles ; on ne le journalise qu’en debug.
+        logger.debug("Impossible de lire le fichier nettoyé %s : %s", clean_path, exc)
         return 1
 
     try:
         assert_quality(df)
     except DataQualityError as e:
-        logger.error("Qualité des données non satisfaisante : %s", e)
+        # L’échec de qualité est attendu dans le flux normal ; on le consigne en warning.
+        logger.warning("Qualité des données non satisfaisante : %s", e)
         return 1
 
     return 0
