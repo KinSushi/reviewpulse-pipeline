@@ -92,6 +92,10 @@ Le modèle est suivi dans **MLflow** : alias `champion` et `challenger`, **barri
 
 **Un tableau de bord** (Streamlit) : part négative prédite contre part réelle, par jeu et par langue ; avis à lire en premier ; termes qui pèsent ; test d'un avis saisi à la main. Aucune information d'auteur n'y est affichée.
 
+![Tableau de bord : version du modèle en service, seuil de décision, part négative prédite contre part réelle, avis à lire en premier](docs/captures/tableau_de_bord.png)
+
+*Captures réelles de la pile qui tourne, reproductibles par [`tools/capture_ecrans.js`](tools/capture_ecrans.js). La première capture du tableau de bord, le 21/09/2026, affichait « version du modèle 2 » alors que le champion était la version 5 : les scores sur disque dataient d'avant la promotion. C'est une capture, pas un test, qui l'a trouvé ; le DAG quotidien a été rejoué, et l'écran ci-dessus en est le résultat.*
+
 ## 6. Comment je sais que ça marche
 
 Un chiffre seul ne vaut rien ; chaque ligne ci-dessous nomme sa preuve.

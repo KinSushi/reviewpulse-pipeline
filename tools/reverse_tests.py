@@ -1,27 +1,51 @@
 """tools/reverse_tests.py
-Où : module exécutable placé sous le répertoire ``tools`` du projet ReviewPulse.
-Quoi : exécute la batterie de « mutations » décrites dans
+Où : module exécutable placé sous le répertoire ``tools`` du projet ReviewPulse.
+Quoi : exécute la batterie de « mutations » décrites dans
 ``tests/reverse/mutations.json`` afin de vérifier que les tests
 détectent les défauts volontairement injectés.
-Comment :
+Comment :
 - pour chaque mutation, copie les sources (``src/``, ``tests/``, ``dashboard/``,
   ``dags/``) et le fichier ``pyproject.toml`` dans un répertoire temporaire,
-- s’assure que la chaîne ``avant`` apparaît exactement une fois dans le
+- s'assure que la chaîne ``avant`` apparaît exactement une fois dans le
   fichier ciblé, sinon la mutation est marquée ``OBSOLETE``,
 - remplace cette occurrence par ``apres``,
 - lance ``pytest`` dans la copie avec un environnement contrôlé
   (``PYTHONPATH`` pointant vers ``src`` et ``REVIEWPULSE_SALT`` fixé à
   ``reverse-salt``),
-- interprète le code retour : ``non‑zero`` → ``TUEE`` (les tests ont
-  détecté la mutation), ``zero`` → ``SURVIVANTE``,
-- relève le premier test qui échoue (ou « ERREUR DE COLLECTE »),
+- interprète le code retour : ``non-zero`` -> ``TUEE`` (les tests ont
+  détecté la mutation), ``zero`` -> ``SURVIVANTE``,
+- relève le premier test qui échoue (ou « ERREUR DE COLLECTE »),
 - conserve la dernière ligne de sortie de ``pytest`` comme résumé.
-Pourquoi : ce script constitue le test de robustesse du jeu de tests
-en s’assurant qu’une mutation introduite volontairement entraîne l’échec
-des tests. Le rapport Markdown généré sert de preuve d‑effet.
+Pourquoi : ce script constitue le test de robustesse du jeu de tests
+en s'assurant qu'une mutation introduite volontairement entraîne l'échec
+des tests. Le rapport Markdown généré sert de preuve d'effet.
 
 Le module expose ``main() -> int`` et se lance via
 ``if __name__ == "__main__": raise SystemExit(main())``.
+
+Choix de conception :
+- Copie du projet dans un répertoire temporaire : retenu, car chaque mutation
+  modifie isolément une copie sans toucher aux sources. Alternative écartée :
+  appliquer les mutations en place puis les annuler, car un échec intermédiaire
+  laisserait le dépôt dans un état inconnu.
+- ``REVIEWPULSE_SALT`` fixé à ``reverse-salt`` : retenu, pour rendre les tests
+  reproductibles indépendamment du sel de l'environnement. Alternative écartée :
+  utiliser le sel local, car il pourrait ne pas être défini dans CI.
+- ``pytest -x`` : retenu, pour arrêter à la première défaillance et identifier
+  le test détecteur. Alternative écartée : laisser pytest poursuivre, car le
+  rapport ne retient qu'un seul test par mutation.
+- Code de sortie : ``0`` si toutes les mutations sont tuées, ``1`` si au moins
+  une survit ou est obsolète, ``2`` si le témoin échoue. Cela distingue un
+  jeu de tests insuffisant d'une exécution invalide.
+
+Limites connues :
+- Le script ne vérifie pas que ``mutations.json`` couvre l'ensemble des
+  décisions critiques ; il valide seulement que les mutations listées sont
+  détectées.
+- Une mutation obsolète n'indique pas forcément que le défaut simulé a
+  disparu du code, seulement que la chaîne ``avant`` n'est plus présente.
+- Le délai global n'est pas borné : chaque mutation dispose de son propre
+  ``timeout``, mais la somme des délais peut dépasser l'horizon attendu.
 """
 
 from __future__ import annotations
@@ -45,12 +69,29 @@ Result = Tuple[str, str]  # (statut, résumé pytest)
 
 
 def _repo_root() -> Path:
-    """Retourne le répertoire racine du dépôt (parent du répertoire ``tools``)."""
+    """Retourne le répertoire racine du dépôt (parent du répertoire ``tools``).
+
+    Pourquoi : l'arborescence des sources est relative à la racine du dépôt,
+    que le script soit lancé depuis ``tools`` ou depuis la racine.
+    """
     return Path(__file__).resolve().parents[1]
 
 
 def _load_mutations(path: Path) -> List[Mutation]:
-    """Charge la liste des mutations depuis le fichier JSON indiqué."""
+    """Charge la liste des mutations depuis le fichier JSON indiqué.
+
+    Pourquoi : centraliser le chargement permet de valider une fois pour toutes
+    que le fichier contient bien une liste JSON.
+
+    Args:
+        path: chemin absolu vers ``tests/reverse/mutations.json``.
+
+    Returns:
+        liste des mutations brutes.
+
+    Raises:
+        ValueError: si le fichier JSON ne contient pas une liste.
+    """
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list):
@@ -59,7 +100,14 @@ def _load_mutations(path: Path) -> List[Mutation]:
 
 
 def _copy_project(temp_dir: Path) -> None:
-    """Copie ``src/``, ``tests/``, ``dashboard/``, ``dags/``, ``dbt/`` et ``pyproject.toml``."""
+    """Copie ``src/``, ``tests/``, ``dashboard/``, ``dags/``, ``dbt/`` et ``pyproject.toml``.
+
+    Pourquoi : chaque mutation s'exécute dans un environnement isolé, sans
+    modifier le dépôt source.
+
+    Args:
+        temp_dir: répertoire temporaire qui accueillera la copie.
+    """
     root = _repo_root()
     for name in ("src", "tests", "dashboard", "dags", "dbt"):
         src = root / name
@@ -77,9 +125,19 @@ def _apply_mutation(
     Applique la mutation dans la copie du projet.
 
     Retourne un tuple ``(statut, chemin_fichier)`` où ``statut`` vaut
-    ``"OBSOLETE"`` si la chaîne ``avant`` n’est pas trouvée exactement
+    ``"OBSOLETE"`` si la chaîne ``avant`` n'est pas trouvée exactement
     une fois, sinon ``"OK"``. ``chemin_fichier`` est le chemin absolu du
-    fichier modifié (ou ``None`` en cas d’``OBSOLETE``).
+    fichier modifié (ou ``None`` en cas d'``OBSOLETE``).
+
+    Pourquoi : une mutation n'a de sens que si la chaîne cible existe une
+    seule fois ; sinon le résultat serait ambigu ou la mutation obsolète.
+
+    Args:
+        temp_dir: copie du projet où appliquer la mutation.
+        mutation: dictionnaire décrivant ``fichier``, ``avant`` et ``apres``.
+
+    Returns:
+        ``("OK", chemin)`` ou ``("OBSOLETE", None)``.
     """
     rel_path = Path(mutation["fichier"])
     target = temp_dir / rel_path
@@ -113,6 +171,19 @@ def _run_pytest(
     complète est exécutée.
 
     Retourne ``(code_retour, sortie_complète, dernière_ligne_de_sortie)``.
+
+    Pourquoi : lancer pytest dans la copie temporaire avec ``PYTHONPATH``
+    redirigé garantit que les tests portent sur le code muté, pas sur les
+    sources du dépôt.
+
+    Args:
+        temp_dir: copie du projet servant de répertoire de travail.
+        timeout_s: durée maximale autorisée pour l'exécution, en secondes.
+        chemins: chemins de tests à passer à pytest, ou ``None`` pour la
+            batterie complète.
+
+    Returns:
+        triplet ``(code_retour, sortie, dernière_ligne)``.
     """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(temp_dir / "src")
@@ -151,7 +222,7 @@ def _run_pytest(
         output = f"Le délai de {timeout_s} secondes a été dépassé."
         returncode = 124
 
-    # Extraction de la dernière ligne non vide de la sortie (ou du message d’erreur)
+    # Extraction de la dernière ligne non vide de la sortie (ou du message d'erreur)
     last_line = ""
     for line in reversed(output.splitlines()):
         if line.strip():
@@ -169,6 +240,15 @@ def _extract_failing_test(pytest_output: str) -> str:
     - Si le texte contient le mot ``error`` (insensible à la casse) sans
       ligne ``FAILED ``, on renvoie ``ERREUR DE COLLECTE``.
     - Sinon, on renvoie ``-``.
+
+    Pourquoi : le rapport ne retient qu'un seul test détecteur par mutation ;
+    le premier ``FAILED`` de pytest est le plus pertinent.
+
+    Args:
+        pytest_output: sortie texte brute de pytest.
+
+    Returns:
+        nom du test, ``ERREUR DE COLLECTE`` ou ``-``.
     """
     for line in pytest_output.splitlines():
         if line.startswith("FAILED "):
@@ -181,7 +261,17 @@ def _extract_failing_test(pytest_output: str) -> str:
 
 
 def _git_short_hash(root: Path) -> str:
-    """Retourne le hash court du commit courant, ou ``'inconnu'`` en cas d’échec."""
+    """Retourne le hash court du commit courant, ou ``'inconnu'`` en cas d'échec.
+
+    Pourquoi : le rapport doit être rattaché à une version du code, même
+    quand la variable ``REVIEWPULSE_COMMIT`` n'est pas définie.
+
+    Args:
+        root: répertoire racine du dépôt.
+
+    Returns:
+        hash court git, ou la chaîne ``'inconnu'``.
+    """
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
@@ -196,7 +286,17 @@ def _git_short_hash(root: Path) -> str:
 
 
 def _get_commit(root: Path) -> str:
-    """Détermine le commit à reporter."""
+    """Détermine le commit à reporter.
+
+    Pourquoi : la CI peut fournir le commit via une variable d'environnement ;
+    en local, on relève git.
+
+    Args:
+        root: répertoire racine du dépôt.
+
+    Returns:
+        identifiant de commit à inscrire dans le rapport.
+    """
     env_commit = os.getenv("REVIEWPULSE_COMMIT")
     if env_commit:
         return env_commit
@@ -214,7 +314,25 @@ def _format_markdown_report(
     commit: str,
     date_utc: str,
 ) -> str:
-    """Construit le texte complet du rapport Markdown."""
+    """Construit le texte complet du rapport Markdown.
+
+    Pourquoi : le rapport est la preuve d'effet attendue par le jury ;
+    sa structure est figée pour rester lisible dans GitHub.
+
+    Args:
+        witness_ok: ``True`` si la mesure témoin a réussi.
+        witness_summary: dernière ligne de sortie du témoin.
+        results: liste des résultats de mutation.
+        total: nombre total de mutations exécutées.
+        killed: nombre de mutations tuées.
+        survived: nombre de mutations survivantes.
+        obsolete: nombre de mutations obsolètes.
+        commit: identifiant de version.
+        date_utc: date et heure UTC du rapport.
+
+    Returns:
+        texte Markdown complet.
+    """
     lines = [
         f"# Rapport de tests inverses – {date_utc}",
         "",
@@ -248,7 +366,14 @@ def _format_markdown_report(
 
 
 def _print_console_table(results: List[Dict[str, str]]) -> None:
-    """Affiche un tableau simple en console (format Markdown)."""
+    """Affiche un tableau simple en console (format Markdown).
+
+    Pourquoi : l'opérateur voit immédiatement le résultat sans ouvrir le
+    rapport, en conservant le même ordre et les mêmes colonnes que le rapport.
+
+    Args:
+        results: liste des résultats de mutation.
+    """
     # Mapping explicite entre les clés internes et les titres affichés
     columns = [
         ("id", "id"),
@@ -269,7 +394,7 @@ def _print_console_table(results: List[Dict[str, str]]) -> None:
     def fmt(row: Dict[str, str]) -> str:
         return " | ".join(str(row.get(key, "")).ljust(w) for (key, _), w in zip(columns, col_widths))
 
-    # En‑tête
+    # En-tête
     header_row = {key: title for key, title in columns}
     print(fmt(header_row))
     print("-|-".join("-" * w for w in col_widths))
@@ -279,7 +404,15 @@ def _print_console_table(results: List[Dict[str, str]]) -> None:
 
 
 def main() -> int:
-    """Point d’entrée du script."""
+    """Point d'entrée du script.
+
+    Pourquoi : orchestrer la mesure témoin, l'application des mutations et la
+    génération du rapport dans un seul flux contrôlé.
+
+    Returns:
+        ``0`` si toutes les mutations sont tuées, ``1`` si au moins une
+        survit ou est obsolète, ``2`` si le témoin échoue.
+    """
     parser = argparse.ArgumentParser(
         description="Exécute les tests inverses (mutations) du projet ReviewPulse."
     )
@@ -461,7 +594,7 @@ def main() -> int:
     # Affichage console
     _print_console_table(results)
 
-    # Code de sortie : 0 uniquement si aucune mutation n’est SURVIVANTE ou OBSOLETE
+    # Code de sortie : 0 uniquement si aucune mutation n'est SURVIVANTE ou OBSOLETE
     if survived == 0 and obsolete == 0:
         return 0
     return 1

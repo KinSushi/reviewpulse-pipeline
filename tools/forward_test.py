@@ -2,7 +2,7 @@
 ===================
 
 Ce script exécute, en conditions réelles, un jeu complet de contrôles de santé
-sur la stack ReviewPulse :
+sur la stack ReviewPulse :
 
 * API FastAPI
 * Tableau de bord Streamlit
@@ -12,11 +12,11 @@ sur la stack ReviewPulse :
 Chaque contrôle est implémenté sous forme de fonction retournant un tuple
 ``(nom, statut, détail)`` où *statut* vaut ``"PASS"`` ou ``"FAIL"``.
 Les exceptions sont capturées et converties en ``FAIL`` avec le message
-d’erreur.
+d'erreur.
 
 Le script accepte plusieurs arguments en ligne de commande afin de pouvoir
 cibler des environnements de test différents.  Le rapport Markdown généré
-contient :
+contient :
 
 * titre et date UTC
 * identifiant du commit Git (ou ``inconnu``)
@@ -25,6 +25,52 @@ contient :
 * nombre total de PASS / FAIL
 
 Le code de sortie est ``0`` si tous les contrôles passent, sinon ``1``.
+
+Quoi
+----
+Script de validation end-to-end de la stack ReviewPulse déployée.
+
+Pourquoi
+--------
+Détecter les régressions en production avant qu'elles n'affectent les utilisateurs.
+Éviter le défaut où un composant fonctionne isolément mais échoue en intégration
+(constaté le 16/09/2026 : API santé OK mais prédictions incohérentes).
+
+Ou
+----
+Appelé par : CI/CD (.github/workflows/pipeline.yml), opérateur manuel.
+Lit : config.py, fichiers parquet (clean, scored), DuckDB gold, tables Iceberg.
+Écrit : rapport Markdown dans docs/evidence/forward_test.md.
+
+Comment
+-------
+1. Parse les arguments CLI pour les URLs et chemins.
+2. Exécute A1 pour extraire la version du modèle champion.
+3. Enchaîne 15 contrôles (A1-A4, D1, M1, F1-F10) avec décorateur _handle.
+4. Chaque contrôle retourne (nom, statut, détail) ou FAIL sur exception.
+5. Génère un rapport Markdown récapitulatif avec date, commit, URLs, résultats.
+6. Retourne 0 si tous PASS, 1 sinon.
+
+Choix de conception
+-------------------
+- Décorateur _handle : centralise la capture d'exception pour éviter la duplication
+  de code try/except dans chaque contrôle. Alternative écartée : bloc try/except
+  dans chaque fonction (trop verbeux, risque d'oubli).
+- Tuple (nom, statut, détail) : structure simple, sérialisable, lisible dans le rapport.
+  Alternative écartée : classe dataclass (surcharge inutile pour ce cas).
+- Rapport Markdown : format lisible par humain et versionnable dans Git.
+  Alternative écartée : JSON (moins lisible pour revue manuelle).
+- Code de sortie 0/1 : convention Unix standard pour l'orchestration CI/CD.
+- Pas de modification de la logique existante : ce fichier est un outil de validation,
+  pas un composant de production. ADR 0011 (orchestration), ADR 0008 (promotion champion).
+
+Limites connues
+---------------
+- Ne teste pas les performances (latence, débit).
+- Ne valide pas la cohérence sémantique des prédictions (seulement le format).
+- Dépend de la disponibilité des services externes (API, dashboard, MLflow).
+- Le contrôle F4 nécessite un minimum de 20 avis négatifs par groupe (app_id, language).
+- Ne remplace pas les tests unitaires (reverse_tests.py) ni les contrôles qualité (expectations.py).
 """
 
 from __future__ import annotations
@@ -67,7 +113,20 @@ ControlResult = Tuple[str, str, str]  # (nom, statut, détail)
 # Fonctions de contrôle
 # --------------------------------------------------------------------------- #
 def _handle(func):
-    """Décorateur qui transforme toute exception en résultat FAIL."""
+    """Décorateur qui transforme toute exception en résultat FAIL.
+
+    Pourquoi : éviter la duplication de code try/except dans chaque contrôle.
+    Alternative écartée : bloc try/except dans chaque fonction (trop verbeux).
+
+    Args:
+        func: Fonction de contrôle à décorer.
+
+    Returns:
+        Fonction wrapper retournant ControlResult.
+
+    Raises:
+        Aucune exception propagée : toutes capturées et converties en FAIL.
+    """
     def wrapper(*args, **kwargs) -> ControlResult:
         name = func.__name__.upper()
         try:
@@ -80,7 +139,21 @@ def _handle(func):
 
 @_handle
 def A1(api_url: str) -> ControlResult:
-    """GET {api}/health → 200, model_version non vide, decision_threshold ∈ (0,1)."""
+    """Vérifie la santé de l'API et la validité des métadonnées du modèle.
+
+    Pourquoi : s'assurer que l'API est accessible et que le modèle est configuré.
+    Le seuil (0,1) pour decision_threshold vient de la convention de décision.
+
+    Args:
+        api_url: URL de base de l'API ReviewPulse.
+
+    Returns:
+        ControlResult avec model_version et decision_threshold en détail.
+
+    Raises:
+        RuntimeError: Si le statut HTTP n'est pas 200.
+        ValueError: Si model_version est vide ou decision_threshold hors (0,1).
+    """
     resp = requests.get(f"{api_url.rstrip('/')}/health", timeout=10)
     if resp.status_code != 200:
         raise RuntimeError(f"Statut {resp.status_code}")
@@ -96,7 +169,22 @@ def A1(api_url: str) -> ControlResult:
 
 @_handle
 def A2(api_url: str) -> ControlResult:
-    """POST {api}/predict avec 4 textes → labels attendus négatif, négatif, positif, positif."""
+    """Valide les prédictions sur 4 textes de référence (2 négatifs, 2 positifs).
+
+    Pourquoi : vérifier que le modèle classe correctement des cas connus.
+    Les textes sont en anglais et français pour tester le multilingue.
+
+    Args:
+        api_url: URL de base de l'API ReviewPulse.
+
+    Returns:
+        ControlResult avec les labels prédits en détail.
+
+    Raises:
+        RuntimeError: Si le statut HTTP n'est pas 200.
+        ValueError: Si la réponse n'a pas 4 prédictions.
+        AssertionError: Si les labels ne correspondent pas aux attendus.
+    """
     texts = [
         "The game crashes on launch after the last patch, I want a refund.",
         "Le jeu plante sans arrêt depuis la mise à jour, injouable.",
@@ -124,7 +212,20 @@ def A2(api_url: str) -> ControlResult:
 
 @_handle
 def A3(api_url: str) -> ControlResult:
-    """POST {api}/predict avec [] → 422."""
+    """Valide le rejet d'une requête avec une liste de textes vide.
+
+    Pourquoi : s'assurer que l'API refuse les entrées invalides (fail-closed).
+    Le code 422 est la convention HTTP pour les données non valides.
+
+    Args:
+        api_url: URL de base de l'API ReviewPulse.
+
+    Returns:
+        ControlResult confirmant la réception du 422.
+
+    Raises:
+        RuntimeError: Si le statut HTTP n'est pas 422.
+    """
     resp = requests.post(
         f"{api_url.rstrip('/')}/predict",
         json={"texts": []},
@@ -137,7 +238,21 @@ def A3(api_url: str) -> ControlResult:
 
 @_handle
 def A4(api_url: str) -> ControlResult:
-    """GET {api}/insights?app_id=<premier>&days=7 → 200 et liste non vide."""
+    """Valide l'endpoint /insights avec un app_id de la configuration.
+
+    Pourquoi : vérifier que les insights sont accessibles et retournent des données.
+    Utilise le premier APP_IDS de config pour la démo rejouable.
+
+    Args:
+        api_url: URL de base de l'API ReviewPulse.
+
+    Returns:
+        ControlResult avec le nombre d'éléments retournés.
+
+    Raises:
+        RuntimeError: Si APP_IDS est vide ou statut HTTP non 200.
+        ValueError: Si la réponse n'est pas une liste.
+    """
     if not config.APP_IDS:
         raise RuntimeError("APP_IDS vide dans la configuration")
     app_id = config.APP_IDS[0]
@@ -156,7 +271,20 @@ def A4(api_url: str) -> ControlResult:
 
 @_handle
 def D1(dashboard_url: str) -> ControlResult:
-    """GET {dashboard}/_stcore/health → 200."""
+    """Vérifie la santé du tableau de bord Streamlit.
+
+    Pourquoi : s'assurer que le dashboard est accessible aux utilisateurs.
+    L'endpoint /_stcore/health est l'endpoint de santé natif de Streamlit.
+
+    Args:
+        dashboard_url: URL de base du tableau de bord Streamlit.
+
+    Returns:
+        ControlResult confirmant l'accès OK.
+
+    Raises:
+        RuntimeError: Si le statut HTTP n'est pas 200.
+    """
     resp = requests.get(f"{dashboard_url.rstrip('/')}/_stcore/health", timeout=10)
     if resp.status_code != 200:
         raise RuntimeError(f"Statut {resp.status_code}")
@@ -165,7 +293,23 @@ def D1(dashboard_url: str) -> ControlResult:
 
 @_handle
 def M1(mlflow_url: str, expected_version: str) -> ControlResult:
-    """GET alias champion → version égale à model_version d'A1."""
+    """Vérifie que l'alias champion dans MLflow correspond à la version d'A1.
+
+    Pourquoi : garantir la cohérence entre l'API et le registre de modèles.
+    L'alias champion est le mécanisme de promotion (ADR 0008).
+
+    Args:
+        mlflow_url: URL de base du serveur MLflow.
+        expected_version: Version attendue du modèle champion (issue de A1).
+
+    Returns:
+        ControlResult confirmant que champion=servi.
+
+    Raises:
+        RuntimeError: Si le statut HTTP n'est pas 200.
+        ValueError: Si le format de model_version est inattendu.
+        AssertionError: Si la version servie diffère de l'attendue.
+    """
     endpoint = (
         f"{mlflow_url.rstrip('/')}"
         f"/api/2.0/mlflow/registered-models/alias"
@@ -186,7 +330,22 @@ def M1(mlflow_url: str, expected_version: str) -> ControlResult:
 
 @_handle
 def F1(data_dir: Path) -> ControlResult:
-    """Idempotence des fichiers raw : chaque flux a autant de lignes que d'ids distincts."""
+    """Vérifie l'idempotence des fichiers raw : chaque flux a autant de lignes que d'ids distincts.
+
+    Pourquoi : détecter les doublons dans la zone brute (ADR 0002).
+    Le flux est déduit du chemin (sample=negative_boost ou natural).
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult avec le détail par flux (lignes / ids distincts).
+
+    Raises:
+        FileNotFoundError: Si le répertoire raw est absent.
+        RuntimeError: Si aucun fichier .jsonl n'est trouvé.
+        AssertionError: Si le nombre de lignes diffère du nombre d'ids distincts.
+    """
     raw_dir = data_dir / "raw"
     if not raw_dir.is_dir():
         raise FileNotFoundError(f"{raw_dir} absent")
@@ -215,7 +374,20 @@ def F1(data_dir: Path) -> ControlResult:
 
 @_handle
 def F2(data_dir: Path) -> ControlResult:
-    """Qualité du parquet clean → check_clean renvoie []"""
+    """Vérifie la qualité du parquet clean via quality.check_clean.
+
+    Pourquoi : s'assurer que la zone propre passe les contrôles qualité (ADR 0005).
+    check_clean renvoie [] si tout est valide, sinon la liste des erreurs.
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult confirmant aucune erreur.
+
+    Raises:
+        AssertionError: Si check_clean retourne des erreurs.
+    """
     clean_path = data_dir / "clean" / "reviews.parquet"
     df = pd.read_parquet(clean_path)
     errors = quality.check_clean(df)
@@ -226,7 +398,20 @@ def F2(data_dir: Path) -> ControlResult:
 
 @_handle
 def F3(data_dir: Path) -> ControlResult:
-    """Confidentialité : aucune colonne interdite dans clean et scored."""
+    """Vérifie l'absence de colonnes interdites dans clean et scored.
+
+    Pourquoi : garantir la confidentialité (ADR 0004 - pseudonymisation).
+    Les colonnes interdites sont définies dans config.FORBIDDEN_CLEAN_COLUMNS.
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult confirmant aucune colonne interdite.
+
+    Raises:
+        AssertionError: Si des colonnes interdites sont détectées.
+    """
     forbidden = set(config.FORBIDDEN_CLEAN_COLUMNS)
     for sub in ["clean", "scored"]:
         path = data_dir / sub / ("reviews.parquet" if sub == "clean" else "reviews_scored.parquet")
@@ -239,7 +424,24 @@ def F3(data_dir: Path) -> ControlResult:
 
 @_handle
 def F4(data_dir: Path, ratio_min: float, ratio_max: float) -> ControlResult:
-    """Cohérence métier sur les lignes natural."""
+    """Vérifie la cohérence métier sur les lignes natural (ratio prédit/réel).
+
+    Pourquoi : détecter une dérive du modèle ou un biais de collecte.
+    Le ratio doit être entre ratio_min et ratio_max (défaut 0,5 à 2,0).
+    Seuls les groupes avec >= 20 avis négatifs réels sont contrôlés.
+
+    Args:
+        data_dir: Répertoire racine des données.
+        ratio_min: Ratio minimal acceptable.
+        ratio_max: Ratio maximal acceptable.
+
+    Returns:
+        ControlResult avec les ratios par groupe (app_id/language).
+
+    Raises:
+        RuntimeError: Si aucune ligne natural n'est présente.
+        AssertionError: Si un ratio est hors bornes.
+    """
     scored_path = data_dir / "scored" / "reviews_scored.parquet"
     df = pd.read_parquet(scored_path)
     natural = df[df["sample_source"] == config.SAMPLE_NATURAL]
@@ -264,7 +466,20 @@ def F4(data_dir: Path, ratio_min: float, ratio_max: float) -> ControlResult:
 
 @_handle
 def F5(data_dir: Path) -> ControlResult:
-    """Résumé daily_summary agrège uniquement les avis naturels."""
+    """Vérifie que daily_summary agrège uniquement les avis naturels.
+
+    Pourquoi : le flux negative_boost est une collecte ponctuelle, pas en production.
+    Le total n_reviews du résumé doit égaler le nombre de lignes natural.
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult avec le total n_reviews.
+
+    Raises:
+        AssertionError: Si les totaux ne correspondent pas.
+    """
     scored_path = data_dir / "scored" / "reviews_scored.parquet"
     summary_path = data_dir / "scored" / "daily_summary.parquet"
     scored = pd.read_parquet(scored_path)
@@ -280,7 +495,21 @@ def F5(data_dir: Path) -> ControlResult:
 
 @_handle
 def F6(data_dir: Path, champion_version: str) -> ControlResult:
-    """Toutes les lignes scorées portent la version du champion."""
+    """Vérifie que toutes les lignes scorées portent la version du champion.
+
+    Pourquoi : garantir la traçabilité des prédictions (ADR 0010).
+    Toute ligne avec une version différente indique un problème de scoring.
+
+    Args:
+        data_dir: Répertoire racine des données.
+        champion_version: Version du modèle champion attendue.
+
+    Returns:
+        ControlResult confirmant que toutes les lignes ont la bonne version.
+
+    Raises:
+        AssertionError: Si des lignes ont une version différente.
+    """
     scored_path = data_dir / "scored" / "reviews_scored.parquet"
     df = pd.read_parquet(scored_path)
     mismatches = df[df["model_version"] != champion_version]
@@ -294,7 +523,21 @@ def F6(data_dir: Path, champion_version: str) -> ControlResult:
 # --------------------------------------------------------------------------- #
 @_handle
 def F9(data_dir: Path) -> ControlResult:
-    """La base DuckDB de la zone gold existe et la table main.mart_sentiment_daily contient au moins une ligne."""
+    """Vérifie que la base DuckDB gold existe et que mart_sentiment_daily a des lignes.
+
+    Pourquoi : s'assurer que la couche gold est construite et peuplée.
+    La table main.mart_sentiment_daily est le point d'entrée pour les analystes.
+
+    Args:
+        data_dir: Répertoire racine des données (non utilisé ici, config.GOLD_DB).
+
+    Returns:
+        ControlResult avec le nombre de lignes dans la table.
+
+    Raises:
+        FileNotFoundError: Si le fichier DuckDB est absent.
+        AssertionError: Si la table est vide.
+    """
     if not config.GOLD_DB.is_file():
         raise FileNotFoundError(f"{config.GOLD_DB} absent")
     con = duckdb.connect(str(config.GOLD_DB), read_only=True)
@@ -314,8 +557,21 @@ def F9(data_dir: Path) -> ControlResult:
 
 @_handle
 def F10(data_dir: Path) -> ControlResult:
-    """Le nombre total de lignes de main.fct_review_predictions doit correspondre au nombre total de lignes du parquet scored,
-    et le nombre de lignes naturelles (sample_source = SAMPLE_NATURAL) doit correspondre entre les deux sources."""
+    """Vérifie la cohérence entre le parquet scored et la table fct_review_predictions.
+
+    Pourquoi : garantir que l'ETL vers DuckDB préserve toutes les lignes.
+    Compare le total et le nombre de lignes naturelles entre les deux sources.
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult avec les comptes totaux et naturels.
+
+    Raises:
+        FileNotFoundError: Si le fichier DuckDB est absent.
+        AssertionError: Si les comptes diffèrent entre parquet et DuckDB.
+    """
     # Chemins
     scored_path = data_dir / "scored" / "reviews_scored.parquet"
 
@@ -353,7 +609,14 @@ def F10(data_dir: Path) -> ControlResult:
 
 def _git_commit_short() -> str:
     """Retourne le hash court du commit Git, ou la variable d'env REVIEWPULSE_COMMIT,
-    ou 'inconnu' en cas d'échec."""
+    ou 'inconnu' en cas d'échec.
+
+    Pourquoi : tracer la version exacte du code testé dans le rapport.
+    La variable d'environnement permet de forcer un commit en CI/CD.
+
+    Returns:
+        Hash court du commit, ou 'inconnu'.
+    """
     env_commit = os.getenv("REVIEWPULSE_COMMIT")
     if env_commit:
         return env_commit
@@ -370,8 +633,21 @@ def _git_commit_short() -> str:
 
 @_handle
 def F7(data_dir: Path) -> ControlResult:
-    """La table Iceberg `silver.reviews` est lisible et contient le même nombre de lignes que le parquet clean."""
-    # Lecture du parquet « zone propre »
+    """Vérifie que la table Iceberg silver.reviews est lisible et a le même nombre de lignes que le parquet clean.
+
+    Pourquoi : garantir la cohérence entre la zone clean (pandas) et silver (Iceberg).
+    Utilise lakehouse.read_table pour lire la table Iceberg sans Spark.
+
+    Args:
+        data_dir: Répertoire racine des données.
+
+    Returns:
+        ControlResult confirmant l'égalité des comptes de lignes.
+
+    Raises:
+        AssertionError: Si les nombres de lignes diffèrent.
+    """
+    # Lecture du parquet « zone propre »
     clean_path = data_dir / "clean" / "reviews.parquet"
     df_clean = pd.read_parquet(clean_path)
     clean_rows = len(df_clean)
@@ -389,7 +665,20 @@ def F7(data_dir: Path) -> ControlResult:
 
 @_handle
 def F8(data_dir: Path) -> ControlResult:
-    """L'historique de la table Iceberg `silver.reviews` contient au moins un instantané."""
+    """Vérifie que l'historique de la table Iceberg silver.reviews contient au moins un instantané.
+
+    Pourquoi : garantir que la table Iceberg a été écrite avec snapshot (ADR 0014).
+    Un historique vide indiquerait une écriture directe sans gestion de version.
+
+    Args:
+        data_dir: Répertoire racine des données (non utilisé ici).
+
+    Returns:
+        ControlResult avec le nombre d'instantanés et l'id du dernier.
+
+    Raises:
+        AssertionError: Si l'historique est vide.
+    """
     history = table_history(config.SILVER_REVIEWS_TABLE)
     if not history:
         raise AssertionError("Aucun instantané trouvé dans l'historique de la table Iceberg")
@@ -406,7 +695,16 @@ def _write_report(
     results: List[ControlResult],
     urls: dict,
 ) -> None:
-    """Écrit le rapport Markdown."""
+    """Écrit le rapport Markdown.
+
+    Pourquoi : produire un artefact lisible et versionnable pour la revue.
+    Le format Markdown permet une lecture directe sur GitHub.
+
+    Args:
+        report_path: Chemin du fichier rapport à écrire.
+        results: Liste des ControlResult de tous les contrôles.
+        urls: Dictionnaire des URLs testées (API, Dashboard, MLflow, Data directory).
+    """
     report_path.parent.mkdir(parents=True, exist_ok=True)
     now = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
     commit = _git_commit_short()
@@ -434,7 +732,14 @@ def _write_report(
 # Fonction principale
 # --------------------------------------------------------------------------- #
 def main() -> int:
-    """Parse les arguments, exécute les contrôles et génère le rapport."""
+    """Parse les arguments, exécute les contrôles et génère le rapport.
+
+    Pourquoi : point d'entrée unique pour l'exécution en CLI ou CI/CD.
+    Le code de retour (0/1) permet l'intégration dans les pipelines.
+
+    Returns:
+        0 si tous les contrôles passent, 1 sinon.
+    """
     parser = argparse.ArgumentParser(
         description="Test en conditions réelles de la stack ReviewPulse"
     )
