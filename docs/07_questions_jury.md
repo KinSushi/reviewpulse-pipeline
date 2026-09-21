@@ -107,6 +107,9 @@ Oui, et ils sont documentés : modèle introuvable (artefacts relatifs au dossie
 **Comment prouvez-vous que tout marche ailleurs que sur votre poste ?**
 `make up && make jobs && make evidence` : tests unitaires, tests inverses et test de la stack déployée, avec rapports datés et numéro de commit. → `evidence/`.
 
+**Votre rapport de dérive affiche un PSI de 2,8 sur la langue et « dérive » en toutes lettres : pourquoi aucune alerte ?**
+Parce que ce chiffre mesure **notre plan de collecte**, pas la population — et nous l'avons compris en le regardant, le 19/09/2026. La fenêtre ancienne était à 85 % francophone, la récente à 91 % anglophone : c'est l'ordre dans lequel l'ingestion parcourt `config.APP_IDS` × `config.LANGUAGES`, pas un changement chez les joueurs. Aucun avis n'avait changé de nature, et le PSI criait 3,10. Depuis, la dérive se mesure sur le **flux naturel seul**, et seules les colonnes de `COLONNES_ALERTE` peuvent lever une alerte — aujourd'hui `text_len`, ce que le modèle consomme réellement : **0,036 pour un seuil de 0,2** au passage du 21/09. `language` et `app_id` restent dans le rapport **à titre informatif**, étiquetés comme tels dans l'ADR. S'y ajoute la part de jours où le rapport entre part négative prédite et réelle sort de ses bornes : 4,8 % pour un seuil de 10 % — le 19/09, c'est elle, à 10,13 %, qui avait levé l'alerte. Une alerte qui crie pour une raison connue et sans conséquence, plus personne ne la lit : c'est la mutation M20. → ADR 0015.
+
 ## Architecture, choix et décisions
 
 Chaque décision structurante a son ADR. Les renvois `→ ADR NNNN` pointent vers le registre [`adr/README.md`](adr/README.md), qui compte **vingt décisions** au 19/09/2026.

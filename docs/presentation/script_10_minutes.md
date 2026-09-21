@@ -19,6 +19,28 @@ Construction : `tools/construire_slides.py` — le fichier se régénère à l'i
 | — | — | **Sur le réemploi, si la question vient** : ReviewPulse est le support du **bloc AIA 4**. Pour les autres blocs, ce sont les **briques** qui circulent — l'orchestration, la porte de qualité, le registre de modèles, la réversibilité — pas le projet. Chaque bloc garde son projet imposé : Spotify, Stripe, Fraud Detection, Kayak, Getaround. **Le piège serait de prétendre que ce projet couvre les dix blocs** ; il n'en couvre qu'un, et il outille les autres. |
 | 9:20–10:00 | 9 — questions | Reformuler la promesse et rendre la parole. |
 
+## Quinze minutes avant de passer
+
+```bash
+sh tools/prevol_demo.sh
+```
+
+Le contrôle avant vol interroge la pile **dans l'ordre du discours** et rend `PRÊT` ou `PAS PRÊT` en
+nommant ce qui manque. Chacun de ses contrôles porte le nom d'un défaut réellement rencontré le
+21/09/2026 :
+
+- **la pile est réchauffée** — le premier `/health` après un redémarrage a pris **190 s**, le premier
+  `/predict` 9,7 s, puis 6 ms à chaud : une démonstration ouverte sur une pile froide commence par
+  trois minutes de silence. On ne redémarre plus rien après un `PRÊT` ;
+- **la phrase tapée à la main** — « injouable, plein de bugs, remboursez-moi » — est classée négative
+  (probabilité 0,98) et expliquée par dix termes ;
+- **les scores servis viennent du champion en service** — le tableau de bord avait affiché la version 2
+  alors que le champion était la 5 ;
+- **l'interface d'Airflow répond**, pas seulement son planificateur — elle était morte depuis la veille.
+
+Les affirmations du discours ont été confrontées à la pile réelle le même jour : latence à chaud sous
+100 ms, PSI de 0,036 sur la colonne surveillée pour un seuil de 0,2, branche de réentraînement sautée.
+
 ## Chemin de secours
 
 - **Si l'API Steam ne répond pas** : la chaîne rejoue sur la zone brute déjà remplie, avec `make pipeline-gele`, qui n'ingère rien. C'est précisément l'intérêt d'une zone brute inchangée.
