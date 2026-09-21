@@ -1,0 +1,88 @@
+name: comparaison-modeles
+# Banc de comparaison des familles de modèles, sur un runner neutre.
+#
+# Pourquoi ici : le protocole demande neuf candidats × cinq plis sur des matrices de 100 000
+# n-grammes. Sur la machine de développement, dont le disque est externe et lent, l'installation
+# d'une seule dépendance est restée bloquée plus de trente minutes le 21/09/2026. Un runner GitHub
+# fait le tout en quelques minutes, et la preuve ne dépend d'aucun poste.
+#
+# XGBoost n'est PAS une dépendance du projet : il est installé ici, pour ce banc seulement. L'outil
+# le traite comme optionnel et écrit « non mesuré » s'il manque.
+#
+# Déclenchement manuel uniquement : ce banc répond à une question d'architecture (ADR 0030), il
+# n'a pas à tourner à chaque envoi.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  comparaison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      REVIEWPULSE_SALT: ${{ secrets.REVIEWPULSE_SALT }}
+      REVIEWPULSE_MAX_PAGES: 5
+      JAVA_TOOL_OPTIONS: -Xss4m
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Installer XGBoost pour ce banc seulement
+        run: pip install xgboost-cpu==2.1.4
+
+      - name: Validate REVIEWPULSE_SALT secret
+        run: |
+          if [ -z "${REVIEWPULSE_SALT}" ]; then
+            echo "Error: REVIEWPULSE_SALT secret is not set or empty."
+            exit 1
+          fi
+
+      # Mêmes étapes que la chaîne quotidienne jusqu'à la zone propre : le banc mesure les
+      # candidats sur des données réelles, collectées en direct, passées par la porte de qualité.
+      - name: Ingestion
+        run: python -m reviewpulse.ingest
+
+      - name: Zone silver (Spark et Iceberg)
+        run: python -m reviewpulse.spark_silver
+
+      - name: Porte de qualité (Great Expectations)
+        run: python -m reviewpulse.expectations
+
+      - name: Comparaison des familles de modèles
+        run: python tools/comparaison_modeles.py --sortie docs/evidence/comparaison_modeles.md
+
+      # Le rapport est écrit dans le journal, entre deux marqueurs : un quota d'artefacts ne doit
+      # pas faire perdre une mesure de vingt minutes (voir ci.yml, 20/09/2026).
+      - name: Rendre le rapport
+        if: always()
+        run: |
+          echo "<<<RAPPORT>>>"
+          cat docs/evidence/comparaison_modeles.md || echo "rapport absent"
+          echo "<<<FIN RAPPORT>>>"
+          cat docs/evidence/comparaison_modeles.md >> "${GITHUB_STEP_SUMMARY}" || true
+
+      - name: Téléverser le rapport
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: comparaison-modeles
+          path: docs/evidence/comparaison_modeles.md
+          retention-days: 7
