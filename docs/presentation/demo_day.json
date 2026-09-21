@@ -91,11 +91,11 @@
    "5": "Mots, régularisation ajustée : 0,756",
    "6": "Caractères, 2 à 5 grammes ",
    "7": "(0,759 puis 0,797 puis 0,803) ",
-   "8": "→ retenu : robuste aux fautes, explicable terme par terme",
-   "9": "Un autre modèle ferait-il mieux ? Neuf candidats, mêmes plis",
-   "10": "Régression logistique 0,812 · SVM linéaire 0,807 : égalité, sans explication exacte",
-   "11": "XGBoost 0,735 · forêt aléatoire 0,719 — entraînement jusqu'à 23 fois plus cher",
-   "12": "Règle de décision écrite avant les résultats — ADR 0006, 0007, 0030",
+   "8": "→ retenu : robuste aux fautes, explicable",
+   "9": "Un autre modèle ferait-il mieux ? 9 candidats, mêmes plis",
+   "10": "Régression logistique 0,812 · SVM 0,807 : égalité",
+   "11": "XGBoost 0,735 · forêt aléatoire 0,719 · coût × 23",
+   "12": "Règle écrite avant les résultats — ADR 0006, 0007, 0030",
    "13": ""
   },
   "15": {
