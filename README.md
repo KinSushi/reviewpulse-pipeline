@@ -146,7 +146,7 @@ make airflow                # Airflow :8080, DAG reviewpulse_daily
 
 Sans Docker (Python 3.11) : `make install`, puis `make pipeline`, `make api`, `make dashboard`.
 
-Avant une démonstration : `make prevol` — la pile est-elle levée, **réchauffée** et cohérente ? Le premier appel après un redémarrage charge le modèle ; le contrôle le fait avant le jury.
+Le jour d'une démonstration : `sh tools/jour_j.sh` ([notice](docs/presentation/JOUR_J.md)) lève la pile, attend qu'elle soit chaude et vérifie qu'elle est cohérente. Sur une pile déjà levée : `make prevol` — la pile est-elle levée, **réchauffée** et cohérente ? Le premier appel après un redémarrage charge le modèle ; le contrôle le fait avant le jury.
 
 Rejouer les preuves : `make test` · `make reverse` · `make forward` · `make evidence` (rapports datés dans `docs/evidence/`). Procédure détaillée, durées mesurées et pièges : [runbook de déploiement](docs/22_runbook_deploiement.md).
 
