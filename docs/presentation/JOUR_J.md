@@ -20,6 +20,18 @@ Ce qu'elle fait, dans l'ordre, et pourquoi :
 Si c'est PRÊT : ne redémarre rien, ouvre `http://localhost:8501` (tableau de bord), `http://localhost:8000/docs`
 (API) et `http://localhost:8080` (Airflow) dans le navigateur, et le support `ReviewPulse_DemoDay.pptx`.
 
+## Le 25/09 : un seul double-clic
+
+`LANCER_DEMO_DAY.cmd` (hors dépôt, dans `livrables_demo_day`, copie sur le Bureau) enchaîne tout : contrôle des
+images, `tools/jour_j.sh` (qui attend désormais aussi Airflow), maintien des DAG **en pause**, ouverture du
+tableau de bord et du diaporama. Vérifié le 23/09 : PRÊT, 11 contrôles sur 11.
+
+Les DAG sont en pause depuis le 23/09 : au démarrage, le planificateur avait lancé l'exécution en retard, qui
+aurait rescoré les données et pu réentraîner le modèle avant le passage. Après la soutenance :
+`docker exec reviewpulse-airflow-1 airflow dags unpause reviewpulse_daily` (et `reviewpulse_weekly_train`).
+
+L'interface Airflow n'est pas utilisée pendant le passage : son mot de passe n'est pas un préalable.
+
 ## Condition préalable : les images doivent exister (R81)
 
 Le 22/09 à 19 h 46, les images `reviewpulse-app` et `reviewpulse-airflow` ont été supprimées depuis

@@ -24,5 +24,13 @@ until curl -s -o /dev/null -w '%{http_code}' --max-time 300 http://localhost:800
     sleep 30
 done
 echo "   API en ligne."
+# Airflow demarre apres l API : le 23/09, le controle avant vol l a trouve a froid et a rendu PAS PRET a tort.
+echo "2b. Attendre l'interface et le planificateur d'Airflow (jusqu'a 10 min)"
+n=0
+until curl -s --max-time 30 http://localhost:8080/health | grep -q '"scheduler": {[^}]*"status": "healthy"'; do
+    n=$((n + 1)); [ "$n" -ge 20 ] && { echo "   Airflow ne repond pas apres 10 min : PAS PRET"; exit 1; }
+    sleep 30
+done
+echo "   Airflow en ligne."
 echo "3. Controle avant vol"
 sh tools/prevol_demo.sh
