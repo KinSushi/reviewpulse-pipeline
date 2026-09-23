@@ -23,8 +23,11 @@ Si c'est PRÊT : ne redémarre rien, ouvre `http://localhost:8501` (tableau de b
 ## Le 25/09 : un seul double-clic
 
 `LANCER_DEMO_DAY.cmd` (hors dépôt, dans `livrables_demo_day`, copie sur le Bureau) enchaîne tout : contrôle des
-images, `tools/jour_j.sh` (qui attend désormais aussi Airflow), maintien des DAG **en pause**, ouverture du
-tableau de bord et du diaporama. Vérifié le 23/09 : PRÊT, 11 contrôles sur 11.
+images, `tools/jour_j.sh` (qui attend désormais aussi Airflow), maintien des DAG **en pause**, présence du
+raccourci de démonstration. Vérifié le 23/09 : PRÊT, 11 contrôles sur 11.
+
+Pendant le passage, **Ctrl+Alt+D** joue seule la démonstration en direct sur le vrai tableau de bord
+(indicateurs, Top 20, avis tapé, prédiction, termes ; environ 30 s) ; **Échap** rend la main au diaporama.
 
 Les DAG sont en pause depuis le 23/09 : au démarrage, le planificateur avait lancé l'exécution en retard, qui
 aurait rescoré les données et pu réentraîner le modèle avant le passage. Après la soutenance :
